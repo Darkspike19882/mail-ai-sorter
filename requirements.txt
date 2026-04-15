@@ -1,1 +1,36 @@
 flask>=3.0.0
+requests>=2.31.0
+
+# Optional Extensions
+# Uncomment what you need:
+
+# Paperless-ngx Integration
+# requests>=2.31.0  # Already installed
+
+# Calendar Integration
+# gcalcli>=4.0.0
+# khal>=0.10.0
+
+# Task Management
+# taskwarrior>=2.6.0
+
+# Analytics & Visualization
+# pandas>=2.0.0
+# matplotlib>=3.8.0
+# plotly>=5.0.0
+
+# Notifications
+# terminal-notifier>=2.0.0
+
+# AI/LLM Frameworks
+# langchain>=0.1.0
+# openai>=1.0.0
+
+# Document Processing
+# PyPDF2>=3.0.0
+# pdfplumber>=0.10.0
+# pytesseract>=0.3.10
+
+# Database & Storage
+# sqlalchemy>=2.0.0
+# alembic>=1.12.0
