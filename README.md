@@ -41,54 +41,72 @@
 
 ## 🚀 Schnellstart
 
+### 🎯 In 5 Minuten einsatzbereit!
+
+**Empfohlen:** Nutze den automatischen Installer:
+```bash
+git clone https://github.com/Darkspike19882/mail-ai-sorter.git
+cd mail-ai-sorter
+./install.sh
+```
+
+**Oder manuell:** Siehe [QUICKSTART.md](QUICKSTART.md)
+
+**Detailliert:** Siehe [INSTALL.md](INSTALL.md)
+
 ### Voraussetzungen
 
-- macOS mit Apple Silicon (M1/M2/M3)
-- Python 3.14+
-- Ollama mit llama3.1:8b Modell
-- IMAP-Email-Zugänge
+- ✅ macOS mit Apple Silicon (M1/M2/M3)
+- ✅ Python 3.14+
+- ✅ Ollama mit llama3.1:8b Modell
+- ✅ IMAP-Email-Zugänge
 
-### Installation
+### Installation (Kurzversion)
 
 ```bash
 # 1. Repository klonen
-git clone https://github.com/dein-username/mail-ai-sorter.git
+git clone https://github.com/Darkspike19882/mail-ai-sorter.git
 cd mail-ai-sorter
 
-# 2. Virtuelle Umgebung erstellen
-python3 -m venv venv
+# 2. Automatischen Installer starten
+./install.sh
+
+# 3. Web UI starten
 source venv/bin/activate
-
-# 3. Abhängigkeiten installieren
-pip install -r requirements.txt
-
-# 4. Ollama installieren (falls nicht vorhanden)
-brew install ollama
-ollama pull llama3.1:8b
-
-# 5. Konfiguration einrichten
-cp config.example.json config.json
-# config.json mit deinen Daten bearbeiten
-
-# 6. Passwörter setzen
-cp secrets.example.env secrets.env
-# secrets.env mit deinen Passwörtern bearbeiten
-
-# 7. Web UI starten
 python3 web_ui.py
 
-# 8. Browser öffnen
-open http://localhost:5000
+# 4. Setup Wizard im Browser öffnen
+open http://localhost:5001/setup
 ```
+
+### 🧙 Setup Wizard
+
+Der **Setup Wizard** führt dich durch alle Schritte:
+
+1. ✅ Ollama Prüfung (automatisch)
+2. ✅ Email-Konto einrichten
+3. ✅ Kategorien wählen
+4. ✅ KI-Modell wählen
+5. ✅ Paperless-Integration
+6. ✅ Zusammenfassung & Speichern
+
+**Alles im Browser - kein Terminal nötig!**
 
 ## 📖 Nutzung
 
 ### Web UI
 
 ```bash
+source venv/bin/activate
 python3 web_ui.py
-# Öffnet http://localhost:5000
+# Öffnet http://localhost:5001
 ```
+
+**Pages:**
+- **Dashboard:** http://localhost:5001/
+- **Setup Wizard:** http://localhost:5001/setup
+- **Konfiguration:** http://localhost:5001/config
+- **Logs:** http://localhost:5001/logs
 
 **Features:**
 - 📊 **Dashboard** - Live-Statistiken und Übersicht

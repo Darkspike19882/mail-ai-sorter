@@ -1,0 +1,450 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard - Mail AI Sorter{% endblock %}
+
+{% block head %}
+<style>
+    .stat-card {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-primary-400;
+    }
+    .chart-container {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+    }
+    .action-card {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+    }
+    .progress-card {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+    }
+</style>
+{% endblock %}
+
+{% block nav_dashboard %}active{% endblock %}
+{% block nav_mobile_dashboard %}active{% endblock %}
+
+{% block content %}
+<div x-data="dashboard()" x-init="initDashboard()">
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold gradient-text mb-2">Dashboard</h1>
+                <p class="text-slate-600 dark:text-slate-400 flex items-center gap-2">
+                    <i data-lucide="bot" class="w-5 h-5 text-primary-600"></i>
+                    Intelligente Email-Klassifizierung mit llama3.1:8b auf Ihrem M1 Pro Mac
+                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-full text-xs font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
+                        Live
+                    </span>
+                </p>
+            </div>
+            <div class="flex items-center gap-3">
+                <a href="/setup" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg">
+                    <i data-lucide="wand-2" class="w-4 h-4"></i>
+                    Setup
+                </a>
+                <button @click="refreshStats()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2 border-2 border-slate-300 dark:border-slate-600">
+                    <i data-lucide="refresh-cw" :class="{'animate-spin': isLoading}" class="w-4 h-4"></i>
+                    Aktualisieren
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Banner -->
+    <div x-show="accountsCount === 0" class="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-xl border-2 border-yellow-200 dark:border-yellow-800">
+        <div class="flex items-center gap-3">
+            <i data-lucide="alert-triangle" class="w-6 h-6 text-yellow-600 dark:text-yellow-400 flex-shrink-0"></i>
+            <div class="flex-1">
+                <h3 class="font-semibold text-yellow-900 dark:text-yellow-200">Keine Konten konfiguriert!</h3>
+                <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                    Starten Sie den <a href="/setup" class="underline font-medium">Setup-Assistenten</a>, um Ihr Email-Konto einzurichten.
+                </p>
+            </div>
+            <a href="/setup" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+                Jetzt einrichten
+            </a>
+        </div>
+    </div>
+
+    <!-- Stats Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
+        <!-- Total Emails -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-blue-100 dark:bg-blue-900 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                    <i data-lucide="mail" class="w-6 h-6 text-blue-600 dark:text-blue-400"></i>
+                </div>
+                <span class="text-xs font-medium text-green-600 bg-green-100 dark:bg-green-900 dark:text-green-200 px-2 py-1 rounded-full border border-green-300 dark:border-green-700 flex items-center gap-1">
+                    <span class="w-1.5 h-1.5 rounded-full bg-green-500 animate-pulse"></span>
+                    Live
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white" x-text="formatNumber(stats.total)"></div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Gesamte Mails</div>
+        </div>
+
+        <!-- Categories -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-purple-100 dark:bg-purple-900 rounded-lg border-2 border-purple-200 dark:border-purple-800">
+                    <i data-lucide="folder" class="w-6 h-6 text-purple-600 dark:text-purple-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white" x-text="Object.keys(stats.categories || {}).length"></div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Kategorien</div>
+        </div>
+
+        <!-- Accounts -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-green-100 dark:bg-green-900 rounded-lg border-2 border-green-200 dark:border-green-800">
+                    <i data-lucide="users" class="w-6 h-6 text-green-600 dark:text-green-400"></i>
+                </div>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white" x-text="Object.keys(stats.accounts || {}).length"></div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Konten</div>
+        </div>
+
+        <!-- Accuracy -->
+        <div class="stat-card">
+            <div class="flex items-center justify-between mb-4">
+                <div class="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg border-2 border-orange-200 dark:border-orange-800">
+                    <i data-lucide="brain" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
+                </div>
+                <span class="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900 dark:text-orange-200 px-2 py-1 rounded-full border border-orange-300 dark:border-orange-700">
+                    llama3.1:8b
+                </span>
+            </div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white">92%</div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Genauigkeit</div>
+        </div>
+    </div>
+
+    <!-- Charts Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Category Distribution -->
+        <div class="chart-container">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+                <i data-lucide="pie-chart" class="w-5 h-5 text-primary-600"></i>
+                Kategorien-Verteilung
+                <span class="ml-auto text-xs font-normal text-slate-600 dark:text-slate-400" x-text="Object.keys(stats.categories || {}).length + ' Kategorien'"></span>
+            </h3>
+            <div class="h-64">
+                <canvas id="categoryChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Account Distribution -->
+        <div class="chart-container">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+                <i data-lucide="bar-chart" class="w-5 h-5 text-primary-600"></i>
+                Konto-Übersicht
+                <span class="ml-auto text-xs font-normal text-slate-600 dark:text-slate-400" x-text="Object.keys(stats.accounts || {}).length + ' Konten'"></span>
+            </h3>
+            <div class="h-64">
+                <canvas id="accountChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Category Progress Bars -->
+    <div class="progress-card mb-8">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="trending-up" class="w-5 h-5 text-primary-600"></i>
+            Top 10 Kategorien
+        </h3>
+        <div class="space-y-3">
+            <template x-for="(category, index) in topCategories" :key="index">
+                <div class="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 dark:border-slate-600 hover:border-primary-400 transition-colors">
+                    <div class="flex justify-between items-center mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-6 h-6 rounded-full bg-primary-100 dark:bg-primary-900 text-primary-600 dark:text-primary-200 text-xs font-bold flex items-center justify-center" x-text="index + 1"></span>
+                            <span class="font-semibold text-slate-700 dark:text-slate-200" x-text="category.name"></span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-medium text-slate-900 dark:text-white" x-text="formatNumber(category.count)"></span>
+                            <span class="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded text-xs font-medium" x-text="category.percentage + '%'"></span>
+                        </div>
+                    </div>
+                    <div class="w-full bg-slate-200 dark:bg-slate-600 rounded-full h-2.5 border border-slate-300 dark:border-slate-500">
+                        <div class="bg-gradient-to-r from-primary-500 to-primary-600 h-2.5 rounded-full transition-all duration-500 border-r-2 border-primary-700"
+                             :style="'width: ' + category.percentage + '%'"></div>
+                    </div>
+                </div>
+            </template>
+        </div>
+    </div>
+
+    <!-- Actions Row -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+        <!-- Search -->
+        <div class="action-card">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+                <i data-lucide="search" class="w-5 h-5 text-primary-600"></i>
+                Emails durchsuchen
+            </h3>
+            <div class="space-y-3">
+                <div class="flex gap-2">
+                    <input type="text"
+                           x-model="searchQuery"
+                           @keyup.enter="searchEmails()"
+                           placeholder="Suchbegriff eingeben..."
+                           class="flex-1 px-4 py-2.5 rounded-lg border-2 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500">
+                    <button @click="searchEmails()"
+                            class="px-6 py-2.5 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 border-2 border-primary-700">
+                        <i data-lucide="search" class="w-4 h-4"></i>
+                        Suchen
+                    </button>
+                </div>
+                <div x-show="searchResults.length > 0" class="space-y-2 max-h-64 overflow-y-auto border-2 dark:border-slate-600 rounded-lg">
+                    <template x-for="email in searchResults" :key="email.id">
+                        <div class="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border-l-4 border-primary-500 hover:bg-slate-100 dark:hover:bg-slate-600 transition-colors">
+                            <div class="font-medium text-slate-900 dark:text-white text-sm mb-1" x-text="email.subject"></div>
+                            <div class="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400">
+                                <span class="px-2 py-1 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded font-medium" x-text="email.category"></span>
+                                <span x-text="email.from_addr"></span>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+                <div x-show="searchQuery && searchResults.length === 0" class="p-4 text-center text-slate-500 dark:text-slate-400">
+                    <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-50"></i>
+                    <p>Keine Ergebnisse gefunden</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Quick Actions -->
+        <div class="action-card">
+            <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+                <i data-lucide="zap" class="w-5 h-5 text-primary-600"></i>
+                Schnell-Aktionen
+            </h3>
+            <div class="space-y-3">
+                <button @click="runSorter(false)"
+                        :disabled="isSorting || accountsCount === 0"
+                        class="w-full px-4 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg font-medium transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center gap-2 border-2 border-primary-700 shadow-lg">
+                    <i data-lucide="mail" class="w-5 h-5"></i>
+                    <span x-text="isSorting ? 'Sortierung läuft...' : 'Emails sortieren (50)'"></span>
+                </button>
+                <button @click="runSorter(true)"
+                        :disabled="isSorting || accountsCount === 0"
+                        class="w-full px-4 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center justify-center gap-2 border-2 border-slate-300 dark:border-slate-600">
+                    <i data-lucide="flask" class="w-5 h-5"></i>
+                    <span>Testlauf (Dry-Run, 10 Mails)</span>
+                </button>
+                <div class="p-3 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                    <div class="flex items-start gap-2 text-sm">
+                        <i data-lucide="info" class="w-4 h-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5"></i>
+                        <p class="text-blue-700 dark:text-blue-300">
+                            Der erste Durchlauf empfiehlt sich als <strong>Testlauf (Dry-Run)</strong> um Ergebnisse zu prüfen ohne zu verschieben.
+                        </p>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Status Log -->
+    <div x-show="statusLog" class="chart-container">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="terminal" class="w-5 h-5 text-primary-600"></i>
+            Letzte Aktion
+            <button @click="statusLog = ''" class="ml-auto p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </h3>
+        <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 font-mono text-sm text-green-400 max-h-64 overflow-y-auto border-2 border-slate-700">
+            <pre x-text="statusLog" class="whitespace-pre-wrap"></pre>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function dashboard() {
+    return {
+        stats: {{ stats | tojson }},
+        searchQuery: '',
+        searchResults: [],
+        isSorting: false,
+        isLoading: false,
+        statusLog: '',
+        categoryChart: null,
+        accountChart: null,
+
+        get accountsCount() {
+            return Object.keys(this.stats.accounts || {}).length;
+        },
+
+        initDashboard() {
+            this.$nextTick(() => {
+                this.initCharts();
+                lucide.createIcons();
+            });
+
+            setInterval(() => this.refreshStats(), 30000);
+        },
+
+        get topCategories() {
+            if (!this.stats.categories) return [];
+            return Object.entries(this.stats.categories)
+                .map(([name, count]) => ({
+                    name,
+                    count,
+                    percentage: ((count / this.stats.total) * 100).toFixed(1)
+                }))
+                .sort((a, b) => b.count - a.count)
+                .slice(0, 10);
+        },
+
+        initCharts() {
+            const categories = this.stats.categories || {};
+            const accounts = this.stats.accounts || {};
+
+            // Category Pie Chart
+            const categoryCtx = document.getElementById('categoryChart').getContext('2d');
+            this.categoryChart = new Chart(categoryCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: Object.keys(categories),
+                    datasets: [{
+                        data: Object.values(categories),
+                        backgroundColor: [
+                            '#0ea5e9', '#8b5cf6', '#10b981', '#f59e0b',
+                            '#ef4444', '#ec4899', '#06b6d4', '#84cc16',
+                            '#f97316', '#6366f1', '#14b8a6', '#eab308',
+                            '#a855f7', '#3b82f6', '#22c55e'
+                        ],
+                        borderWidth: 2,
+                        borderColor: document.documentElement.classList.contains('dark') ? '#1e293b' : '#ffffff'
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: {
+                            position: 'right',
+                            labels: {
+                                color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#475569',
+                                padding: 15,
+                                font: { size: 11 }
+                            }
+                        }
+                    }
+                }
+            });
+
+            // Account Bar Chart
+            const accountCtx = document.getElementById('accountChart').getContext('2d');
+            this.accountChart = new Chart(accountCtx, {
+                type: 'bar',
+                data: {
+                    labels: Object.keys(accounts),
+                    datasets: [{
+                        label: 'Emails',
+                        data: Object.values(accounts),
+                        backgroundColor: '#0ea5e9',
+                        borderColor: '#0284c7',
+                        borderWidth: 2,
+                        borderRadius: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#475569'
+                            },
+                            grid: {
+                                color: document.documentElement.classList.contains('dark') ? '#334155' : '#e2e8f0',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: {
+                                color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#475569',
+                                font: { size: 10 }
+                            },
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        },
+
+        async refreshStats() {
+            if (this.isLoading) return;
+            this.isLoading = true;
+
+            try {
+                const response = await fetch('/api/stats');
+                this.stats = await response.json();
+            } catch (error) {
+                console.error('Error refreshing stats:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        async runSorter(dryRun) {
+            this.isSorting = true;
+            const mailCount = dryRun ? 10 : 50;
+            this.statusLog = `🚀 Starte ${dryRun ? 'Testlauf' : 'Sortierung'} (${mailCount} Mails pro Konto)...\n\n`;
+
+            try {
+                const response = await fetch('/api/run', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({dry_run: dryRun, max_mails: mailCount})
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    this.statusLog += `✅ ${dryRun ? 'Testlauf' : 'Sortierung'} erfolgreich!\n\n${data.output || 'Keine Ausgabe'}`;
+                    showNotification(`${dryRun ? 'Testlauf' : 'Sortierung'} erfolgreich!`, 'success');
+                    await this.refreshStats();
+                } else {
+                    this.statusLog += `❌ Fehler:\n${data.errors || 'Unbekannter Fehler'}`;
+                    showNotification('Fehler bei Aktion', 'error');
+                }
+            } catch (error) {
+                this.statusLog += `❌ Fehler: ${error}`;
+                showNotification('Fehler: ' + error, 'error');
+            } finally {
+                this.isSorting = false;
+            }
+        },
+
+        async searchEmails() {
+            if (!this.searchQuery) {
+                this.searchResults = [];
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/search?q=' + encodeURIComponent(this.searchQuery));
+                const data = await response.json();
+                this.searchResults = data.emails || [];
+            } catch (error) {
+                showNotification('Fehler bei Suche: ' + error, 'error');
+            }
+        },
+
+        formatNumber(num) {
+            return new Intl.NumberFormat('de-DE').format(num);
+        }
+    };
+}
+</script>
+{% endblock %}

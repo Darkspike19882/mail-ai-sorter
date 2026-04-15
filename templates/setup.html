@@ -1,0 +1,705 @@
+{% extends "base.html" %}
+
+{% block title %}Setup - Mail AI Sorter{% endblock %}
+
+{% block head %}
+<style>
+    .step-indicator {
+        @apply flex items-center justify-between mb-8;
+    }
+    .step {
+        @apply flex items-center gap-2;
+    }
+    .step-number {
+        @apply w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all;
+    }
+    .step.active .step-number {
+        @apply bg-primary-600 text-white;
+    }
+    .step.completed .step-number {
+        @apply bg-green-500 text-white;
+    }
+    .step.pending .step-number {
+        @apply bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400;
+    }
+    .step-line {
+        @apply flex-1 h-1 bg-slate-200 dark:bg-slate-700 mx-4;
+    }
+    .step-line.completed {
+        @apply bg-green-500;
+    }
+    .form-card {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-8;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div x-data="setupWizard()" x-init="initWizard()">
+    <!-- Header -->
+    <div class="text-center mb-8 animate-fade-in">
+        <div class="inline-flex items-center justify-center w-20 h-20 bg-gradient-to-br from-primary-500 to-primary-600 rounded-2xl mb-4 shadow-lg">
+            <i data-lucide="bot" class="w-10 h-10 text-white"></i>
+        </div>
+        <h1 class="text-4xl font-bold gradient-text mb-2">Willkommen bei Mail AI Sorter!</h1>
+        <p class="text-slate-600 dark:text-slate-400 text-lg">
+            Lassen Sie uns Ihren Email Sorter in wenigen Minuten einrichten
+        </p>
+    </div>
+
+    <!-- Step Indicator -->
+    <div class="step-indicator">
+        <template x-for="(step, index) in steps" :key="index">
+            <div class="step" :class="currentStep > index ? 'completed' : currentStep === index ? 'active' : 'pending'">
+                <div class="step-number" x-text="index + 1"></div>
+                <div class="hidden md:block text-sm font-medium" :class="currentStep > index ? 'text-green-600' : currentStep === index ? 'text-primary-600' : 'text-slate-600 dark:text-slate-400'" x-text="step.title"></div>
+            </div>
+            <div class="step-line" x-show="index < steps.length - 1" :class="currentStep > index ? 'completed' : ''"></div>
+        </template>
+    </div>
+
+    <!-- Step Content -->
+    <div class="form-card max-w-3xl mx-auto">
+        <!-- Step 1: Welcome -->
+        <div x-show="currentStep === 0" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="sparkles" class="w-6 h-6 text-primary-600"></i>
+                Herzlich willkommen!
+            </h2>
+            <div class="space-y-4 text-slate-600 dark:text-slate-400">
+                <p>
+                    Der <strong>Mail AI Sorter</strong> verwendet lokale KI (llama3.1:8b), um Ihre Emails automatisch zu sortieren -
+                    komplett auf Ihrem Mac, ohne Cloud, zu 100% privat.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 my-6">
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg text-center">
+                        <i data-lucide="brain" class="w-8 h-8 mx-auto mb-2 text-blue-600"></i>
+                        <h3 class="font-semibold text-blue-900 dark:text-blue-200">Lokale KI</h3>
+                        <p class="text-sm text-blue-700 dark:text-blue-300 mt-1">llama3.1:8b auf Ihrem Mac</p>
+                    </div>
+                    <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg text-center">
+                        <i data-lucide="shield" class="w-8 h-8 mx-auto mb-2 text-green-600"></i>
+                        <h3 class="font-semibold text-green-900 dark:text-green-200">100% Privat</h3>
+                        <p class="text-sm text-green-700 dark:text-green-300 mt-1">Keine Cloud, keine Tracking</p>
+                    </div>
+                    <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg text-center">
+                        <i data-lucide="zap" class="w-8 h-8 mx-auto mb-2 text-purple-600"></i>
+                        <h3 class="font-semibold text-purple-900 dark:text-purple-200">Lightning Fast</h3>
+                        <p class="text-sm text-purple-700 dark:text-purple-300 mt-1">1.2s pro Email auf M1 Pro</p>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h3 class="font-semibold text-yellow-900 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        Was Sie benötigen:
+                    </h3>
+                    <ul class="space-y-1 text-sm text-yellow-800 dark:text-yellow-300">
+                        <li>✅ macOS mit Apple Silicon (M1 Pro/M2/M3)</li>
+                        <li>✅ Ollama installiert mit llama3.1:8b Modell</li>
+                        <li>✅ Mindestens ein IMAP Email-Konto</li>
+                        <li>✅ 5 Minuten Ihrer Zeit</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 2: Ollama Check -->
+        <div x-show="currentStep === 1" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="cpu" class="w-6 h-6 text-primary-600"></i>
+                Ollama Prüfung
+            </h2>
+
+            <div class="space-y-4">
+                <p class="text-slate-600 dark:text-slate-400">
+                    Wir prüfen, ob Ollama installiert ist und das llama3.1:8b Modell heruntergeladen wurde.
+                </p>
+
+                <div x-show="!ollamaChecked" class="text-center py-8">
+                    <div class="spinner mx-auto mb-4"></div>
+                    <p class="text-slate-600 dark:text-slate-400">Prüfe Ollama Installation...</p>
+                </div>
+
+                <div x-show="ollamaChecked && !ollamaInstalled" class="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg">
+                    <h3 class="font-semibold text-red-900 dark:text-red-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="x-circle" class="w-5 h-5"></i>
+                        Ollama nicht gefunden
+                    </h3>
+                    <p class="text-sm text-red-700 dark:text-red-300 mb-3">
+                        Ollama ist nicht installiert oder nicht verfügbar. Bitte installieren Sie es zuerst:
+                    </p>
+                    <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 font-mono text-sm text-green-400">
+                        brew install ollama
+                        ollama serve
+                    </div>
+                    <button @click="checkOllama()" class="mt-4 px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium">
+                        Erneut prüfen
+                    </button>
+                </div>
+
+                <div x-show="ollamaChecked && ollamaInstalled && !modelInstalled" class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h3 class="font-semibold text-yellow-900 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        Modell nicht gefunden
+                    </h3>
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300 mb-3">
+                        Das llama3.1:8b Modell ist noch nicht heruntergeladen. Bitte laden Sie es herunter:
+                    </p>
+                    <div class="bg-slate-900 dark:bg-slate-950 rounded-lg p-4 font-mono text-sm text-green-400">
+                        ollama pull llama3.1:8b
+                    </div>
+                    <button @click="checkOllama()" class="mt-4 px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium">
+                        Erneut prüfen
+                    </button>
+                </div>
+
+                <div x-show="ollamaChecked && ollamaInstalled && modelInstalled" class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h3 class="font-semibold text-green-900 dark:text-green-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="check-circle" class="w-5 h-5"></i>
+                        Alles bereit!
+                    </h3>
+                    <p class="text-sm text-green-700 dark:text-green-300">
+                        Ollama ist installiert und das llama3.1:8b Modell ist verfügbar.
+                        <br><strong>Ollama URL:</strong> <span x-text="config.ollama_url"></span>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 3: Email Accounts -->
+        <div x-show="currentStep === 2" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="mail" class="w-6 h-6 text-primary-600"></i>
+                Email-Konto hinzufügen
+            </h2>
+
+            <div class="space-y-6">
+                <!-- Account List -->
+                <div x-show="accounts.length > 0" class="space-y-3">
+                    <h3 class="font-semibold text-slate-900 dark:text-white">Konfigurierte Konten:</h3>
+                    <template x-for="(account, index) in accounts" :key="index">
+                        <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 border-slate-200 dark:border-slate-600">
+                            <div class="flex items-center justify-between">
+                                <div class="flex-1">
+                                    <h4 class="font-semibold text-slate-900 dark:text-white" x-text="account.name"></h4>
+                                    <p class="text-sm text-slate-600 dark:text-slate-400" x-text="account.username + ' @ ' + account.imap_host"></p>
+                                </div>
+                                <button @click="removeAccount(index)" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                                    <i data-lucide="trash-2" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Add Account Form -->
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                    <h3 class="font-semibold text-blue-900 dark:text-blue-200 mb-4 flex items-center gap-2">
+                        <i data-lucide="plus-circle" class="w-5 h-5"></i>
+                        <span x-show="editingIndex === null">Neues Konto hinzufügen</span>
+                        <span x-show="editingIndex !== null">Konto bearbeiten</span>
+                    </h3>
+
+                    <div class="space-y-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Konto-Name</label>
+                                <input type="text" x-model="newAccount.name" placeholder="z.B. Gmail, iCloud, Arbeit"
+                                       class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IMAP Server</label>
+                                <input type="text" x-model="newAccount.imap_host" placeholder="z.B. imap.gmail.com"
+                                       class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IMAP Port</label>
+                                <input type="number" x-model="newAccount.imap_port" placeholder="993"
+                                       class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                            </div>
+                            <div>
+                                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Benutzername</label>
+                                <input type="text" x-model="newAccount.username" placeholder="deine.email@gmail.com"
+                                       class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Passwort</label>
+                            <div class="relative">
+                                <input :type="showPassword ? 'text' : 'password'" x-model="newAccount.password" placeholder="Dein Passwort"
+                                       class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white pr-10">
+                                <button @click="showPassword = !showPassword" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+                                    <i :data-lucide="showPassword ? 'eye-off' : 'eye'" class="w-5 h-5"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quellordner</label>
+                            <input type="text" x-model="newAccount.source_folder" placeholder="INBOX"
+                                   class="w-full px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                        </div>
+
+                        <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+                            <template x-for="(category, catIndex) in config.categories" :key="catIndex">
+                                <div>
+                                    <label class="block text-xs font-medium text-slate-600 dark:text-slate-400 mb-1" x-text="category"></label>
+                                    <input type="text" x-model="newAccount.target_folders[category]" :placeholder="category.charAt(0).toUpperCase() + category.slice(1)"
+                                           class="w-full px-2 py-1.5 text-sm rounded border dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                                </div>
+                            </template>
+                        </div>
+
+                        <div class="flex gap-2">
+                            <button @click="addAccount()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium flex items-center gap-2">
+                                <i data-lucide="plus" class="w-4 h-4"></i>
+                                <span x-show="editingIndex === null">Hinzufügen</span>
+                                <span x-show="editingIndex !== null">Aktualisieren</span>
+                            </button>
+                            <button x-show="editingIndex !== null" @click="cancelEdit()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium">
+                                Abbrechen
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Quick Templates -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                    <h3 class="font-semibold text-slate-900 dark:text-white mb-3">Schnell-Vorlagen:</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
+                        <button @click="applyTemplate('gmail')" class="p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-primary-500 text-left transition-colors">
+                            <div class="font-semibold text-slate-900 dark:text-white">Gmail</div>
+                            <div class="text-xs text-slate-600 dark:text-slate-400">imap.gmail.com:993</div>
+                        </button>
+                        <button @click="applyTemplate('icloud')" class="p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-primary-500 text-left transition-colors">
+                            <div class="font-semibold text-slate-900 dark:text-white">iCloud</div>
+                            <div class="text-xs text-slate-600 dark:text-slate-400">imap.mail.me.com:993</div>
+                        </button>
+                        <button @click="applyTemplate('outlook')" class="p-3 bg-white dark:bg-slate-800 rounded-lg border hover:border-primary-500 text-left transition-colors">
+                            <div class="font-semibold text-slate-900 dark:text-white">Outlook</div>
+                            <div class="text-xs text-slate-600 dark:text-slate-400">outlook.office365.com:993</div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 4: Categories -->
+        <div x-show="currentStep === 3" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="folder" class="w-6 h-6 text-primary-600"></i>
+                Kategorien anpassen
+            </h2>
+
+            <div class="space-y-4">
+                <p class="text-slate-600 dark:text-slate-400">
+                    Wählen Sie aus, welche Kategorien aktiviert sein sollen. Die Reihenfolge bestimmt die Priorität der Regeln.
+                </p>
+
+                <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                    <template x-for="(category, index) in config.categories" :key="index">
+                        <label class="relative cursor-pointer">
+                            <input type="checkbox" x-model="activeCategories" :value="category" class="peer sr-only">
+                            <div class="p-3 rounded-lg border-2 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20">
+                                <div class="flex items-center gap-2">
+                                    <span class="w-2 h-2 rounded-full" :class="activeCategories.includes(category) ? 'bg-primary-500' : 'bg-slate-300'"></span>
+                                    <span class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="category"></span>
+                                </div>
+                            </div>
+                        </label>
+                    </template>
+                </div>
+
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-200 mb-2">Empfehlung</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-300">
+                        Aktivieren Sie alle Kategorien für die beste Klassifizierung. Sie können später einzelne Kategorien in der Konfiguration deaktivieren.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: AI Model -->
+        <div x-show="currentStep === 4" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="cpu" class="w-6 h-6 text-primary-600"></i>
+                KI-Modell wählen
+            </h2>
+
+            <div class="space-y-4">
+                <p class="text-slate-600 dark:text-slate-400">
+                    Wählen Sie das KI-Modell für die Email-Klassifizierung. Für M1 Pro mit 16GB RAM wird llama3.1:8b empfohlen.
+                </p>
+
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <!-- llama3.1:8b -->
+                    <label class="cursor-pointer">
+                        <input type="radio" x-model="config.model" value="llama3.1:8b" class="peer sr-only">
+                        <div class="p-4 rounded-lg border-2 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 hover:border-primary-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-slate-900 dark:text-white">llama3.1:8b</h3>
+                                <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded text-xs">Empfohlen</span>
+                            </div>
+                            <div class="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                                <p>⚡ 1.2s pro Email</p>
+                                <p>🎯 92% Genauigkeit</p>
+                                <p>💾 7GB RAM</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- gemma4:e4b -->
+                    <label class="cursor-pointer">
+                        <input type="radio" x-model="config.model" value="gemma4:e4b" class="peer sr-only">
+                        <div class="p-4 rounded-lg border-2 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 hover:border-primary-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-slate-900 dark:text-white">gemma4:e4b</h3>
+                                <span class="px-2 py-1 bg-purple-100 dark:bg-purple-900 text-purple-700 dark:text-purple-200 rounded text-xs">Präzise</span>
+                            </div>
+                            <div class="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                                <p>🐌 2.0s pro Email</p>
+                                <p>🎯 95% Genauigkeit</p>
+                                <p>💾 10GB RAM</p>
+                            </div>
+                        </div>
+                    </label>
+
+                    <!-- phi3:mini -->
+                    <label class="cursor-pointer">
+                        <input type="radio" x-model="config.model" value="phi3:mini" class="peer sr-only">
+                        <div class="p-4 rounded-lg border-2 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 hover:border-primary-300">
+                            <div class="flex items-center justify-between mb-2">
+                                <h3 class="font-semibold text-slate-900 dark:text-white">phi3:mini</h3>
+                                <span class="px-2 py-1 bg-orange-100 dark:bg-orange-900 text-orange-700 dark:text-orange-200 rounded text-xs">Schnell</span>
+                            </div>
+                            <div class="space-y-1 text-sm text-slate-600 dark:text-slate-400">
+                                <p>🚀 0.8s pro Email</p>
+                                <p>🎯 88% Genauigkeit</p>
+                                <p>💾 5GB RAM</p>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 6: Paperless Integration -->
+        <div x-show="currentStep === 5" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="clock" class="w-6 h-6 text-primary-600"></i>
+                Paperless-ngx Integration
+            </h2>
+
+            <div class="space-y-6">
+                <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg">
+                    <h3 class="font-semibold text-blue-900 dark:text-blue-200 mb-2">Warum 30 Minuten?</h3>
+                    <p class="text-sm text-blue-700 dark:text-blue-300">
+                        Paperless-ngx benötigt ca. 30 Minuten um PDFs aus Emails zu extrahieren.
+                        Wenn Emails sofort verschoben werden, kann Paperless die PDFs nicht finden.
+                    </p>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2">Verzögerung (Minuten)</label>
+                    <input type="range" x-model="config.delay_minutes" min="0" max="120" step="5"
+                           class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer">
+                    <div class="flex justify-between text-sm text-slate-600 dark:text-slate-400 mt-1">
+                        <span>Sofort (0min)</span>
+                        <span class="font-semibold text-primary-600" x-text="config.delay_minutes + ' Minuten'"></span>
+                        <span>2 Stunden</span>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h4 class="font-semibold text-yellow-900 dark:text-yellow-200 mb-2 flex items-center gap-2">
+                        <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                        Wichtiger Hinweis
+                    </h4>
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                        Wenn Sie Paperless-ngx <strong>nicht</strong> verwenden, können Sie die Verzögerung auf 0 Minuten setzen.
+                        Ansonsten wird <strong>30 Minuten</strong> empfohlen.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 7: Summary -->
+        <div x-show="currentStep === 6" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="check-circle" class="w-6 h-6 text-primary-600"></i>
+                Zusammenfassung
+            </h2>
+
+            <div class="space-y-6">
+                <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                    <h3 class="font-semibold text-green-900 dark:text-green-200 mb-3">✅ Ihre Konfiguration:</h3>
+                    <div class="space-y-2 text-sm">
+                        <p><strong>KI-Modell:</strong> <span x-text="config.model"></span></p>
+                        <p><strong>Email-Konten:</strong> <span x-text="accounts.length"></span></p>
+                        <p><strong>Aktive Kategorien:</strong> <span x-text="activeCategories.length"></span></p>
+                        <p><strong>Papless-Verzögerung:</strong> <span x-text="config.delay_minutes + ' Minuten'"></span></p>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                    <h3 class="font-semibold text-slate-900 dark:text-white mb-3">📧 Konfigurierte Konten:</h3>
+                    <div class="space-y-2">
+                        <template x-for="(account, index) in accounts" :key="index">
+                            <div class="flex items-center justify-between py-2 border-b dark:border-slate-600 last:border-0">
+                                <div>
+                                    <div class="font-medium text-slate-900 dark:text-white" x-text="account.name"></div>
+                                    <div class="text-sm text-slate-600 dark:text-slate-400" x-text="account.username"></div>
+                                </div>
+                                <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded text-xs">Bereit</span>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-purple-50 dark:bg-purple-900/20 rounded-lg">
+                    <h3 class="font-semibold text-purple-900 dark:text-purple-200 mb-2">🚀 Nächste Schritte:</h3>
+                    <ol class="space-y-1 text-sm text-purple-700 dark:text-purple-300 list-decimal list-inside">
+                        <li>Konfiguration speichern</li>
+                        <li>Ersten Testlauf starten (Dry-Run)</li>
+                        <li>Ergebnisse im Dashboard prüfen</li>
+                        <li>Echte Sortierung starten</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+
+        <!-- Navigation -->
+        <div class="flex items-center justify-between mt-8 pt-6 border-t dark:border-slate-700">
+            <button x-show="currentStep > 0" @click="previousStep()"
+                    class="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="arrow-left" class="w-4 h-4"></i>
+                Zurück
+            </button>
+
+            <button x-show="currentStep < steps.length - 1" @click="nextStep()"
+                    class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg font-medium transition-all transform hover:scale-105 flex items-center gap-2">
+                Weiter
+                <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            </button>
+
+            <button x-show="currentStep === steps.length - 1" @click="finishSetup()"
+                    class="px-6 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white rounded-lg font-medium transition-all transform hover:scale-105 flex items-center gap-2">
+                <i data-lucide="check" class="w-4 h-4"></i>
+                Setup abschließen
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function setupWizard() {
+    return {
+        currentStep: 0,
+        steps: [
+            { title: 'Willkommen' },
+            { title: 'Ollama' },
+            { title: 'Konten' },
+            { title: 'Kategorien' },
+            { title: 'KI-Modell' },
+            { title: 'Paperless' },
+            { title: 'Fertig' }
+        ],
+        config: {
+            ollama_url: 'http://127.0.0.1:11434',
+            model: 'llama3.1:8b',
+            delay_minutes: 30,
+            categories: ['paperless', 'apple', 'finanzen', 'vertraege', 'einkauf', 'reisen', 'rettung', 'arbeit', 'politik', 'behoerden', 'wohnen', 'tech', 'community', 'newsletter', 'privat']
+        },
+        accounts: [],
+        activeCategories: [],
+        newAccount: {
+            name: '',
+            imap_host: '',
+            imap_port: 993,
+            username: '',
+            password: '',
+            source_folder: 'INBOX',
+            target_folders: {}
+        },
+        editingIndex: null,
+        showPassword: false,
+        ollamaChecked: false,
+        ollamaInstalled: false,
+        modelInstalled: false,
+
+        initWizard() {
+            this.activeCategories = [...this.config.categories];
+            this.$nextTick(() => lucide.createIcons());
+
+            // Initialize target folders
+            this.config.categories.forEach(cat => {
+                this.newAccount.target_folders[cat] = cat.charAt(0).toUpperCase() + cat.slice(1);
+            });
+        },
+
+        async checkOllama() {
+            this.ollamaChecked = false;
+            try {
+                const response = await fetch(this.config.ollama_url + '/api/tags');
+                if (response.ok) {
+                    this.ollamaInstalled = true;
+                    const data = await response.json();
+                    this.modelInstalled = data.models?.some(m => m.name.includes('llama3.1:8b'));
+                } else {
+                    this.ollamaInstalled = false;
+                }
+            } catch (error) {
+                this.ollamaInstalled = false;
+            }
+            this.ollamaChecked = true;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        addAccount() {
+            if (!this.newAccount.name || !this.newAccount.imap_host || !this.newAccount.username || !this.newAccount.password) {
+                showNotification('Bitte alle Pflichtfelder ausfüllen', 'error');
+                return;
+            }
+
+            if (this.editingIndex !== null) {
+                this.accounts[this.editingIndex] = {...this.newAccount};
+                this.editingIndex = null;
+            } else {
+                this.accounts.push({...this.newAccount});
+            }
+
+            this.resetAccountForm();
+            showNotification('Konto gespeichert!', 'success');
+        },
+
+        editAccount(index) {
+            this.editingIndex = index;
+            this.newAccount = {...this.accounts[index]};
+        },
+
+        removeAccount(index) {
+            if (confirm('Konto wirklich löschen?')) {
+                this.accounts.splice(index, 1);
+                showNotification('Konto gelöscht', 'info');
+            }
+        },
+
+        cancelEdit() {
+            this.editingIndex = null;
+            this.resetAccountForm();
+        },
+
+        resetAccountForm() {
+            this.newAccount = {
+                name: '',
+                imap_host: '',
+                imap_port: 993,
+                username: '',
+                password: '',
+                source_folder: 'INBOX',
+                target_folders: {}
+            };
+            this.config.categories.forEach(cat => {
+                this.newAccount.target_folders[cat] = cat.charAt(0).toUpperCase() + cat.slice(1);
+            });
+            this.showPassword = false;
+        },
+
+        applyTemplate(type) {
+            const templates = {
+                gmail: {
+                    imap_host: 'imap.gmail.com',
+                    imap_port: 993,
+                    source_folder: 'INBOX'
+                },
+                icloud: {
+                    imap_host: 'imap.mail.me.com',
+                    imap_port: 993,
+                    source_folder: 'INBOX'
+                },
+                outlook: {
+                    imap_host: 'outlook.office365.com',
+                    imap_port: 993,
+                    source_folder: 'INBOX'
+                }
+            };
+
+            if (templates[type]) {
+                Object.assign(this.newAccount, templates[type]);
+            }
+        },
+
+        nextStep() {
+            if (this.currentStep === 1 && !this.ollamaInstalled) {
+                showNotification('Bitte Ollama installieren', 'error');
+                return;
+            }
+
+            if (this.currentStep === 1 && !this.modelInstalled) {
+                showNotification('Bitte llama3.1:8b herunterladen', 'error');
+                return;
+            }
+
+            if (this.currentStep === 2 && this.accounts.length === 0) {
+                showNotification('Bitte mindestens ein Konto hinzufügen', 'error');
+                return;
+            }
+
+            this.currentStep++;
+
+            if (this.currentStep === 1) {
+                this.checkOllama();
+            }
+
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        previousStep() {
+            if (this.currentStep > 0) {
+                this.currentStep--;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async finishSetup() {
+            try {
+                // Prepare config
+                const finalConfig = {
+                    global: this.config,
+                    accounts: this.accounts.map(acc => ({
+                        ...acc,
+                        password_env: acc.name.toUpperCase() + '_PASSWORD'
+                    }))
+                };
+
+                // Save config
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(finalConfig)
+                });
+
+                if (await response.json()) {
+                    showNotification('Setup erfolgreich! Weiterleitung...', 'success');
+                    setTimeout(() => {
+                        window.location.href = '/';
+                    }, 2000);
+                } else {
+                    showNotification('Fehler beim Speichern', 'error');
+                }
+            } catch (error) {
+                showNotification('Fehler: ' + error, 'error');
+            }
+        }
+    };
+}
+</script>
+{% endblock %}

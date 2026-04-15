@@ -1,0 +1,337 @@
+{% extends "base.html" %}
+
+{% block title %}Logs - Mail AI Sorter{% endblock %}
+
+{% block head %}
+<style>
+    .log-container {
+        @apply bg-slate-900 dark:bg-slate-950 rounded-xl shadow-lg p-6 font-mono text-sm;
+    }
+    .log-entry {
+        @apply py-1 px-2 rounded hover:bg-slate-800 dark:hover:bg-slate-900;
+    }
+    .log-timestamp {
+        @apply text-slate-500 dark:text-slate-600 mr-2;
+    }
+    .log-level-info {
+        @apply text-blue-400;
+    }
+    .log-level-warn {
+        @apply text-yellow-400;
+    }
+    .log-level-error {
+        @apply text-red-400;
+    }
+    .log-level-success {
+        @apply text-green-400;
+    }
+    .log-message {
+        @apply text-slate-300 dark:text-slate-200;
+    }
+</style>
+{% endblock %}
+
+{% block nav_logs %}active{% endblock %}
+{% block nav_mobile_logs %}active{% endblock %}
+
+{% block content %}
+<div x-data="logs()" x-init="initLogs()">
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in">
+        <h1 class="text-4xl font-bold gradient-text mb-2">Logs</h1>
+        <p class="text-slate-600 dark:text-slate-400">
+            Live-Ansicht der Mail AI Sorter Aktivität
+        </p>
+    </div>
+
+    <!-- Controls -->
+    <div class="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 mb-6">
+        <div class="flex flex-wrap items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <!-- Auto-Refresh Toggle -->
+                <label class="flex items-center gap-2 cursor-pointer">
+                    <input type="checkbox" x-model="autoRefresh" class="w-4 h-4 text-primary-600 rounded focus:ring-primary-500">
+                    <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Auto-Refresh</span>
+                </label>
+
+                <!-- Refresh Interval -->
+                <select x-model="refreshInterval" class="px-3 py-1.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200">
+                    <option :value="2000">2 Sekunden</option>
+                    <option :value="5000">5 Sekunden</option>
+                    <option :value="10000">10 Sekunden</option>
+                    <option :value="30000">30 Sekunden</option>
+                </select>
+
+                <!-- Log Level Filter -->
+                <select x-model="logFilter" class="px-3 py-1.5 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200">
+                    <option value="all">Alle Logs</option>
+                    <option value="info">Nur Info</option>
+                    <option value="warn">Nur Warnungen</option>
+                    <option value="error">Nur Fehler</option>
+                </select>
+            </div>
+
+            <div class="flex items-center gap-2">
+                <!-- Pause/Resume -->
+                <button @click="togglePause()"
+                        class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <i :data-lucide="isPaused ? 'play' : 'pause'" class="w-4 h-4"></i>
+                    <span x-text="isPaused ? 'Fortsetzen' : 'Pausieren'"></span>
+                </button>
+
+                <!-- Refresh Now -->
+                <button @click="loadLogs()"
+                        class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <i data-lucide="refresh-cw" :class="{'animate-spin': isLoading}" class="w-4 h-4"></i>
+                    Aktualisieren
+                </button>
+
+                <!-- Clear -->
+                <button @click="clearLogs()"
+                        class="px-4 py-2 bg-red-500 hover:bg-red-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <i data-lucide="trash-2" class="w-4 h-4"></i>
+                    Löschen
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="mt-4 pt-4 border-t dark:border-slate-700">
+            <div class="flex flex-wrap items-center gap-6 text-sm">
+                <div class="flex items-center gap-2">
+                    <span class="text-slate-600 dark:text-slate-400">Gesamt:</span>
+                    <span class="font-medium text-slate-900 dark:text-white" x-text="filteredLogs.length"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-blue-400"></span>
+                    <span class="text-slate-600 dark:text-slate-400">Info:</span>
+                    <span class="font-medium text-slate-900 dark:text-white" x-text="getLogCount('info')"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-yellow-400"></span>
+                    <span class="text-slate-600 dark:text-slate-400">Warnungen:</span>
+                    <span class="font-medium text-slate-900 dark:text-white" x-text="getLogCount('warn')"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-red-400"></span>
+                    <span class="text-slate-600 dark:text-slate-400">Fehler:</span>
+                    <span class="font-medium text-slate-900 dark:text-white" x-text="getLogCount('error')"></span>
+                </div>
+                <div class="flex items-center gap-2">
+                    <span class="w-2 h-2 rounded-full bg-green-400"></span>
+                    <span class="text-slate-600 dark:text-slate-400">Erfolg:</span>
+                    <span class="font-medium text-slate-900 dark:text-white" x-text="getLogCount('success')"></span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Log Viewer -->
+    <div class="log-container">
+        <div class="flex items-center justify-between mb-4 pb-4 border-b dark:border-slate-800">
+            <h3 class="text-lg font-semibold text-slate-200 flex items-center gap-2">
+                <i data-lucide="file-text" class="w-5 h-5 text-primary-400"></i>
+                mail_sorter.log
+                <span x-show="!isPaused" class="flex items-center gap-1 text-xs text-green-400">
+                    <span class="w-2 h-2 rounded-full bg-green-400 animate-pulse"></span>
+                    Live
+                </span>
+            </h3>
+            <div class="flex items-center gap-2">
+                <!-- Scroll to bottom -->
+                <button @click="scrollToBottom()"
+                        class="p-2 text-slate-400 hover:text-slate-200 hover:bg-slate-800 rounded-lg transition-colors"
+                        title="Nach unten scrollen">
+                    <i data-lucide="arrow-down" class="w-4 h-4"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Log Entries -->
+        <div x-ref="logContainer" class="max-h-[600px] overflow-y-auto space-y-1">
+            <template x-for="(log, index) in displayLogs" :key="index">
+                <div class="log-entry">
+                    <span class="log-timestamp" x-text="log.timestamp"></span>
+                    <span :class="'log-level-' + log.level" x-text="log.level.toUpperCase()"></span>
+                    <span class="log-message" x-text="log.message"></span>
+                </div>
+            </template>
+
+            <!-- Empty State -->
+            <div x-show="filteredLogs.length === 0" class="text-center py-12 text-slate-500">
+                <i data-lucide="inbox" class="w-12 h-12 mx-auto mb-4 opacity-50"></i>
+                <p>Keine Logs gefunden</p>
+            </div>
+
+            <!-- Loading State -->
+            <div x-show="isLoading && filteredLogs.length === 0" class="text-center py-12 text-slate-500">
+                <div class="spinner mx-auto mb-4"></div>
+                <p>Lade Logs...</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Export Options -->
+    <div class="mt-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6">
+        <h3 class="text-lg font-semibold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+            <i data-lucide="download" class="w-5 h-5 text-primary-600"></i>
+            Export
+        </h3>
+        <div class="flex flex-wrap gap-3">
+            <button @click="exportLogs('txt')"
+                    class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="file" class="w-4 h-4"></i>
+                Als .txt exportieren
+            </button>
+            <button @click="exportLogs('json')"
+                    class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="braces" class="w-4 h-4"></i>
+                Als .json exportieren
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function logs() {
+    return {
+        logs: [],
+        autoRefresh: true,
+        refreshInterval: 5000,
+        logFilter: 'all',
+        isPaused: false,
+        isLoading: false,
+        refreshTimer: null,
+
+        initLogs() {
+            this.loadLogs();
+            this.$nextTick(() => lucide.createIcons());
+            this.startAutoRefresh();
+        },
+
+        startAutoRefresh() {
+            if (this.refreshTimer) clearInterval(this.refreshTimer);
+            if (this.autoRefresh && !this.isPaused) {
+                this.refreshTimer = setInterval(() => {
+                    if (!this.isPaused) this.loadLogs();
+                }, this.refreshInterval);
+            }
+        },
+
+        async loadLogs() {
+            this.isLoading = true;
+
+            try {
+                const response = await fetch('/api/logs');
+                const rawLogs = await response.json();
+
+                this.logs = rawLogs.map(line => this.parseLog(line)).filter(log => log);
+            } catch (error) {
+                console.error('Error loading logs:', error);
+            } finally {
+                this.isLoading = false;
+            }
+        },
+
+        parseLog(line) {
+            if (!line.trim()) return null;
+
+            // Versuche verschiedene Log-Formate zu parsen
+            const timestampRegex = /(\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2})/;
+            const match = line.match(timestampRegex);
+
+            if (match) {
+                const timestamp = match[1];
+                const message = line.substring(match[0].length).trim();
+
+                let level = 'info';
+                if (message.toLowerCase().includes('error') || message.toLowerCase().includes('fehler')) {
+                    level = 'error';
+                } else if (message.toLowerCase().includes('warn') || message.toLowerCase().includes('warnung')) {
+                    level = 'warn';
+                } else if (message.toLowerCase().includes('success') || message.toLowerCase().includes('erfolg')) {
+                    level = 'success';
+                }
+
+                return { timestamp, message, level };
+            }
+
+            // Fallback für Zeilen ohne Timestamp
+            return {
+                timestamp: new Date().toISOString().slice(0, 19).replace('T', ' '),
+                message: line,
+                level: 'info'
+            };
+        },
+
+        get filteredLogs() {
+            if (this.logFilter === 'all') return this.logs;
+            return this.logs.filter(log => log.level === this.logFilter);
+        },
+
+        get displayLogs() {
+            // Zeige nur die letzten 100 Einträge für Performance
+            return this.filteredLogs.slice(-100);
+        },
+
+        getLogCount(level) {
+            return this.filteredLogs.filter(log => log.level === level).length;
+        },
+
+        togglePause() {
+            this.isPaused = !this.isPaused;
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        clearLogs() {
+            if (confirm('Möchten Sie alle Logs löschen?')) {
+                this.logs = [];
+                showNotification('Logs gelöscht', 'info');
+            }
+        },
+
+        scrollToBottom() {
+            const container = this.$refs.logContainer;
+            if (container) {
+                container.scrollTop = container.scrollHeight;
+            }
+        },
+
+        exportLogs(format) {
+            let content, filename, type;
+
+            if (format === 'json') {
+                content = JSON.stringify(this.filteredLogs, null, 2);
+                filename = 'mail-sorter-logs.json';
+                type = 'application/json';
+            } else {
+                content = this.filteredLogs
+                    .map(log => `[${log.timestamp}] [${log.level.toUpperCase()}] ${log.message}`)
+                    .join('\n');
+                filename = 'mail-sorter-logs.txt';
+                type = 'text/plain';
+            }
+
+            const blob = new Blob([content], { type });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            a.click();
+            URL.revokeObjectURL(url);
+
+            showNotification(`Logs als .${format} exportiert`, 'success');
+        }
+    };
+}
+
+// Watch für Auto-Refresh Änderungen
+Alpine.effect(() => {
+    if (window.Alpine?.store?.logs) {
+        window.Alpine.store.logs.startAutoRefresh();
+    }
+});
+</script>
+{% endblock %}

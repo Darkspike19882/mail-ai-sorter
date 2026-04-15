@@ -112,22 +112,25 @@ def get_logs():
 
 @app.route('/')
 def index():
-    """Hauptseite"""
+    """Dashboard (Hauptseite)"""
     stats = get_stats()
-    config = load_config()
-    return render_template('index.html', stats=stats, config=config, title='Mail AI Sorter')
+    return render_template('dashboard.html', stats=stats)
 
 @app.route('/config')
 def config_page():
     """Konfigurationsseite"""
     config = load_config()
-    return render_template('config.html', config=config, title='Konfiguration')
+    return render_template('configuration.html', config=config)
 
 @app.route('/logs')
 def logs_page():
     """Log-Seite"""
-    logs = get_logs()
-    return render_template('logs.html', logs=logs, title='Logs')
+    return render_template('logs.html')
+
+@app.route('/setup')
+def setup_page():
+    """Setup-Assistent"""
+    return render_template('setup.html')
 
 @app.route('/api/stats')
 def api_stats():
@@ -154,6 +157,12 @@ def api_run():
 
     result = run_sorter(dry_run=dry_run, max_mails=max_mails)
     return jsonify(result)
+
+@app.route('/api/logs')
+def api_logs():
+    """Logs API"""
+    logs = get_logs()
+    return jsonify(logs)
 
 @app.route('/api/search')
 def api_search():
@@ -212,8 +221,8 @@ def api_search():
 if __name__ == '__main__':
     print("🌐 Mail AI Sorter Web UI")
     print("=" * 50)
-    print("Starte Web-Server auf http://localhost:5000")
+    print("Starte Web-Server auf http://localhost:5001")
     print("Drücke STRG+C zum Beenden")
     print("=" * 50)
 
-    app.run(debug=False, host='127.0.0.1', port=5000)
+    app.run(debug=False, host='127.0.0.1', port=5001)

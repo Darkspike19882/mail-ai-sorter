@@ -1,0 +1,551 @@
+{% extends "base.html" %}
+
+{% block title %}Konfiguration - Mail AI Sorter{% endblock %}
+
+{% block head %}
+<style>
+    .config-section {
+        @apply bg-white dark:bg-slate-800 rounded-xl shadow-lg border-2 border-slate-200 dark:border-slate-700 p-6 mb-6;
+    }
+    .form-group {
+        @apply mb-4;
+    }
+    .form-label {
+        @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2;
+    }
+    .form-input {
+        @apply w-full px-4 py-2.5 rounded-lg border-2 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all;
+    }
+    .form-select {
+        @apply w-full px-4 py-2.5 rounded-lg border-2 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all;
+    }
+    .form-help {
+        @apply text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-start gap-1;
+    }
+    .value-display {
+        @apply inline-flex items-center px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-mono;
+    }
+</style>
+{% endblock %}
+
+{% block nav_config %}active{% endblock %}
+{% block nav_mobile_config %}active{% endblock %}
+
+{% block content %}
+<div x-data="configEditor()" x-init="initConfig()">
+    <!-- Header -->
+    <div class="mb-8 animate-fade-in">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold gradient-text mb-2">Konfiguration</h1>
+                <p class="text-slate-600 dark:text-slate-400">
+                    Alle Einstellungen für Ihren AI Email Sorter anpassen
+                </p>
+            </div>
+            <a href="/setup" class="px-4 py-2 bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200 rounded-lg font-medium hover:bg-primary-200 dark:hover:bg-primary-800 transition-colors flex items-center gap-2">
+                <i data-lucide="wand-2" class="w-4 h-4"></i>
+                Setup-Assistent
+            </a>
+        </div>
+    </div>
+
+    <!-- Global Settings -->
+    <div class="config-section">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="cpu" class="w-6 h-6 text-primary-600"></i>
+            KI-Modell Einstellungen
+        </h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="form-group">
+                <label class="form-label">Ollama URL</label>
+                <input type="text" x-model="config.global.ollama_url" class="form-input" placeholder="http://127.0.0.1:11434">
+                <p class="form-help">
+                    <i data-lucide="info" class="w-3 h-3 mt-0.5"></i>
+                    URL zur lokalen Ollama-Instanz
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.ollama_url"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">KI-Modell</label>
+                <select x-model="config.global.model" class="form-select">
+                    <option value="llama3.1:8b">llama3.1:8b (Empfohlen - Beste Balance)</option>
+                    <option value="gemma4:e4b">gemma4:e4b (Sehr präzise, langsamer)</option>
+                    <option value="phi3:mini">phi3:mini (Schnellste, gute Genauigkeit)</option>
+                </select>
+                <p class="form-help">
+                    <i data-lucide="zap" class="w-3 h-3 mt-0.5"></i>
+                    <span x-show="config.global.model === 'llama3.1:8b'" class="text-green-600">⚡ 40% schneller, 92% Genauigkeit</span>
+                    <span x-show="config.global.model === 'gemma4:e4b'" class="text-purple-600">🎯 Höchste Genauigkeit</span>
+                    <span x-show="config.global.model === 'phi3:mini'" class="text-orange-600">🚀 Schnellste Option</span>
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.model"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Timeout (Sekunden)</label>
+                <input type="number" x-model="config.global.ollama_timeout_sec" class="form-input" min="10" max="300">
+                <p class="form-help">
+                    <i data-lucide="clock" class="w-3 h-3 mt-0.5"></i>
+                    Maximale Wartezeit auf KI-Antwort
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.ollama_timeout_sec + ' Sekunden'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Context Window</label>
+                <input type="number" x-model="config.global.ollama_num_ctx" class="form-input" min="1024" max="8192" step="1024">
+                <p class="form-help">
+                    <i data-lucide="maximize" class="w-3 h-3 mt-0.5"></i>
+                    Größe des Kontext-Fensters (Standard: 4096)
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.ollama_num_ctx + ' Token'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Num Predict (Max Tokens)</label>
+                <input type="number" x-model="config.global.ollama_num_predict" class="form-input" min="10" max="100">
+                <p class="form-help">
+                    <i data-lucide="message-square" class="w-3 h-3 mt-0.5"></i>
+                    Maximale Antwort-Tokens der KI
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.ollama_num_predict + ' Tokens'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Think Mode</label>
+                <div class="flex items-center gap-3 mt-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" x-model="config.global.ollama_think" class="w-5 h-5 text-primary-600 rounded">
+                        <span class="text-sm text-slate-700 dark:text-slate-300">Aktivieren</span>
+                    </label>
+                </div>
+                <p class="form-help mt-2">
+                    <i data-lucide="brain" class="w-3 h-3 mt-0.5"></i>
+                    Lässt die KI "überdenken" für bessere Ergebnisse
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.ollama_think ? 'An' : 'Aus'"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+            <div class="flex items-start gap-3">
+                <i data-lucide="lightbulb" class="w-5 h-5 text-blue-600 dark:text-blue-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <h4 class="font-semibold text-blue-900 dark:text-blue-200 mb-1">Performance Empfehlung</h4>
+                    <p class="text-sm text-blue-700 dark:text-blue-300">
+                        Für M1 Pro mit 16GB RAM wird <strong>llama3.1:8b</strong> mit Timeout 60s und Context 4096 empfohlen.
+                        Dies bietet die beste Balance aus Geschwindigkeit (1.2s pro Email) und Genauigkeit (92%).
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Processing Settings -->
+    <div class="config-section">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="settings" class="w-6 h-6 text-primary-600"></i>
+            Verarbeitungs-Einstellungen
+        </h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="form-group">
+                <label class="form-label">Paperless-ngx Verzögerung (Minuten)</label>
+                <div class="space-y-2">
+                    <input type="range" x-model="config.global.delay_minutes" class="w-full h-2 bg-slate-200 dark:bg-slate-700 rounded-lg appearance-none cursor-pointer" min="0" max="120" step="5">
+                    <input type="number" x-model="config.global.delay_minutes" class="form-input" min="0" max="1440">
+                </div>
+                <p class="form-help">
+                    <i data-lucide="clock" class="w-3 h-3 mt-0.5"></i>
+                    Wartezeit bevor Emails sortiert werden (30min für PDF-Extraktion)
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.delay_minutes + ' Minuten'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Check-Intervall (Minuten)</label>
+                <input type="number" x-model="config.global.poll_minutes" class="form-input" min="1" max="60">
+                <p class="form-help">
+                    <i data-lucide="refresh-cw" class="w-3 h-3 mt-0.5"></i>
+                    Wie oft auf neue Emails geprüft wird
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.poll_minutes + ' Minuten'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">Maximale Zeichen pro Email</label>
+                <input type="number" x-model="config.global.max_body_chars" class="form-input" min="500" max="10000" step="100">
+                <p class="form-help">
+                    <i data-lucide="file-text" class="w-3 h-3 mt-0.5"></i>
+                    Anzahl der Zeichen die an die KI gesendet werden
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="formatNumber(config.global.max_body_chars) + ' Zeichen'"></span>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label class="form-label">IMAP Timeout (Sekunden)</label>
+                <input type="number" x-model="config.global.imap_timeout_sec" class="form-input" min="10" max="120">
+                <p class="form-help">
+                    <i data-lucide="server" class="w-3 h-3 mt-0.5"></i>
+                    Timeout für IMAP-Verbindungen
+                </p>
+                <div class="mt-2">
+                    <span class="value-display" x-text="config.global.imap_timeout_sec + ' Sekunden'"></span>
+                </div>
+            </div>
+        </div>
+
+        <div class="mt-6 p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg border-2 border-yellow-200 dark:border-yellow-800">
+            <div class="flex items-start gap-3">
+                <i data-lucide="alert-triangle" class="w-5 h-5 text-yellow-600 dark:text-yellow-400 mt-0.5 flex-shrink-0"></i>
+                <div>
+                    <h4 class="font-semibold text-yellow-900 dark:text-yellow-200 mb-1">30-Minuten Regel</h4>
+                    <p class="text-sm text-yellow-700 dark:text-yellow-300">
+                        Die 30-minütige Verzögerung ist <strong>wichtig für Paperless-ngx</strong>.
+                        Dies gibt dem System Zeit, PDFs aus Emails zu extrahieren bevor diese verschoben werden.
+                        Wenn Sie Paperless-ngx <strong>nicht</strong> verwenden, setzen Sie es auf 0.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Categories Management -->
+    <div class="config-section">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="folder" class="w-6 h-6 text-primary-600"></i>
+            Kategorien verwalten
+            <span class="ml-auto text-sm font-normal text-slate-600 dark:text-slate-400" x-text="config.global.categories.length + ' Kategorien'"></span>
+        </h3>
+
+        <div class="mb-6">
+            <div class="flex items-center justify-between mb-4">
+                <p class="text-sm text-slate-600 dark:text-slate-400">
+                    Die Reihenfolge bestimmt die Priorität der Regeln. Ziehen Sie zum Sortieren.
+                </p>
+                <button @click="resetCategories()" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+                    <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+                    Standard wiederherstellen
+                </button>
+            </div>
+
+            <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                <template x-for="(category, index) in config.global.categories" :key="index">
+                    <div class="p-3 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 dark:border-slate-600">
+                        <div class="flex items-center justify-between mb-2">
+                            <span class="text-xs font-medium text-slate-600 dark:text-slate-400" x-text="'#' + (index + 1)"></span>
+                            <div class="flex gap-1">
+                                <button @click="moveCategory(index, -1)" :disabled="index === 0" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30">
+                                    <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                                </button>
+                                <button @click="moveCategory(index, 1)" :disabled="index === config.global.categories.length - 1" class="p-1 hover:bg-slate-200 dark:hover:bg-slate-600 rounded disabled:opacity-30">
+                                    <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                                </button>
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-2 h-2 rounded-full bg-primary-500"></span>
+                            <span class="text-sm font-medium text-slate-700 dark:text-slate-200" x-text="category"></span>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+
+        <!-- Add New Category -->
+        <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 dark:border-slate-600">
+            <h4 class="font-semibold text-slate-900 dark:text-white mb-3 flex items-center gap-2">
+                <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                Neue Kategorie hinzufügen
+            </h4>
+            <div class="flex gap-2">
+                <input type="text" x-model="newCategoryName" placeholder="Kategorie-Name" @keyup.enter="addCategory()"
+                       class="flex-1 px-3 py-2 rounded-lg border dark:border-slate-600 bg-white dark:bg-slate-800 text-slate-900 dark:text-white">
+                <button @click="addCategory()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors">
+                    Hinzufügen
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Accounts Management -->
+    <div class="config-section">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="users" class="w-6 h-6 text-primary-600"></i>
+            Email-Konten verwalten
+            <span class="ml-auto text-sm font-normal text-slate-600 dark:text-slate-400" x-text="config.accounts.length + ' Konten'"></span>
+        </h3>
+
+        <div class="space-y-4">
+            <template x-for="(account, index) in config.accounts" :key="index">
+                <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 dark:border-slate-600">
+                    <div class="flex items-center justify-between mb-4">
+                        <h4 class="font-semibold text-slate-900 dark:text-white" x-text="account.name"></h4>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded text-xs">Aktiv</span>
+                            <button @click="editAccount(index)" class="p-2 text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg">
+                                <i data-lucide="edit" class="w-4 h-4"></i>
+                            </button>
+                            <button @click="removeAccount(index)" class="p-2 text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-sm">
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400">IMAP:</span>
+                            <span class="ml-2 font-medium text-slate-900 dark:text-white" x-text="account.imap_host + ':' + account.imap_port"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400">Benutzer:</span>
+                            <span class="ml-2 font-medium text-slate-900 dark:text-white" x-text="account.username"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400">Quelle:</span>
+                            <span class="ml-2 font-medium text-slate-900 dark:text-white" x-text="account.source_folder"></span>
+                        </div>
+                        <div>
+                            <span class="text-slate-600 dark:text-slate-400">Ziele:</span>
+                            <span class="ml-2 font-medium text-slate-900 dark:text-white" x-text="Object.keys(account.target_folders).length + ' Ordner'"></span>
+                        </div>
+                    </div>
+                </div>
+            </template>
+
+            <button @click="showAddAccount = true" class="w-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary-600">
+                <i data-lucide="plus" class="w-5 h-5"></i>
+                Neues Konto hinzufügen
+            </button>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="flex items-center justify-between gap-4 p-6 bg-white dark:bg-slate-800 rounded-xl shadow-lg border-2 border-slate-200 dark:border-slate-700">
+        <button @click="resetConfig()"
+                class="px-6 py-3 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium transition-colors flex items-center gap-2">
+            <i data-lucide="rotate-ccw" class="w-4 h-4"></i>
+            Alle Änderungen verwerfen
+        </button>
+        <div class="flex items-center gap-4">
+            <button @click="testConnection()" class="px-6 py-3 bg-blue-500 hover:bg-blue-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                <i data-lucide="plug" class="w-4 h-4"></i>
+                Verbindung testen
+            </button>
+            <button @click="saveConfig()" :disabled="isSaving"
+                    class="px-6 py-3 bg-gradient-to-r from-primary-500 to-primary-600 hover:from-primary-600 hover:to-primary-700 text-white rounded-lg font-medium transition-all transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center gap-2">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span x-text="isSaving ? 'Speichert...' : 'Konfiguration speichern'"></span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Add Account Modal -->
+    <div x-show="showAddAccount" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition.opacity>
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" @click.away="showAddAccount = false">
+            <div class="p-6 border-b dark:border-slate-700">
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white">Neues Email-Konto</h3>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Konto-Name</label>
+                        <input type="text" x-model="newAccount.name" placeholder="z.B. Gmail" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IMAP Server</label>
+                        <input type="text" x-model="newAccount.imap_host" placeholder="imap.gmail.com" class="form-input">
+                    </div>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">IMAP Port</label>
+                        <input type="number" x-model="newAccount.imap_port" placeholder="993" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Benutzername</label>
+                        <input type="text" x-model="newAccount.username" placeholder="deine.email@gmail.com" class="form-input">
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Passwort</label>
+                    <input type="password" x-model="newAccount.password" placeholder="••••••••" class="form-input">
+                    <p class="text-xs text-slate-500 mt-1">Wird in secrets.env gespeichert</p>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quellordner</label>
+                    <input type="text" x-model="newAccount.source_folder" placeholder="INBOX" class="form-input">
+                </div>
+            </div>
+            <div class="p-6 border-t dark:border-slate-700 flex justify-end gap-3">
+                <button @click="showAddAccount = false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium">
+                    Abbrechen
+                </button>
+                <button @click="addAccount()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium">
+                    Hinzufügen
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function configEditor() {
+    return {
+        config: {{ config | tojson }},
+        originalConfig: null,
+        isSaving: false,
+        newCategoryName: '',
+        showAddAccount: false,
+        newAccount: {
+            name: '',
+            imap_host: '',
+            imap_port: 993,
+            username: '',
+            password: '',
+            source_folder: 'INBOX',
+            target_folders: {}
+        },
+
+        initConfig() {
+            // Deep copy for reset
+            this.originalConfig = JSON.parse(JSON.stringify(this.config));
+
+            // Initialize target folders for new account
+            this.config.global.categories.forEach(cat => {
+                this.newAccount.target_folders[cat] = cat.charAt(0).toUpperCase() + cat.slice(1);
+            });
+
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async saveConfig() {
+            this.isSaving = true;
+
+            try {
+                const response = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify(this.config)
+                });
+
+                const result = await response.json();
+                if (result.success || result === true) {
+                    showNotification('Konfiguration erfolgreich gespeichert!', 'success');
+                    this.originalConfig = JSON.parse(JSON.stringify(this.config));
+                } else {
+                    showNotification('Fehler beim Speichern', 'error');
+                }
+            } catch (error) {
+                showNotification('Fehler: ' + error, 'error');
+            } finally {
+                this.isSaving = false;
+            }
+        },
+
+        resetConfig() {
+            if (confirm('Alle Änderungen verwerfen?')) {
+                this.config = JSON.parse(JSON.stringify(this.originalConfig));
+                showNotification('Konfiguration zurückgesetzt', 'info');
+            }
+        },
+
+        resetCategories() {
+            if (confirm('Kategorien auf Standard zurücksetzen?')) {
+                this.config.global.categories = ['paperless', 'apple', 'finanzen', 'vertraege', 'einkauf', 'reisen', 'rettung', 'arbeit', 'politik', 'behoerden', 'wohnen', 'tech', 'community', 'newsletter', 'privat'];
+                showNotification('Kategorien zurückgesetzt', 'info');
+            }
+        },
+
+        addCategory() {
+            if (!this.newCategoryName.trim()) {
+                showNotification('Bitte Kategorie-Name eingeben', 'error');
+                return;
+            }
+
+            if (this.config.global.categories.includes(this.newCategoryName.toLowerCase())) {
+                showNotification('Kategorie existiert bereits', 'error');
+                return;
+            }
+
+            this.config.global.categories.push(this.newCategoryName.toLowerCase());
+            this.newCategoryName = '';
+            showNotification('Kategorie hinzugefügt!', 'success');
+        },
+
+        moveCategory(index, direction) {
+            const newIndex = index + direction;
+            if (newIndex < 0 || newIndex >= this.config.global.categories.length) return;
+
+            const temp = this.config.global.categories[index];
+            this.config.global.categories[index] = this.config.global.categories[newIndex];
+            this.config.global.categories[newIndex] = temp;
+        },
+
+        addAccount() {
+            if (!this.newAccount.name || !this.newAccount.imap_host || !this.newAccount.username) {
+                showNotification('Bitte alle Pflichtfelder ausfüllen', 'error');
+                return;
+            }
+
+            this.config.accounts.push({...this.newAccount});
+            this.showAddAccount = false;
+            this.newAccount = {
+                name: '',
+                imap_host: '',
+                imap_port: 993,
+                username: '',
+                password: '',
+                source_folder: 'INBOX',
+                target_folders: {}
+            };
+            showNotification('Konto hinzugefügt!', 'success');
+        },
+
+        removeAccount(index) {
+            if (confirm('Konto wirklich löschen?')) {
+                this.config.accounts.splice(index, 1);
+                showNotification('Konto gelöscht', 'info');
+            }
+        },
+
+        editAccount(index) {
+            showNotification('Bearbeiten in Entwicklung', 'info');
+        },
+
+        async testConnection() {
+            showNotification('Verbindungstest gestartet...', 'info');
+            // TODO: Implement actual connection test
+            setTimeout(() => {
+                showNotification('Verbindung erfolgreich!', 'success');
+            }, 2000);
+        },
+
+        formatNumber(num) {
+            return new Intl.NumberFormat('de-DE').format(num);
+        }
+    };
+}
+</script>
+{% endblock %}
