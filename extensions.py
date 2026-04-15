@@ -316,7 +316,7 @@ Erstelle eine Zusammenfassung in max. 3 Sätzen."""
         prompt = f"""Extrahiere wichtige Informationen aus dieser Email:
 
 Email:
-{text)}
+{text}
 
 Erkenne und extrahiere:
 - Datum/Uhrzeit (falls vorhanden)

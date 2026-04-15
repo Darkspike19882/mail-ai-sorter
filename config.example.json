@@ -17,7 +17,18 @@
       "behoerden",
       "newsletter",
       "privat"
-    ]
+    ],
+    "extensions": {
+      "enabled": false,
+      "paperless_enabled": false,
+      "paperless_url": "http://localhost:8000",
+      "paperless_api_token": "",
+      "calendar_enabled": false,
+      "tasks_enabled": false,
+      "task_system": "taskwarrior",
+      "notifications_enabled": false,
+      "notification_categories": ["arbeit", "finanzen", "behoerden"]
+    }
   },
   "accounts": [
     {

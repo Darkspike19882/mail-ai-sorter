@@ -38,6 +38,18 @@ try:
 except Exception:
     HAS_INDEX = False
 
+# Optional extensions module (same directory)
+try:
+    import importlib.util, pathlib
+    _spec_ext = importlib.util.spec_from_file_location(
+        "extensions", pathlib.Path(__file__).parent / "extensions.py"
+    )
+    _ext_mod = importlib.util.module_from_spec(_spec_ext)  # type: ignore
+    _spec_ext.loader.exec_module(_ext_mod)  # type: ignore
+    HAS_EXTENSIONS = True
+except Exception:
+    HAS_EXTENSIONS = False
+
 
 # ── Config & Cache ─────────────────────────────────────────────────────────────
 
@@ -150,6 +162,70 @@ def should_delay(msg_date: Optional[dt.datetime], delay_minutes: int) -> bool:
         return True
     mail_age = dt.datetime.now(dt.timezone.utc) - msg_date
     return mail_age < dt.timedelta(minutes=delay_minutes)
+
+
+# ── Extensions ────────────────────────────────────────────────────────────────────
+
+def run_extensions(category: str, from_addr: str, subject: str, body: str,
+                   extensions_cfg: Dict[str, Any], global_cfg: Dict[str, Any]) -> None:
+    """Führt Erweiterungen basierend auf Kategorie aus"""
+    if not HAS_EXTENSIONS or not extensions_cfg.get("enabled", False):
+        return
+
+    email_data = {
+        "category": category,
+        "from_addr": from_addr,
+        "subject": subject,
+        "body": body,
+    }
+
+    # Paperless-ngx für Dokumenten-Kategorien
+    if extensions_cfg.get("paperless_enabled", False):
+        if category in ["paperless", "finanzen", "vertraege", "einkauf"]:
+            try:
+                paperless = _ext_mod.PaperlessNGXIntegration(
+                    paperless_url=extensions_cfg.get("paperless_url", "http://localhost:8000"),
+                    api_token=extensions_cfg.get("paperless_api_token")
+                )
+                paperless.create_document_from_email(email_data)
+                log(f"✅ Nach Paperless-ngx gesendet")
+            except Exception as e:
+                log(f"❌ Paperless-ngx Fehler: {e}")
+
+    # Kalender für Termin-Kategorien
+    if extensions_cfg.get("calendar_enabled", False):
+        if category in ["arbeit", "reisen", "termin"]:
+            try:
+                calendar = _ext_mod.CalendarIntegration()
+                appointments = calendar.extract_appointments(email_data)
+                for appointment in appointments:
+                    calendar.create_calendar_event(appointment, email_data)
+                if appointments:
+                    log(f"✅ {len(appointments)} Termine erstellt")
+            except Exception as e:
+                log(f"❌ Kalender Fehler: {e}")
+
+    # Tasks für Aufgaben-Kategorien
+    if extensions_cfg.get("tasks_enabled", False):
+        if category in ["arbeit", "finanzen", "behoerden", "vertraege"]:
+            try:
+                tasks = _ext_mod.TaskIntegration(
+                    task_system=extensions_cfg.get("task_system", "taskwarrior")
+                )
+                tasks.create_task_from_email(email_data)
+                log(f"✅ Aufgabe erstellt")
+            except Exception as e:
+                log(f"❌ Task-Fehler: {e}")
+
+    # Benachrichtigungen für wichtige Kategorien
+    if extensions_cfg.get("notifications_enabled", False):
+        important_categories = extensions_cfg.get("notification_categories", [])
+        if category in important_categories:
+            try:
+                notifications = _ext_mod.NotificationIntegration()
+                notifications.notify_important_email(email_data)
+            except Exception as e:
+                log(f"❌ Benachrichtigungs-Fehler: {e}")
 
 
 # ── Rules ───────────────────────────────────────────────────────────────────────
@@ -522,6 +598,14 @@ def process_account(
                 log(f"[{name}] keep ({category}): {subject[:80]}")
                 skipped += 1
                 continue
+
+            # Erweiterungen ausführen (Paperless, Kalender, Tasks, etc.)
+            extensions_cfg = global_cfg.get("extensions", {})
+            if extensions_cfg.get("enabled", False):
+                try:
+                    run_extensions(category, from_addr, subject, body, extensions_cfg, global_cfg)
+                except Exception as e:
+                    log(f"[{name}] WARN extensions failed: {e}")
 
             ensure_folder(conn, target_folder)
 
