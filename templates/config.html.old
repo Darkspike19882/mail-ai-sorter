@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2em;
+            margin-bottom: 10px;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            background: white;
+            color: #667eea;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .config-card {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .config-section {
+            margin-bottom: 30px;
+        }
+
+        .config-section h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+            font-size: 1.3em;
+        }
+
+        .form-group {
+            margin-bottom: 20px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .form-group input,
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 1em;
+            font-family: inherit;
+        }
+
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .form-group .help {
+            font-size: 0.85em;
+            color: #666;
+            margin-top: 5px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .message {
+            padding: 15px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            display: none;
+        }
+
+        .message.success {
+            background: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+
+        .message.error {
+            background: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+
+        .category-list {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 10px;
+        }
+
+        .category-item {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 8px;
+            border: 2px solid #e0e0e0;
+        }
+
+        .category-item input {
+            margin-right: 10px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>⚙️ Konfiguration</h1>
+            <p>Passe deinen Mail AI Sorter an</p>
+        </div>
+
+        <div class="nav">
+            <a href="/">📊 Dashboard</a>
+            <a href="/config" class="active">⚙️ Konfiguration</a>
+            <a href="/logs">📋 Logs</a>
+        </div>
+
+        <div class="config-card">
+            <div id="message" class="message"></div>
+
+            <form id="configForm">
+                <div class="config-section">
+                    <h2>🤖 AI Einstellungen</h2>
+
+                    <div class="form-group">
+                        <label for="model">Modell</label>
+                        <select id="model" name="model">
+                            <option value="llama3.1:8b" {{ 'selected' if config.global.model == 'llama3.1:8b' else '' }}>llama3.1:8b (Empfohlen für M1 Pro)</option>
+                            <option value="gemma4:e4b" {{ 'selected' if config.global.model == 'gemma4:e4b' else '' }}>gemma4:e4b</option>
+                            <option value="phi3:mini" {{ 'selected' if config.global.model == 'phi3:mini' else '' }}>phi3:mini (Schneller)</option>
+                        </select>
+                        <div class="help">Das KI-Modell für Email-Klassifizierung</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="delay_minutes">Verzögerung (Minuten)</label>
+                        <input type="number" id="delay_minutes" name="delay_minutes"
+                               value="{{ config.global.delay_minutes }}" min="0" max="1440">
+                        <div class="help">Wie lange Paperless-ngx Zeit für PDF-Extraktion hat (30 = empfohlen)</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="max_body_chars">Maximale Zeichen</label>
+                        <input type="number" id="max_body_chars" name="max_body_chars"
+                               value="{{ config.global.max_body_chars }}" min="500" max="10000">
+                        <div class="help">Wie viel Text vom Email analysiert wird</div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h2>📧 IMAP Einstellungen</h2>
+
+                    <div class="form-group">
+                        <label for="imap_timeout">IMAP Timeout (Sekunden)</label>
+                        <input type="number" id="imap_timeout" name="imap_timeout"
+                               value="{{ config.global.imap_timeout_sec }}" min="10" max="120">
+                        <div class="help">Timeout für IMAP-Verbindungen</div>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="ollama_timeout">Ollama Timeout (Sekunden)</label>
+                        <input type="number" id="ollama_timeout" name="ollama_timeout"
+                               value="{{ config.global.ollama_timeout_sec }}" min="30" max="300">
+                        <div class="help">Maximale Wartezeit für KI-Antworten</div>
+                    </div>
+                </div>
+
+                <div class="config-section">
+                    <h2>📁 Kategorien</h2>
+                    <div class="category-list">
+                        {% for category in config.global.categories %}
+                        <div class="category-item">
+                            <input type="checkbox" id="cat_{{ category }}" name="categories" value="{{ category }}" checked>
+                            <label for="cat_{{ category }}">{{ category }}</label>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <button type="submit" class="button">💾 Konfiguration speichern</button>
+            </form>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('configForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+
+            const formData = new FormData(e.target);
+            const config = {
+                global: {
+                    model: formData.get('model'),
+                    delay_minutes: parseInt(formData.get('delay_minutes')),
+                    max_body_chars: parseInt(formData.get('max_body_chars')),
+                    imap_timeout_sec: parseInt(formData.get('imap_timeout')),
+                    ollama_timeout_sec: parseInt(formData.get('ollama_timeout')),
+                    ollama_url: "http://127.0.0.1:11434",
+                    ollama_think: false,
+                    ollama_num_predict: 30,
+                    ollama_num_ctx: 4096,
+                    poll_minutes: 5,
+                    default_category: "privat",
+                    categories: []
+                }
+            };
+
+            // Kategorien sammeln
+            document.querySelectorAll('input[name="categories"]:checked').forEach(function(checkbox) {
+                config.global.categories.push(checkbox.value);
+            });
+
+            // Bestehende Accounts und Rules übernehmen
+            fetch('/api/config')
+                .then(response => response.json())
+                .then(currentConfig => {
+                    config.accounts = currentConfig.accounts;
+                    config.global.global_rules = currentConfig.global.global_rules;
+                    config.global.important_rules = currentConfig.global.important_rules;
+                    config.global.important_actions = currentConfig.global.important_actions;
+                    config.global.default_category = currentConfig.global.default_category;
+                    config.global.target_folders = currentConfig.global.target_folders;
+
+                    // Konfiguration speichern
+                    return fetch('/api/config', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify(config)
+                    });
+                })
+                .then(response => response.json())
+                .then(data => {
+                    const messageDiv = document.getElementById('message');
+                    if (data.success) {
+                        messageDiv.textContent = '✅ Konfiguration erfolgreich gespeichert!';
+                        messageDiv.className = 'message success';
+                        messageDiv.style.display = 'block';
+                    } else {
+                        messageDiv.textContent = '❌ Fehler: ' + data.error;
+                        messageDiv.className = 'message error';
+                        messageDiv.style.display = 'block';
+                    }
+
+                    setTimeout(() => {
+                        messageDiv.style.display = 'none';
+                    }, 5000);
+                })
+                .catch(error => {
+                    const messageDiv = document.getElementById('message');
+                    messageDiv.textContent = '❌ Fehler: ' + error;
+                    messageDiv.className = 'message error';
+                    messageDiv.style.display = 'block';
+                });
+        });
+    </script>
+</body>
+</html>

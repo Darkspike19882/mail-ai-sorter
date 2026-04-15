@@ -1,0 +1,177 @@
+{
+  "global": {
+    "ollama_url": "http://127.0.0.1:11434",
+    "model": "llama3.1:8b",
+    "ollama_timeout_sec": 60,
+    "ollama_think": false,
+    "ollama_num_predict": 30,
+    "ollama_num_ctx": 4096,
+    "delay_minutes": 30,
+    "poll_minutes": 5,
+    "max_body_chars": 3000,
+    "default_category": "privat",
+    "imap_timeout_sec": 30,
+    "categories": [
+      "paperless",
+      "apple",
+      "finanzen",
+      "vertraege",
+      "einkauf",
+      "reisen",
+      "rettung",
+      "arbeit",
+      "politik",
+      "behoerden",
+      "wohnen",
+      "tech",
+      "community",
+      "newsletter",
+      "privat"
+    ],
+    "global_rules": [
+      {
+        "if_from_contains": ["email.apple.com", "apple.com", "id.apple.com", "icloud.com"],
+        "if_subject_contains": ["rechnung", "beleg", "invoice", "receipt", "lastschrift", "sepa", "kontoauszug", "steuer", "mahnung", "zahlungseingang", "zahlungsbeleg", "quittung", "abbuchung"],
+        "move_to": "paperless"
+      },
+      {
+        "if_from_contains": ["email.apple.com", "apple.com", "id.apple.com", "icloud.com"],
+        "move_to": "apple"
+      },
+      {
+        "if_subject_contains": ["rechnung", "beleg", "invoice", "receipt", "lastschrift", "sepa", "kontoauszug", "steuer", "mahnung", "zahlungseingang", "zahlungsbeleg", "quittung", "abbuchung"],
+        "move_to": "paperless"
+      },
+      {
+        "if_from_contains": ["paypal", "sparkasse", "volksbank", "commerzbank", "dkb", "n26", "visa", "mastercard", "klarna", "stripe", "curve.app", "revolut", "wise.com", "crypto.com", "binance", "coinbase", "traderepublic", "trade-republic", "scalable", "comdirect", "flatex", "ing-diba", "ing.de", "onvista", "justtrade", "etoro", "finanzen.net", "consorsbank", "maxblue", "degiro"],
+        "move_to": "finanzen"
+      },
+      {
+        "if_subject_contains": ["sparkasse", "paypal", "kreditkarte", "crypto", "zahlung", "konto", "bank", "lease-a-bike", "dienstrad", "leaserad", "depot", "aktie", "dividende", "etf", "sparplan", "wertpapier", "kursveränderung", "order ausgeführt", "ausführung", "trade republic", "portfolio", "investition", "rendite", "steuerreport"],
+        "move_to": "finanzen"
+      },
+      {
+        "if_from_contains": ["telekom", "o2online", "vodafone", "1und1", "check24", "verivox", "eon.de", "e.on", "stadtwerke", "entega", "vattenfall", "fitnessloft", "mcfit", "clever-fit"],
+        "move_to": "vertraege"
+      },
+      {
+        "if_subject_contains": ["telekom", "o2", "vodafone", "1und1", "vertrag", "tarif", "kündigung", "kuendigung", "strom", "gas", "abo "],
+        "move_to": "vertraege"
+      },
+      {
+        "if_from_contains": ["amazon", "ebay", "dhl", "dpd", "hermes", "ups", "gls", "etsy", "zalando", "otto.de", "mediamarkt", "saturn.de", "notebooksbilliger", "idealo", "kleinanzeigen", "shein", "temu", "about-you"],
+        "move_to": "einkauf"
+      },
+      {
+        "if_subject_contains": ["dhl", "sendung", "paket", "bestellung", "amazon", "lieferung", "tracking", "versand", "rücksendung", "retoure"],
+        "move_to": "einkauf"
+      },
+      {
+        "if_from_contains": ["booking", "airbnb", "lufthansa", "bahn.de", "ryanair", "expedia", "opodo", "easyjet", "eurowings", "flixbus", "rentalcars", "billiger-mietwagen", "mietwagen", "europcar", "hertz", "sixt"],
+        "move_to": "reisen"
+      },
+      {
+        "if_subject_contains": ["bahn", "flug", "reise", "booking", "hotel", "airbnb", "check-in", "boarding pass", "buchungsnummer", "mietwagen", "opodo"],
+        "move_to": "reisen"
+      },
+      {
+        "if_from_contains": ["rettinar", "rettinare", "rdschule", "stiwl.de", "rdf-guetersloh", "drk.de", "dlrg.de", "johanniter", "malteser", "asb.de", "deutsches-rotes-kreuz", "kreisleitstelle"],
+        "move_to": "rettung"
+      },
+      {
+        "if_subject_contains": ["rettinar", "rettingsdienst", "rettungsdienst", "sanitätsdienst", "manv", "einsatzleitung", "rettinar", "fortbildung rettung", "lehrgang rettung", "notfallsanitäter", "rettungssanitäter", "saed", "aed-kurs", "erste-hilfe-kurs", "kreisleitstelle"],
+        "move_to": "rettung"
+      },
+      {
+        "if_from_contains": ["fernuni-hagen", "fernuniversitaet", "fernuniversität"],
+        "move_to": "arbeit"
+      },
+      {
+        "if_from_contains": ["gruene.de", "grünen.de", "gruenlink.de", "kv-ov", "kv-gt", "ov-", "lag-gesundheit", "lag-", "freitags-mail", "buendnis90", "bundesvorstand.gruene"],
+        "move_to": "politik"
+      },
+      {
+        "if_subject_contains": ["[kv-ov]", "[kv/ov", "[ov-vorstand]", "[lag-", "[freitags-mail]", "grüne info", "kreismitgliederversammlung", "urabstimmung", "parteitag", "bundesvorstand", "kommunalwahlkampf", "kommunalkongress", "ldk ", "kreisparteitag", "landesdelegiertenkonferenz"],
+        "move_to": "politik"
+      },
+      {
+        "if_from_contains": ["bund.de", "finanzamt", "arbeitsagentur", "jobcenter", "bundesagentur", "arge-", "amtsgericht", "landgericht"],
+        "move_to": "behoerden"
+      },
+      {
+        "if_subject_contains": ["bescheid", "finanzamt", "arbeitsagentur", "geburtsurkunde", "personalausweis", "reisepass", "ummeldung", "grundbesitzabgaben", "grundsteuer"],
+        "move_to": "behoerden"
+      },
+      {
+        "if_subject_contains": ["eigentümerversammlung", "hausgeld", "weg ", "wohnungseigentümer", "wohnungskauf", "wohnungskaufvertrag", "hausverwaltung", "notar", "notariat", "grundbuch", "spiekergarten", "amshausener", "nebenkostenabrechnung", "betriebskosten", "instandhaltung", "rücklage", "verwalter", "wohnungseigentümergemeinschaft", "sonderumlage"],
+        "move_to": "wohnen"
+      },
+      {
+        "if_from_contains": ["hausverwaltung", "immobilien", "grundbesitz", "wohnungsverwaltung", "immoverwaltung"],
+        "move_to": "wohnen"
+      },
+      {
+        "if_from_contains": ["github.com", "gitlab.com", "nextcloud", "noreply@home-assistant", "monitoring@", "alert@"],
+        "move_to": "tech"
+      },
+      {
+        "if_subject_contains": ["aktivität bei storage share", "github actions", "gitlab ci", "deployment", "build failed", "server alert", "monitoring alert", "uptime"],
+        "move_to": "tech"
+      },
+      {
+        "if_subject_contains": ["schabbat", "kabbalat shabbat", "purim", "chanukka", "synagoge", "gottesdienst", "jüdische kulturtage", "j-exp", "yton", "jüdisch", "jewish"],
+        "move_to": "community"
+      },
+      {
+        "if_subject_contains": ["newsletter", "marketing", "fyi", "notification", "unsubscribe", "abbestellen", "abmelden"],
+        "move_to": "newsletter"
+      },
+      {
+        "if_subject_contains": ["arbeit", "projekt", "meeting", "fortbildung", "bewerbung"],
+        "move_to": "arbeit"
+      }
+    ],
+    "important_rules": [
+      {
+        "if_from_contains": ["rettinar", "rettinare", "rdschule", "stiwl.de", "rdf-guetersloh", "drk.de", "dlrg.de", "johanniter", "malteser", "kreisleitstelle", "rettungswache", "leitstelle"],
+        "if_subject_contains": ["rettinar", "rettungsdienst", "kreisleitstelle", "einsatz", "alarmierung", "dienstplan", "schichtplan", "notfallsanitäter", "rettungssanitäter", "fortbildung rettung"]
+      },
+      {
+        "if_subject_contains": ["zahlungserinnerung", "mahnung", "überfällig", "ueberfaellig", "frist", "letzte erinnerung", "mahnbescheid"],
+        "if_from_contains": ["bank", "paypal", "sparkasse", "finanzamt", "arbeitsagentur", "bund.de"],
+        "if_subject_contains": ["wichtig", "dringend", "frist", "bescheid"]
+      }
+    ],
+    "important_actions": {
+      "flagged": true,
+      "keyword": "$Important"
+    }
+  },
+  "accounts": [
+    {
+      "name": "Beispiel Konto (Gmail) - Bitte eigene Daten eintragen",
+      "imap_host": "imap.gmail.com",
+      "imap_port": 993,
+      "username": "deine.email@gmail.com",
+      "password_env": "GMAIL_PASSWORD",
+      "source_folder": "INBOX",
+      "target_folders": {
+        "paperless": "Paperless",
+        "apple": "Apple",
+        "finanzen": "Finanzen",
+        "vertraege": "Vertraege",
+        "einkauf": "Einkauf",
+        "reisen": "Reisen",
+        "rettung": "Rettung",
+        "arbeit": "Arbeit",
+        "politik": "Politik",
+        "behoerden": "Behoerden",
+        "wohnen": "Wohnen",
+        "tech": "Tech",
+        "community": "Community",
+        "newsletter": "Newsletter",
+        "privat": "Privat"
+      }
+    }
+  ]
+}
