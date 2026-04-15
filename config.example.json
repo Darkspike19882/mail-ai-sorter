@@ -21,11 +21,11 @@
   },
   "accounts": [
     {
-      "name": "impedire@googlemail.com",
+      "name": "Beispiel Konto (Gmail) - Bitte eigene Daten eintragen",
       "imap_host": "imap.gmail.com",
       "imap_port": 993,
-      "username": "impedire@googlemail.com",
-      "password_env": "MAIL_IMPEDIRE_GOOGLEMAIL_COM_PASS",
+      "username": "deine.email@gmail.com",
+      "password_env": "GMAIL_PASSWORD",
       "source_folder": "INBOX",
       "target_folders": {
         "paperless": "Paperless",
