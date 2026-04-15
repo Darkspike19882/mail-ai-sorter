@@ -93,7 +93,7 @@ python3 web_ui.py
 
 ### **Schritt 2: Lokal vorbereiten**
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 
 # Sensitive Daten entfernen
 cp config.json config.example.json

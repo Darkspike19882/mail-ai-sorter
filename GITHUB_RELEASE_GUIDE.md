@@ -61,7 +61,7 @@ mail-ai-sorter/
 
 #### 4. **Erster Commit & Push**
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 
 # Git initialisieren
 git init

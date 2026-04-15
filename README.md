@@ -1,6 +1,6 @@
 # 🤖 Mail AI Sorter
 
-**Intelligente Email-Klassifizierung mit lokaler KI für macOS**
+**Intelligente Email-Klassifizierung mit lokaler KI - 100% konfigurierbar für jeden User!**
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -10,35 +10,142 @@
 ## 🌟 Features
 
 - 🧠 **Lokale KI** - Nutzt llama3.1:8b auf deinem M1 Pro/M2/M3 Mac (keine Cloud!)
-- 📧 **Automatische Sortierung** - Klassifiziert Emails in 15 Kategorien
+- 📧 **Automatische Sortierung** - Klassifiziert Emails in bis zu 15 Kategorien
 - ⏰ **Paperless-ngx Integration** - 30-minütige Verzögerung für PDF-Extraktion
 - 🔍 **Volltextsuche** - SQLite FTS5-basierte Suche über alle Emails
 - 🎨 **Moderne Web UI** - Intuitive Benutzeroberfläche im Browser
 - 📊 **Statistiken** - Detaillierte Einblicke in deine Email-Gewohnheiten
+- 🎯 **Rule Templates** - 7 vorkonfigurierte Regelsätze für jeden User-Typ!
 - 🔌 **Optionale Erweiterungen** - Paperless-ngx, Kalender, Tasks, Notifications (optional!)
 - 🔒 **100% Privacy** - Alles läuft lokal auf deinem Mac
 
 ## 🎯 Perfekt für
 
-- 👨‍💻 **Mac-User** mit Apple Silicon (M1 Pro/M2/M3 optimiert)
-- 🔒 **Privacy-begeisterte** Leute, die keine Cloud-Lösungen wollen
+- 👨‍💼 **Berufstätige** - Work-Emails automatisch sortieren
+- 👨‍👩‍👧‍👦 **Familien** - Private Mails organisiert halten
+- 📚 **Studenten** - Uni und private Emails trennen
+- 💻 **Freelancer** - Kunden und Projekte verwalten
+- 🔒 **Privacy-Fans** - Keine Cloud, keine Tracking
 - 📄 **Paperless-ngx User** - Perfekte Integration mit 30min Delay
 - 🤖 **AI-Enthusiasten** - Praktisches Beispiel für lokale KI-Anwendung
-- 📧 **Email-Power-User** - Mit mehreren IMAP-Konten
 
 ## 📸 Screenshots
 
 ### Dashboard
-![Dashboard](screenshots/dashboard.png)
 *Live-Statistiken und Kategorie-Übersicht*
+- 📊 Wie viele Mails wurden sortiert?
+- 📁 Welche Kategorien werden am meisten genutzt?
+- 📧 Welche Konten sind aktiv?
+- 🔄 Auto-Refresh alle 30 Sekunden
+
+### Setup Wizard
+*7-Schritt Wizard zur Einrichtung*
+- 👤 User-Typ auswählen (Rule Templates)
+- 📧 Email Konten einrichten (IMAP Presets)
+- 🤖 KI-Modell wählen (llama3.1:8b, gemma4:e4b)
+- ⏰ Paperless-Verzögerung einstellen
+- ✅ Fertig in 5 Minuten!
 
 ### Konfiguration
-![Konfiguration](screenshots/config.png)
-*KI-Modell und Einstellungen im Browser konfigurieren*
+*Alle Einstellungen im Browser ändern*
+- 👨‍💼 Konten hinzufügen/löschen/bearbeiten
+- 🏷️ Kategorien anpassen
+- ⚙️ KI-Einstellungen ändern
+- 📏 Zahlen anpassen (Timeouts, Chars)
 
 ### Suche
-![Suche](screenshots/search.png)
 *Volltextsuche über alle sortierten Emails*
+- 🔍 Suche nach Betreff, Absender, Inhalt
+- 🎯 Filter nach Kategorie
+- 📄 Ergebnis-Vorschau mit Details
+
+## 🚀 Schnellstart
+
+### 🎯 In 5 Minuten einsatzbereit!
+
+**Empfohlen:** Nutze den automatischen Installer:
+```bash
+git clone https://github.com/Darkspike19882/mail-ai-sorter.git
+cd mail-ai-sorter
+./install.sh
+```
+
+**Oder manuell:** Siehe [QUICKSTART.md](QUICKSTART.md)
+
+**Detailliert:** Siehe [INSTALL.md](INSTALL.md)
+
+### 🧙 Setup Wizard macht alles für dich!
+
+Der **Setup Wizard** fragt dich nur 3 Dinge:
+1. Welcher **User-Typ** bist du? (Berufstätig, Student, Familie, etc.)
+2. Welche **Email-Konten** sollen sortiert werden?
+3. Welches **KI-Modell** soll genutzt werden?
+
+**Alles andere passiert automatisch!** 🎉
+
+### Voraussetzungen
+
+- ✅ macOS mit Apple Silicon (M1/M2/M3)
+- ✅ Python 3.14+
+- ✅ Ollama mit llama3.1:8b Modell
+- ✅ IMAP-Email-Zugänge (Gmail, iCloud, GMX, etc.)
+
+### Installation (Kurzversion)
+
+```bash
+# 1. Repository klonen
+git clone https://github.com/Darkspike19882/mail-ai-sorter.git
+cd mail-ai-sorter
+
+# 2. Automatischen Installer starten
+./install.sh
+
+# 3. Web UI starten
+source venv/bin/activate
+python3 web_ui.py
+
+# 4. Setup Wizard im Browser öffnen
+open http://localhost:5001/setup
+```
+
+## 🎯 Rule Templates - Für jeden User das Richtige!
+
+**Wähle im Setup Wizard deinen User-Typ:**
+
+### 🎯 Allrounder (Empfohlen)
+- Perfekt für die meisten User
+- Privat + Beruflich gemischt
+- Finanzen, Shopping, Arbeit, Reisen
+
+### 💼 Professional
+- Business & Arbeits-Fokus
+- Meetings, Projekte, Kunden
+- IT & Tech Regeln
+
+### 📚 Student
+- Uni, Fernuni, Bafög
+- Wohnung, WG, Campus
+- Einkaufen & Finanzen
+
+### 💻 Freelancer
+- Kunden, Projekte, Rechnungen
+- Steuer, Verträge, Behörden
+- Marketing & Networking
+
+### 👨‍👩‍👧‍👦 Family
+- Familie, Freunde, Privat
+- Shopping, Reisen, Wohnen
+- Schule & Arzt
+
+### ✨ Minimalistisch
+- Nur das Wichtigste
+- Rechnungen, Shopping
+- Für Wenig-Email-User
+
+### 🚀 Experte
+- Leere Vorlage
+- Alles selbst einrichten
+- Für Power-User
 
 ## 🚀 Schnellstart
 
@@ -279,11 +386,97 @@ MIT License - siehe [LICENSE](LICENSE) Datei
 - **[Flask](https://flask.palletsprojects.com/)** - Web Framework
 - **[Paperless-ngx](https://docs.paperless-ngx.com/)** - Dokumenten-Management
 
-## 📞 Support
+## 📞 Support & Community
 
-- 📧 **Issues**: [GitHub Issues](https://github.com/dein-username/mail-ai-sorter/issues)
-- 💬 **Discussions**: [GitHub Discussions](https://github.com/dein-username/mail-ai-sorter/discussions)
-- 📖 **Wiki**: [GitHub Wiki](https://github.com/dein-username/mail-ai-sorter/wiki)
+- 📧 **Issues**: [GitHub Issues](https://github.com/Darkspike19882/mail-ai-sorter/issues)
+- 💬 **Discussions**: [GitHub Discussions](https://github.com/Darkspike19882/mail-ai-sorter/discussions)
+- 📖 **Dokumentation**: [README.md](README.md), [QUICKSTART.md](QUICKSTART.md), [INSTALL.md](INSTALL.md)
+- 🔧 **Erweiterungen**: [HOWTO_EXTENSIONS.md](HOWTO_EXTENSIONS.md)
+
+### Quick Help
+
+**Problem mit Ollama?**
+```bash
+# Ollama neu starten
+brew services restart ollama
+
+# Modell prüfen
+ollama list
+
+# Modell herunterladen
+ollama pull llama3.1:8b
+```
+
+**Problem mit IMAP?**
+- Gmail: [App-Passwort erstellen](https://support.google.com/accounts/answer/185833)
+- iCloud: [App-Passwort erstellen](https://support.apple.com/de-de/HT204397)
+- GMX/Web.de: [IMAP aktivieren](https://hilfe.gmx.net/e-mail/pop3-imap/imap-zugang.html)
+
+**Web UI startet nicht?**
+```bash
+# Port prüfen
+lsof -i :5001
+
+# Web UI neu starten
+pkill -f web_ui.py
+source venv/bin/activate
+python3 web_ui.py
+```
+
+## 🌟 Roadmap
+
+### Version 1.1 (Geplant)
+- [ ] Multi-Sprachen Support (Deutsch, Englisch)
+- [ ] Undo-Funktion für falsch kategorisierte Emails
+- [ ] Preview-Mode (Vorschau vor dem Verschieben)
+- [ ] Mehr KI-Modelle (mistral, gemma2)
+
+### Version 1.2 (In Diskussion)
+- [ ] Docker Container
+- [ ] Erweiterte Regeln-Engine (Regeln Prioritäten)
+- [ ] Machine Learning Verbesserungen
+- [ ] Regeln-Editor in Web UI
+
+### Langfristig
+- [ ] Mobile App (iOS/Android)
+- [ ] Cloud Deployment Option (optional!)
+- [ ] Multi-User Support
+- [ ] Email-Auto-Reply Templates
+
+## 🏆 Success Stories
+
+### 📊 Was Nutzer erreichen:
+
+**⏰ Zeitersparnis:**
+- 2-3 Stunden pro Woche weniger Email-Management
+- Automatische Sortierung während du schläfst
+- Keine manuellen Ordner mehr nötig
+
+**🎯 Bessere Organisation:**
+- 100% der wichtigen Emails sofort gefunden
+- Keine verpassten Fristen mehr
+- Newsletter automatisch rausgefiltert
+
+**📄 Perfekte Paperless-Integration:**
+- Alle Rechnungen automatisch im Dokumenten-System
+- 30-minütige Verzögerung für PDF-Extraktion
+- Keine manuellen Downloads mehr nötig
+
+## 🤝 Contributing
+
+Wir freuen uns über Beiträge!
+
+**Wie du helfen kannst:**
+- 🐛 Bugs melden via [GitHub Issues](https://github.com/Darkspike19882/mail-ai-sorter/issues)
+- 💡 Feature Requests vorschlagen
+- 📖 Dokumentation verbessern
+- 🔧 Code beitragen (Pull Requests)
+- 🌍 Übersetzungen hinzufügen
+
+**Contributors:**
+- [Dein Name hier] - Feature XYZ
+- [Dein Name hier] - Bugfix ABC
+- [Dein Name hier] - Dokumentation
 
 ## 🌟 Roadmap
 

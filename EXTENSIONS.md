@@ -172,7 +172,7 @@ WICHTIGE_KATEGORIEN = [
 ### **Schritt 1: Erweiterungen installieren**
 
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 
 # Erweiterungen-Script erstellen
 cat > extensions.py << 'EOF'
