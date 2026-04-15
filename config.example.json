@@ -1,0 +1,45 @@
+{
+  "global": {
+    "ollama_url": "http://127.0.0.1:11434",
+    "model": "gemma4:e4b",
+    "delay_minutes": 30,
+    "poll_minutes": 5,
+    "max_body_chars": 5000,
+    "default_category": "privat",
+    "categories": [
+      "paperless",
+      "apple",
+      "finanzen",
+      "vertraege",
+      "einkauf",
+      "reisen",
+      "arbeit",
+      "behoerden",
+      "newsletter",
+      "privat"
+    ]
+  },
+  "accounts": [
+    {
+      "name": "impedire@googlemail.com",
+      "imap_host": "imap.gmail.com",
+      "imap_port": 993,
+      "username": "impedire@googlemail.com",
+      "password_env": "MAIL_IMPEDIRE_GOOGLEMAIL_COM_PASS",
+      "source_folder": "INBOX",
+      "target_folders": {
+        "paperless": "Paperless",
+        "apple": "Apple",
+        "finanzen": "Finanzen",
+        "vertraege": "Vertraege",
+        "einkauf": "Einkauf",
+        "reisen": "Reisen",
+        "arbeit": "Arbeit",
+        "behoerden": "Behoerden",
+        "newsletter": "Newsletter",
+        "privat": "Privat"
+      },
+      "rules": []
+    }
+  ]
+}

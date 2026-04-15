@@ -1,0 +1,45 @@
+# Sensitive Daten
+secrets.env
+config.json
+*.db
+*.db-shm
+*.db-wal
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+
+# Logs
+*.log
+logs/
+
+# Temporäre Dateien
+*.tmp
+*.bak
+*.swp
+*~
+
+# OS X
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# Screenshots (optional)
+screenshots/*.png
+!screenshots/.gitkeep
+
+# Learned data (optional - kann committed werden für Demo)
+learned_senders.json
+
+# Backups
+*.backup
+*_backup.*
+*_old.*

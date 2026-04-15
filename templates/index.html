@@ -1,0 +1,421 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ title }}</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        .header {
+            background: white;
+            border-radius: 15px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #667eea;
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #666;
+            font-size: 1.1em;
+        }
+
+        .nav {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            background: white;
+            color: #667eea;
+            padding: 15px 30px;
+            text-decoration: none;
+            border-radius: 10px;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+
+        .nav a:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+        }
+
+        .nav a.active {
+            background: #667eea;
+            color: white;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .card {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .card h2 {
+            color: #667eea;
+            font-size: 1.5em;
+            margin-bottom: 15px;
+        }
+
+        .stat-number {
+            font-size: 3em;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .category-bar {
+            margin-bottom: 10px;
+        }
+
+        .category-name {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+        }
+
+        .progress-bar {
+            background: #f0f0f0;
+            border-radius: 10px;
+            height: 20px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #667eea, #764ba2);
+            transition: width 0.5s;
+        }
+
+        .actions {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+        }
+
+        .actions h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .button {
+            background: linear-gradient(135deg, #667eea, #764ba2);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 10px;
+            font-size: 1.1em;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s;
+            margin-right: 10px;
+        }
+
+        .button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .status {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-top: 15px;
+            font-family: monospace;
+            font-size: 0.9em;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .search-box {
+            background: white;
+            border-radius: 15px;
+            padding: 25px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+
+        .search-box h2 {
+            color: #667eea;
+            margin-bottom: 15px;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 10px;
+            font-size: 1.1em;
+            margin-bottom: 10px;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+
+        .results {
+            margin-top: 15px;
+        }
+
+        .email-item {
+            background: #f8f9fa;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid #667eea;
+        }
+
+        .email-item h3 {
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .email-meta {
+            color: #666;
+            font-size: 0.9em;
+            margin-bottom: 10px;
+        }
+
+        .badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 5px 10px;
+            border-radius: 5px;
+            font-size: 0.8em;
+            margin-right: 5px;
+        }
+
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .loading.active {
+            display: block;
+        }
+
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 Mail AI Sorter</h1>
+            <p>Intelligente Email-Klassifizierung mit llama3.1:8b auf deinem M1 Pro Mac</p>
+        </div>
+
+        <div class="nav">
+            <a href="/" class="active">📊 Dashboard</a>
+            <a href="/config">⚙️ Konfiguration</a>
+            <a href="/logs">📋 Logs</a>
+        </div>
+
+        <div class="stats-grid">
+            <div class="card">
+                <h2>📧 Gesamte Mails</h2>
+                <div class="stat-number">{{ stats.total if stats else 0 }}</div>
+            </div>
+
+            <div class="card">
+                <h2>📁 Kategorien</h2>
+                <div id="categories">
+                    {% if stats and stats.categories %}
+                        {% for category, count in stats.categories.items()[:10] %}
+                        <div class="category-bar">
+                            <div class="category-name">
+                                <span>{{ category }}</span>
+                                <span>{{ count }}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ (count / stats.total * 100)|round }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="card">
+                <h2>📧 Konten</h2>
+                <div id="accounts">
+                    {% if stats and stats.accounts %}
+                        {% for account, count in stats.accounts.items() %}
+                        <div class="category-bar">
+                            <div class="category-name">
+                                <span>{{ account }}</span>
+                                <span>{{ count }}</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ (count / stats.total * 100)|round }}%"></div>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="search-box">
+            <h2>🔍 Mails durchsuchen</h2>
+            <input type="text" class="search-input" id="searchInput" placeholder="Suchbegriff eingeben...">
+            <button class="button" onclick="searchEmails()">Suchen</button>
+            <div id="searchResults" class="results"></div>
+        </div>
+
+        <div class="actions">
+            <h2>🚀 Aktionen</h2>
+            <button class="button" onclick="runSorter(false)">📧 Emails sortieren</button>
+            <button class="button" onclick="runSorter(true)">🧪 Testlauf (Dry-Run)</button>
+            <button class="button" onclick="refreshStats()">🔄 Aktualisieren</button>
+
+            <div id="loading" class="loading">
+                <div class="spinner"></div>
+                <p>Sortierung läuft...</p>
+            </div>
+
+            <div id="status" class="status" style="display: none;">
+                Bereit für Aktionen...
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function refreshStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    document.querySelector('.stat-number').textContent = data.total || 0;
+                    // Aktualisiere Kategorien und Accounts
+                    location.reload();
+                });
+        }
+
+        function runSorter(dryRun) {
+            const loading = document.getElementById('loading');
+            const status = document.getElementById('status');
+
+            loading.classList.add('active');
+            status.style.display = 'block';
+            status.textContent = 'Sortierung läuft...';
+
+            fetch('/api/run', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({dry_run: dryRun, max_mails: 50})
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.classList.remove('active');
+                if (data.success) {
+                    status.textContent = '✅ Sortierung erfolgreich!\n\n' + data.output;
+                } else {
+                    status.textContent = '❌ Fehler bei Sortierung:\n' + data.errors;
+                }
+                refreshStats();
+            })
+            .catch(error => {
+                loading.classList.remove('active');
+                status.textContent = '❌ Fehler: ' + error;
+            });
+        }
+
+        function searchEmails() {
+            const query = document.getElementById('searchInput').value;
+            const resultsDiv = document.getElementById('searchResults');
+
+            if (!query) {
+                resultsDiv.innerHTML = '<p>Bitte Suchbegriff eingeben...</p>';
+                return;
+            }
+
+            resultsDiv.innerHTML = '<p>Suche läuft...</p>';
+
+            fetch('/api/search?q=' + encodeURIComponent(query))
+                .then(response => response.json())
+                .then(data => {
+                    if (data.emails && data.emails.length > 0) {
+                        let html = '<h3>Ergebnisse:</h3>';
+                        data.emails.forEach(email => {
+                            html += `
+                                <div class="email-item">
+                                    <h3>${email.subject || 'Kein Betreff'}</h3>
+                                    <div class="email-meta">
+                                        <span class="badge">${email.category || 'Unbekannt'}</span>
+                                        <span>📧 ${email.from_addr || 'Unbekannt'}</span>
+                                        <span>📅 ${email.date_iso || 'Unbekannt'}</span>
+                                        <span>📁 ${email.account || 'Unbekannt'}</span>
+                                    </div>
+                                </div>
+                            `;
+                        });
+                        resultsDiv.innerHTML = html;
+                    } else {
+                        resultsDiv.innerHTML = '<p>Keine Ergebnisse gefunden.</p>';
+                    }
+                })
+                .catch(error => {
+                    resultsDiv.innerHTML = '<p>Fehler bei Suche: ' + error + '</p>';
+                });
+        }
+
+        // Automatische Aktualisierung alle 30 Sekunden
+        setInterval(refreshStats, 30000);
+
+        // Enter-Taste für Suche
+        document.getElementById('searchInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                searchEmails();
+            }
+        });
+    </script>
+</body>
+</html>
