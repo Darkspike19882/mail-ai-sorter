@@ -122,7 +122,7 @@ sudo powermetrics --samplers cpu_power -i 1000
 
 **Wechsel:**
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 ollama pull llama3.1:8b
 # In config.json ändern: "model": "llama3.1:8b"
 ```

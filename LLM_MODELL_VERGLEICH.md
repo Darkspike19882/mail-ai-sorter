@@ -138,7 +138,7 @@ ollama pull llama3.1:8b
 
 ### 1. Neues Modell laden:
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 ollama pull llama3.1:8b
 ```
 

@@ -145,7 +145,7 @@ Arbeit:      235
 
 ### **1. Launchd Job aktivieren (wichtig!):**
 ```bash
-cd /Users/michaelkatschko/mail-ai-sorter
+cd /path/to/mail-ai-sorter
 sudo ./install_launchd.sh
 ```
 
