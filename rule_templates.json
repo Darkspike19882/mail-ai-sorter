@@ -1,0 +1,322 @@
+{
+  "templates": {
+    "basic": {
+      "name": "Allrounder (Empfohlen)",
+      "description": "Perfekt für die meisten User - privat und beruflich",
+      "icon": "🎯",
+      "target_users": ["privat", "beruflich", "familie", "studenten"],
+      "popular_categories": ["finanzen", "shopping", "arbeit", "reisen", "newsletter"],
+      "rules": [
+        {
+          "name": "Apple Regeln",
+          "if_from_contains": ["apple.com", "icloud.com", "id.apple.com"],
+          "move_to": "apple"
+        },
+        {
+          "name": "Finanzen Regeln",
+          "if_from_contains": ["paypal", "sparkasse", "volksbank", "commerzbank", "dkb", "n26", "visa", "mastercard"],
+          "move_to": "finanzen"
+        },
+        {
+          "name": "Shopping Regeln",
+          "if_from_contains": ["amazon", "ebay", "dhl", "dpd", "amazon.de"],
+          "move_to": "einkauf"
+        },
+        {
+          "name": "Rechnungen automatisch erkennen",
+          "if_subject_contains": ["rechnung", "beleg", "invoice", "receipt"],
+          "move_to": "paperless"
+        },
+        {
+          "name": "Newsletter erkennen",
+          "if_subject_contains": ["newsletter", "unsubscribe", "abbestellen"],
+          "move_to": "newsletter"
+        }
+      ],
+      "important_rules": [
+        {
+          "name": "Wichtige Finanz-Behörden",
+          "if_from_contains": ["finanzamt", "arbeitsagentur", "bund.de"],
+          "if_subject_contains": ["wichtig", "frist", "bescheid"]
+        }
+      ]
+    },
+    "professional": {
+      "name": "Berufstätig & Business",
+      "description": "Für Leute mit vielen Arbeits-Emails",
+      "icon": "💼",
+      "rules": [
+        {
+          "name": "Business & Arbeit",
+          "if_from_contains": ["linkedin.com", "xing.com", "zoom.us", "teams.microsoft.com"],
+          "if_subject_contains": ["meeting", "projekt", "besprechung"],
+          "move_to": "arbeit"
+        },
+        {
+          "name": "Rechnungen & Angebote",
+          "if_subject_contains": ["angebot", "rechnung", "invoice", "bestellung"],
+          "move_to": "paperless"
+        },
+        {
+          "name": "IT & Tech",
+          "if_from_contains": ["github.com", "gitlab.com", "aws.amazon.com"],
+          "move_to": "tech"
+        },
+        {
+          "name": "Verträge",
+          "if_subject_contains": ["vertrag", "kündigung", "tarif"],
+          "move_to": "vertraege"
+        }
+      ],
+      "important_rules": [
+        {
+          "name": "Dringende Arbeit",
+          "if_subject_contains": ["dringend", "asap", "eilig", "priority"],
+          "if_from_contains": ["chef", "manager", "lead"]
+        }
+      ]
+    },
+    "student": {
+      "name": "Student & Ausbildung",
+      "description": "Für Studenten und Azubis",
+      "icon": "📚",
+      "rules": [
+        {
+          "name": "Universität/Fernuni",
+          "if_from_contains": ["uni-", "fernuni", "hs-", "fh-"],
+          "move_to": "arbeit"
+        },
+        {
+          "name": "Campus & Lernen",
+          "if_subject_contains": ["vorlesung", "übung", "klausur", "prüfungszeit"],
+          "move_to": "arbeit"
+        },
+        {
+          "name": "Wohnen & WG",
+          "if_subject_contains": ["wg-", "miete", "wohnung", "vermieter"],
+          "move_to": "wohnen"
+        },
+        {
+          "name": "Finanzen Student",
+          "if_from_contains": ["bafoeg", "jobcenter", "studentenwerk"],
+          "move_to": "finanzen"
+        },
+        {
+          "name": "Shopping & Angebote",
+          "if_from_contains": ["amazon", "ebay", "otto", "zalando"],
+          "move_to": "einkauf"
+        }
+      ],
+      "important_rules": [
+        {
+          "name": "Wichtige Uni-Fristen",
+          "if_subject_contains": ["anmeldung", "einschreibung", "frist", "klausur"]
+        }
+      ]
+    },
+    "freelancer": {
+      "name": "Freelancer & Selbstständig",
+      "description": "Für Selbstständige und Freelancer",
+      "icon": "💻",
+      "rules": [
+        {
+          "name": "Kunden & Projekte",
+          "if_subject_contains": ["projekt", "anfrage", "angebot", "kunde"],
+          "move_to": "arbeit"
+        },
+        {
+          "name": "Rechnungen & Zahlungen",
+          "if_subject_contains": ["rechnung", "zahlung", "paypal", "überweisung"],
+          "move_to": "finanzen"
+        },
+        {
+          "name": "Behörden & Amt",
+          "if_from_contains": ["finanzamt", "bund.de", "versicherung"],
+          "move_to": "behoerden"
+        },
+        {
+          "name": "Verträge & Kunden",
+          "if_subject_contains": ["vertrag", "vereinbarung", "nda"],
+          "move_to": "vertraege"
+        },
+        {
+          "name": "Marketing & Networking",
+          "if_from_contains": ["linkedin", "xing", "newsletter"],
+          "move_to": "newsletter"
+        }
+      ],
+      "important_rules": [
+        {
+          "name": "Wichtige Kundenanfragen",
+          "if_subject_contains": ["dringend", "eilig", "asap", "wichtig"],
+          "if_from_contains": ["kunde", "client", "projekt"]
+        },
+        {
+          "name": "Zahlungserinnerungen",
+          "if_subject_contains": ["mahnung", "überfällig", "zahlungserinnerung"]
+        }
+      ]
+    },
+    "family": {
+      "name": "Familie & Privat",
+      "description": "Fokus auf Familie, Freunde und Privatleben",
+      "icon": "👨‍👩‍👧‍👦",
+      "rules": [
+        {
+          "name": "Shopping & Pakete",
+          "if_from_contains": ["amazon", "dhl", "dpd", "hermes", "otto", "zalando"],
+          "if_subject_contains": ["paket", "lieferung", "bestellung", "versand"],
+          "move_to": "einkauf"
+        },
+        {
+          "name": "Rechnungen & Verträge",
+          "if_subject_contains": ["rechnung", "vertrag", "abbuchung", "überweisung"],
+          "move_to": "finanzen"
+        },
+        {
+          "name": "Familie & Freunde",
+          "if_from_contains": ["whatsapp", "telegram", "facebook", "instagram"],
+          "move_to": "privat"
+        },
+        {
+          "name": "Reisen & Urlaub",
+          "if_from_contains": ["booking", "airbnb", "bahn", "flug", "hotel"],
+          "move_to": "reisen"
+        },
+        {
+          "name": "Wohnen & Haus",
+          "if_subject_contains": ["haus", "wohnung", "garten", "bau", "handwerker"],
+          "move_to": "wohnen"
+        }
+      ],
+      "important_rules": [
+        {
+          "name": "Wichtige Behörden",
+          "if_from_contains": ["finanzamt", "arbeitsagentur", "schulamt"],
+          "if_subject_contains": ["bescheid", "frist", "wichtig"]
+        },
+        {
+          "name": "Dringende Familienangelegenheiten",
+          "if_subject_contains": ["dringend", "notfall", "wichtig", "sofort"],
+          "if_from_contains": ["schule", "kita", "arzt"]
+        }
+      ]
+    },
+    "minimal": {
+      "name": "Minimalistisch",
+      "description": "Nur die wichtigsten Regeln",
+      "icon": "✨",
+      "rules": [
+        {
+          "name": "Rechnungen automatisch",
+          "if_subject_contains": ["rechnung", "beleg", "invoice"],
+          "move_to": "paperless"
+        },
+        {
+          "name": "Newsletter weg",
+          "if_subject_contains": ["newsletter", "unsubscribe"],
+          "move_to": "newsletter"
+        },
+        {
+          "name": "Shopping",
+          "if_from_contains": ["amazon", "ebay", "dhl"],
+          "move_to": "einkauf"
+        }
+      ],
+      "important_rules": []
+    },
+    "advanced": {
+      "name": "Experte (Leere Vorlage)",
+      "description": "Alle Regeln selbst erstellen",
+      "icon": "🚀",
+      "rules": [],
+      "important_rules": []
+    }
+  },
+  "categories_presets": {
+    "minimal": [
+      "paperless",
+      "einkauf",
+      "newsletter",
+      "privat"
+    ],
+    "basic": [
+      "paperless",
+      "apple",
+      "finanzen",
+      "einkauf",
+      "newsletter",
+      "privat"
+    ],
+    "full": [
+      "paperless",
+      "apple",
+      "finanzen",
+      "vertraege",
+      "einkauf",
+      "reisen",
+      "arbeit",
+      "behoerden",
+      "newsletter",
+      "privat"
+    ]
+  },
+  "imap_presets": {
+    "gmail": {
+      "name": "Gmail",
+      "imap_host": "imap.gmail.com",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "icloud": {
+      "name": "iCloud",
+      "imap_host": "imap.mail.me.com",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "outlook": {
+      "name": "Outlook/Hotmail",
+      "imap_host": "outlook.office365.com",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "gmx": {
+      "name": "GMX",
+      "imap_host": "imap.gmx.net",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "web_de": {
+      "name": "WEB.DE",
+      "imap_host": "imap.web.de",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "posteo": {
+      "name": "Posteo",
+      "imap_host": "posteo.de",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "all_inkl": {
+      "name": "All-Inkl.com",
+      "imap_host": "XXX.kasserver.com",
+      "imap_port": 993,
+      "imap_encryption": "ssl",
+      "note": "XXX durch deinen Account-Namen ersetzen"
+    },
+    "strato": {
+      "name": "STRATO",
+      "imap_host": "imap.strato.de",
+      "imap_port": 993,
+      "imap_encryption": "ssl"
+    },
+    "hetzner": {
+      "name": "Hetzner",
+      "imap_host": "YOUR_MAIL_SERVER",
+      "imap_port": 993,
+      "imap_encryption": "ssl",
+      "note": "Siehe Hetzner Admin Panel"
+    }
+  }
+}

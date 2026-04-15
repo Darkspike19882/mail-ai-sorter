@@ -290,8 +290,73 @@
             </div>
         </div>
 
-        <!-- Step 4: Categories -->
+        <!-- Step 4: Rule Templates -->
         <div x-show="currentStep === 3" class="animate-fade-in">
+            <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
+                <i data-lucide="wand-2" class="w-6 h-6 text-primary-600"></i>
+                Regel-Vorlage wählen
+            </h2>
+
+            <div class="space-y-4">
+                <p class="text-slate-600 dark:text-slate-400">
+                    Wählen Sie eine Regel-Vorlage, die zu Ihrem Email-Verhalten passt. Sie können die Regeln später jederzeit anpassen.
+                </p>
+
+                <!-- Template Selection -->
+                <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <template x-for="(template, key) in ruleTemplates.templates" :key="key">
+                        <label class="relative cursor-pointer group">
+                            <input type="radio" x-model="selectedTemplate" :value="key" class="peer sr-only" @change="loadTemplate(key)">
+                            <div class="p-4 rounded-lg border-2 transition-all peer-checked:border-primary-500 peer-checked:bg-primary-50 dark:peer-checked:bg-primary-900/20 group-hover:border-primary-300">
+                                <div class="flex items-start gap-3">
+                                    <div class="text-3xl" x-text="template.icon"></div>
+                                    <div class="flex-1">
+                                        <div class="font-semibold text-slate-900 dark:text-white" x-text="template.name"></div>
+                                        <div class="text-sm text-slate-600 dark:text-slate-400 mt-1" x-text="template.description"></div>
+                                        <div class="mt-2 flex flex-wrap gap-1">
+                                            <template x-for="rule in template.rules.slice(0, 3)" :key="rule.name">
+                                                <span class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs text-slate-600 dark:text-slate-300" x-text="rule.name"></span>
+                                            </template>
+                                            <span x-show="template.rules.length > 3" class="px-2 py-1 bg-slate-100 dark:bg-slate-700 rounded text-xs text-slate-600 dark:text-slate-300">+<span x-text="template.rules.length - 3"></span></span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </label>
+                    </template>
+                </div>
+
+                <!-- Template Preview -->
+                <div class="p-4 bg-slate-50 dark:bg-slate-700 rounded-lg">
+                    <h4 class="font-semibold text-slate-900 dark:text-white mb-3">
+                        <span x-text="ruleTemplates.templates[selectedTemplate]?.name || 'Vorschau'"></span> - Enthaltene Regeln:
+                    </h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-2 text-sm">
+                        <template x-for="rule in (ruleTemplates.templates[selectedTemplate]?.rules || [])" :key="rule.name">
+                            <div class="flex items-start gap-2 p-2 bg-white dark:bg-slate-800 rounded">
+                                <i data-lucide="check" class="w-4 h-4 text-green-500 mt-0.5 flex-shrink-0"></i>
+                                <div>
+                                    <div class="font-medium text-slate-900 dark:text-white" x-text="rule.name"></div>
+                                    <div class="text-xs text-slate-600 dark:text-slate-400">
+                                        → <span x-text="rule.move_to"></span>
+                                    </div>
+                                </div>
+                            </div>
+                        </template>
+                    </div>
+                </div>
+
+                <div class="p-4 bg-yellow-50 dark:bg-yellow-900/20 rounded-lg">
+                    <h4 class="font-semibold text-yellow-900 dark:text-yellow-200 mb-2">💡 Tipp</h4>
+                    <p class="text-sm text-yellow-800 dark:text-yellow-300">
+                        Sie können diese Regeln später in der Konfiguration jederzeit anpassen und erweitern. Wählen Sie jetzt die Vorlage, die am besten zu Ihrem Email-Verhalten passt.
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5: Categories -->
+        <div x-show="currentStep === 4" class="animate-fade-in">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <i data-lucide="folder" class="w-6 h-6 text-primary-600"></i>
                 Kategorien anpassen
@@ -325,8 +390,8 @@
             </div>
         </div>
 
-        <!-- Step 5: AI Model -->
-        <div x-show="currentStep === 4" class="animate-fade-in">
+        <!-- Step 6: AI Model -->
+        <div x-show="currentStep === 5" class="animate-fade-in">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <i data-lucide="cpu" class="w-6 h-6 text-primary-600"></i>
                 KI-Modell wählen
@@ -389,8 +454,8 @@
             </div>
         </div>
 
-        <!-- Step 6: Paperless Integration -->
-        <div x-show="currentStep === 5" class="animate-fade-in">
+        <!-- Step 7: Paperless Integration -->
+        <div x-show="currentStep === 6" class="animate-fade-in">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <i data-lucide="clock" class="w-6 h-6 text-primary-600"></i>
                 Paperless-ngx Integration
@@ -429,8 +494,8 @@
             </div>
         </div>
 
-        <!-- Step 7: Summary -->
-        <div x-show="currentStep === 6" class="animate-fade-in">
+        <!-- Step 8: Summary -->
+        <div x-show="currentStep === 7" class="animate-fade-in">
             <h2 class="text-2xl font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2">
                 <i data-lucide="check-circle" class="w-6 h-6 text-primary-600"></i>
                 Zusammenfassung
@@ -443,6 +508,8 @@
                         <p><strong>KI-Modell:</strong> <span x-text="config.model"></span></p>
                         <p><strong>Email-Konten:</strong> <span x-text="accounts.length"></span></p>
                         <p><strong>Aktive Kategorien:</strong> <span x-text="activeCategories.length"></span></p>
+                        <p><strong>Regel-Vorlage:</strong> <span x-text="ruleTemplates.templates[selectedTemplate]?.name || 'Keine'"></span></p>
+                        <p><strong>Regeln:</strong> <span x-text="(ruleTemplates.templates[selectedTemplate]?.rules?.length || 0) + ' automatisch erstellt'"></span></p>
                         <p><strong>Papless-Verzögerung:</strong> <span x-text="config.delay_minutes + ' Minuten'"></span></p>
                     </div>
                 </div>
@@ -507,11 +574,15 @@ function setupWizard() {
             { title: 'Willkommen' },
             { title: 'Ollama' },
             { title: 'Konten' },
+            { title: 'Regeln' },
             { title: 'Kategorien' },
             { title: 'KI-Modell' },
             { title: 'Paperless' },
             { title: 'Fertig' }
         ],
+        ruleTemplates: [],
+        selectedTemplate: 'basic',
+        customRules: [],
         config: {
             ollama_url: 'http://127.0.0.1:11434',
             model: 'llama3.1:8b',
@@ -543,6 +614,28 @@ function setupWizard() {
             this.config.categories.forEach(cat => {
                 this.newAccount.target_folders[cat] = cat.charAt(0).toUpperCase() + cat.slice(1);
             });
+
+            // Load rule templates
+            this.loadRuleTemplates();
+        },
+
+        async loadRuleTemplates() {
+            try {
+                const response = await fetch('/api/rule-templates');
+                if (response.ok) {
+                    this.ruleTemplates = await response.json();
+                }
+            } catch (error) {
+                console.error('Failed to load rule templates:', error);
+            }
+        },
+
+        loadTemplate(templateKey) {
+            const template = this.ruleTemplates.templates[templateKey];
+            if (template) {
+                this.customRules = template.rules || [];
+                this.$nextTick(() => lucide.createIcons());
+            }
         },
 
         async checkOllama() {
@@ -671,9 +764,15 @@ function setupWizard() {
 
         async finishSetup() {
             try {
-                // Prepare config
+                // Prepare config with rule templates
+                const selectedTemplate = this.ruleTemplates.templates[this.selectedTemplate];
                 const finalConfig = {
-                    global: this.config,
+                    global: {
+                        ...this.config,
+                        categories: this.activeCategories,
+                        global_rules: selectedTemplate?.rules || [],
+                        important_rules: selectedTemplate?.important_rules || []
+                    },
                     accounts: this.accounts.map(acc => ({
                         ...acc,
                         password_env: acc.name.toUpperCase() + '_PASSWORD'

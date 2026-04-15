@@ -148,6 +148,16 @@ def api_config():
             return jsonify({"success": False, "error": "Konnte Konfiguration nicht speichern"})
     return jsonify(load_config())
 
+@app.route('/api/rule-templates')
+def api_rule_templates():
+    """Rule Templates API"""
+    try:
+        templates_file = SORTER_DIR / "rule_templates.json"
+        with open(templates_file, 'r', encoding='utf-8') as f:
+            return jsonify(json.load(f))
+    except Exception as e:
+        return jsonify({"error": str(e)})
+
 @app.route('/api/run', methods=['POST'])
 def api_run():
     """Sortierung starten"""
