@@ -1,6 +1,26 @@
-# 🚀 Mail AI Sorter - Erweiterungen aktivieren
+# 🚀 Mail AI Sorter - OPTIONALE Erweiterungen
 
-## ⚡ Schnellstart für Erweiterungen
+## ⚠️ WICHTIG: Diese Erweiterungen sind KOMPLETT OPTIONAL!
+
+Der Mail AI Sorter funktioniert **perfekt ohne diese Erweiterungen**. Du musst sie **nur installieren und aktivieren, wenn du sie wirklich haben willst**.
+
+### Was macht der Mail AI Sorter ohne Erweiterungen?
+✅ Emails automatisch in 15 Kategorien sortieren
+✅ Lokale KI (llama3.1:8b) verwenden
+✅ Paperless-ngx 30-minütige Verzögerung einhalten
+✅ Web UI mit Dashboard und Konfiguration
+✅ Volltextsuche über alle Emails
+✅ Statistiken und Logs anzeigen
+
+### Was machen die Erweiterungen zusätzlich?
+📄 **Paperless-ngx**: Emails als Dokumente speichern (optional)
+📅 **Kalender**: Termine automatisch eintragen (optional)
+✅ **Tasks**: Aufgaben automatisch erstellen (optional)
+🔔 **Benachrichtigungen**: Desktop-Notifications (optional)
+
+---
+
+## ⚡ Schnellstart für Erweiterungen (NUR wenn du sie willst!)
 
 ### **Schritt 1: Erweiterungen aktivieren**
 
@@ -68,6 +88,42 @@ task add "Testaufgabe von Mail AI Sorter"
 
 # Alle Aufgaben anzeigen
 task list
+```
+
+## ⏸️ Erweiterungen deaktivieren
+
+### **Falls du Erweiterungen aktiviert hast und sie nicht mehr willst:**
+
+In deiner `config.json` einfach wieder auf `false` stellen:
+
+```json
+{
+  "global": {
+    "extensions": {
+      "enabled": false,
+      "paperless_enabled": false,
+      "calendar_enabled": false,
+      "tasks_enabled": false,
+      "notifications_enabled": false
+    }
+  }
+}
+```
+
+**Das wars!** Der Mail AI Sorter arbeitet wieder ganz normal ohne Erweiterungen.
+
+### **Komplettes Entfernen der Erweiterungen:**
+
+Wenn du die Erweiterungen komplett loswerden willst:
+
+```bash
+# Paperless-ngx stoppen und löschen
+docker stop paperless-ngx
+docker rm paperless-ngx
+docker volume rm paperless_data paperless_media paperless_export paperless_consume
+
+# Tools deinstallieren (optional)
+brew uninstall gcalcli taskwarrior terminal-notifier
 ```
 
 ## 🎯 Welche Erweiterungen gibt es?

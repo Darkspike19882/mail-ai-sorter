@@ -15,6 +15,7 @@
 - 🔍 **Volltextsuche** - SQLite FTS5-basierte Suche über alle Emails
 - 🎨 **Moderne Web UI** - Intuitive Benutzeroberfläche im Browser
 - 📊 **Statistiken** - Detaillierte Einblicke in deine Email-Gewohnheiten
+- 🔌 **Optionale Erweiterungen** - Paperless-ngx, Kalender, Tasks, Notifications (optional!)
 - 🔒 **100% Privacy** - Alles läuft lokal auf deinem Mac
 
 ## 🎯 Perfekt für
@@ -142,6 +143,37 @@ python3 index.py stats
 ```
 
 ## 🔧 Konfiguration
+
+### 🔌 Optionale Erweiterungen (NEU!)
+
+Der Mail AI Sorter enthält **optionale Erweiterungen**, die du **nur aktivieren musst, wenn du sie willst**:
+
+**Verfügbare Erweiterungen:**
+- 📄 **Paperless-ngx** - Emails automatisch als Dokumente speichern
+- 📅 **Kalender** - Termine aus Emails extrahieren
+- ✅ **Tasks** - Aufgaben automatisch erstellen
+- 🔔 **Benachrichtigungen** - Desktop-Notifications bei wichtigen Emails
+
+**So aktivierst du Erweiterungen (optional):**
+
+1. In deiner `config.json` unter `global.extensions`:
+```json
+{
+  "extensions": {
+    "enabled": true,
+    "paperless_enabled": true,
+    "calendar_enabled": true,
+    "tasks_enabled": true,
+    "notifications_enabled": true
+  }
+}
+```
+
+2. **Die Erweiterungen sind komplett optional!** Wenn du sie nicht aktivierst, arbeitet der Mail AI Sorter genauso wie bisher.
+
+3. 📖 **Siehe `HOWTO_EXTENSIONS.md`** für detaillierte Anleitungen
+
+**Standardmäßig sind ALLE Erweiterungen deaktiviert** - du entscheidest, was du nutzen willst!
 
 ### KI-Modelle
 
