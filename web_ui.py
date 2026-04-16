@@ -9,6 +9,7 @@ import subprocess
 import threading
 import time
 from datetime import datetime
+from typing import Optional
 from flask import Flask, render_template, request, jsonify, redirect, url_for
 from pathlib import Path
 
@@ -73,6 +74,7 @@ def get_stats():
 def run_sorter(dry_run=False, max_mails=10):
     """Startet den Mail-Sorter"""
     try:
+        max_mails = max(1, min(int(max_mails), 1000))
         cmd = ["./run.sh", "--max-per-account", str(max_mails)]
         if dry_run:
             cmd.append("--dry-run")
@@ -137,11 +139,29 @@ def api_stats():
     """Statistiken API"""
     return jsonify(get_stats())
 
+def _validate_config(cfg) -> Optional[str]:
+    """Gibt eine Fehlermeldung zurück wenn die Konfiguration ungültig ist, sonst None."""
+    if not isinstance(cfg, dict):
+        return "Konfiguration muss ein JSON-Objekt sein"
+    global_section = cfg.get("global")
+    if global_section is not None and not isinstance(global_section, dict):
+        return "'global' muss ein Objekt sein"
+    accounts = cfg.get("accounts")
+    if accounts is not None and not isinstance(accounts, list):
+        return "'accounts' muss eine Liste sein"
+    return None
+
+
 @app.route('/api/config', methods=['GET', 'POST'])
 def api_config():
     """Konfigurations API"""
     if request.method == 'POST':
         new_config = request.json
+        if new_config is None:
+            return jsonify({"success": False, "error": "Kein gültiges JSON erhalten"})
+        error = _validate_config(new_config)
+        if error:
+            return jsonify({"success": False, "error": error})
         if save_config(new_config):
             return jsonify({"success": True})
         else:

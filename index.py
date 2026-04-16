@@ -162,7 +162,8 @@ def search(
         params.append(since)
 
     sql += " ORDER BY e.date_iso DESC" if query else " ORDER BY date_iso DESC"
-    sql += f" LIMIT {limit}"
+    sql += " LIMIT ?"
+    params.append(int(limit))
 
     return conn.execute(sql, params).fetchall()
 
