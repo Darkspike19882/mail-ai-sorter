@@ -36,6 +36,7 @@ def save_config(config):
             json.dump(config, f, indent=2, ensure_ascii=False)
         return True
     except Exception as e:
+        print(f"[save_config] ERROR: {e}", flush=True)
         return False
 
 def get_stats():
@@ -63,10 +64,22 @@ def get_stats():
 
         conn.close()
 
+        # Count entries in the learned-senders cache (if it exists)
+        learned_senders = 0
+        cache_file = SORTER_DIR / "learned_senders.json"
+        if cache_file.exists():
+            try:
+                import json as _json
+                with open(cache_file, "r", encoding="utf-8") as f:
+                    learned_senders = len(_json.load(f))
+            except Exception:
+                pass
+
         return {
             "total": total,
             "categories": dict(categories),
-            "accounts": dict(accounts)
+            "accounts": dict(accounts),
+            "learned_senders": learned_senders,
         }
     except Exception as e:
         return {"error": str(e)}
@@ -86,6 +99,17 @@ def run_sorter(dry_run=False, max_mails=10):
             text=True,
             timeout=300
         )
+
+        # Write output to log file so the /logs page shows real entries
+        log_file = SORTER_DIR / "mail_sorter.log"
+        try:
+            with open(log_file, "a", encoding="utf-8") as lf:
+                if result.stdout:
+                    lf.write(result.stdout)
+                if result.stderr:
+                    lf.write(result.stderr)
+        except OSError:
+            pass
 
         return {
             "success": result.returncode == 0,
@@ -181,8 +205,8 @@ def api_rule_templates():
 @app.route('/api/run', methods=['POST'])
 def api_run():
     """Sortierung starten"""
-    data = request.json
-    dry_run = data.get('dry_run', False)
+    data = request.json or {}
+    dry_run = bool(data.get('dry_run', False))
     max_mails = data.get('max_mails', 10)
 
     result = run_sorter(dry_run=dry_run, max_mails=max_mails)
