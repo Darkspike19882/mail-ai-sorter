@@ -1,0 +1,525 @@
+{% extends "base.html" %}
+
+{% block title %}Inbox — Mail AI{% endblock %}
+{% block nav_inbox %}active{% endblock %}
+{% block nav_mobile_inbox %}active{% endblock %}
+
+{# Vollbreites Layout ohne max-width und Padding #}
+{% block main %}
+<main class="flex flex-col" style="height: calc(100vh - 4rem);">
+    {% block content %}{% endblock %}
+</main>
+{% endblock %}
+
+{% block content %}
+<div x-data="inboxApp()" x-init="init()" class="flex h-full overflow-hidden">
+
+    <!-- ── Spalte 1: Ordner-Baum ──────────────────────────────────────────── -->
+    <aside class="w-56 flex-shrink-0 bg-white dark:bg-slate-800 border-r dark:border-slate-700 flex flex-col overflow-hidden">
+        <div class="p-3 border-b dark:border-slate-700 flex items-center justify-between">
+            <span class="text-sm font-semibold text-slate-700 dark:text-slate-200">Konten</span>
+            <button @click="refreshFolders()" title="Aktualisieren"
+                    class="p-1 rounded hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-500" :class="{'animate-spin': loadingFolders}"></i>
+            </button>
+        </div>
+        <div class="flex-1 overflow-y-auto py-2">
+            <template x-for="account in accounts" :key="account.name">
+                <div class="mb-2">
+                    <div class="px-3 py-1 text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider truncate"
+                         x-text="account.name"></div>
+                    <template x-for="folder in (account.folders || [])" :key="folder.name">
+                        <button
+                            @click="selectFolder(account.name, folder.name)"
+                            :class="selectedAccount === account.name && selectedFolder === folder.name
+                                ? 'bg-primary-50 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300'
+                                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700'"
+                            class="w-full text-left px-3 py-1.5 text-sm flex items-center justify-between rounded-lg mx-1 transition-colors"
+                            style="width: calc(100% - 0.5rem)">
+                            <span class="flex items-center gap-2 min-w-0">
+                                <i :data-lucide="folderIcon(folder.name)" class="w-3.5 h-3.5 flex-shrink-0 opacity-60"></i>
+                                <span class="truncate" x-text="folder.name"></span>
+                            </span>
+                            <span x-show="folder.unread > 0"
+                                  x-text="folder.unread"
+                                  class="ml-1 flex-shrink-0 bg-primary-500 text-white text-xs rounded-full px-1.5 py-0.5 leading-none font-medium">
+                            </span>
+                        </button>
+                    </template>
+                </div>
+            </template>
+            <div x-show="accounts.length === 0 && !loadingFolders"
+                 class="px-3 py-4 text-xs text-slate-400 dark:text-slate-500 text-center">
+                <i data-lucide="alert-circle" class="w-5 h-5 mx-auto mb-2 opacity-50"></i>
+                Kein Konto konfiguriert.<br>
+                <a href="/setup" class="text-primary-500 underline">Setup starten</a>
+            </div>
+        </div>
+    </aside>
+
+    <!-- ── Spalte 2: Mail-Liste ───────────────────────────────────────────── -->
+    <section class="w-80 flex-shrink-0 bg-slate-50 dark:bg-slate-900 border-r dark:border-slate-700 flex flex-col overflow-hidden">
+        <!-- Header -->
+        <div class="p-3 border-b dark:border-slate-700 bg-white dark:bg-slate-800 flex items-center gap-2">
+            <div class="flex-1 min-w-0">
+                <div class="text-sm font-semibold text-slate-800 dark:text-slate-100 truncate"
+                     x-text="selectedFolder || 'Ordner wählen'"></div>
+                <div class="text-xs text-slate-400 dark:text-slate-500"
+                     x-text="totalMessages > 0 ? totalMessages + ' Mails' : ''"></div>
+            </div>
+            <div class="flex items-center gap-1">
+                <button @click="filterUnseen = !filterUnseen; loadMessages()"
+                        :class="filterUnseen ? 'bg-primary-100 dark:bg-primary-900 text-primary-600' : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'"
+                        class="p-1.5 rounded-lg transition-colors text-xs font-medium"
+                        title="Nur ungelesene">
+                    <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                </button>
+                <button @click="loadMessages()" title="Aktualisieren"
+                        class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
+                    <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="{'animate-spin': loadingMessages}"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Mail-Liste -->
+        <div class="flex-1 overflow-y-auto">
+            <template x-for="mail in messages" :key="mail.uid">
+                <button
+                    @click="selectMail(mail)"
+                    :class="[
+                        selectedMail?.uid === mail.uid ? 'bg-primary-50 dark:bg-primary-900/30 border-l-primary-500' : 'bg-white dark:bg-slate-800 border-l-transparent hover:bg-slate-50 dark:hover:bg-slate-750',
+                        !mail.seen ? 'border-l-4' : 'border-l-4 border-l-transparent'
+                    ]"
+                    class="w-full text-left p-3 border-b dark:border-slate-700 transition-colors block">
+                    <div class="flex items-start justify-between gap-2 mb-1">
+                        <span class="text-xs font-medium text-slate-600 dark:text-slate-300 truncate"
+                              :class="!mail.seen ? 'text-slate-900 dark:text-white font-semibold' : ''"
+                              x-text="senderName(mail.from_addr)"></span>
+                        <span class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0"
+                              x-text="formatDate(mail.date_iso)"></span>
+                    </div>
+                    <div class="text-sm truncate"
+                         :class="!mail.seen ? 'font-semibold text-slate-900 dark:text-white' : 'text-slate-700 dark:text-slate-300'"
+                         x-text="mail.subject || '(kein Betreff)'"></div>
+                    <div class="flex items-center gap-1 mt-1">
+                        <i x-show="mail.flagged" data-lucide="star" class="w-3 h-3 text-yellow-400 fill-yellow-400"></i>
+                        <i x-show="!mail.seen" data-lucide="circle" class="w-2 h-2 text-primary-500 fill-primary-500"></i>
+                    </div>
+                </button>
+            </template>
+            <div x-show="messages.length === 0 && !loadingMessages && selectedFolder"
+                 class="p-6 text-center text-slate-400 dark:text-slate-500">
+                <i data-lucide="inbox" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                <p class="text-sm">Keine Mails</p>
+            </div>
+            <div x-show="!selectedFolder"
+                 class="p-6 text-center text-slate-400 dark:text-slate-500">
+                <i data-lucide="folder-open" class="w-8 h-8 mx-auto mb-2 opacity-40"></i>
+                <p class="text-sm">Ordner wählen</p>
+            </div>
+            <!-- Mehr laden -->
+            <div x-show="messages.length < totalMessages && !loadingMessages" class="p-3">
+                <button @click="loadMore()"
+                        class="w-full py-2 text-xs text-primary-600 dark:text-primary-400 hover:bg-primary-50 dark:hover:bg-primary-900/20 rounded-lg transition-colors">
+                    Weitere laden (<span x-text="totalMessages - messages.length"></span> übrig)
+                </button>
+            </div>
+            <div x-show="loadingMessages" class="p-4 text-center">
+                <div class="spinner mx-auto" style="width:24px;height:24px;border-width:2px"></div>
+            </div>
+        </div>
+    </section>
+
+    <!-- ── Spalte 3: Mail-Lesen ───────────────────────────────────────────── -->
+    <article class="flex-1 flex flex-col overflow-hidden bg-white dark:bg-slate-800">
+        <!-- Leer-State -->
+        <div x-show="!selectedMail && !loadingMail"
+             class="flex-1 flex items-center justify-center text-slate-300 dark:text-slate-600">
+            <div class="text-center">
+                <i data-lucide="mail-open" class="w-16 h-16 mx-auto mb-4 opacity-30"></i>
+                <p class="text-lg font-medium">Mail auswählen</p>
+                <p class="text-sm mt-1">Klicke links auf eine Mail um sie zu lesen</p>
+            </div>
+        </div>
+
+        <!-- Lade-Indikator -->
+        <div x-show="loadingMail"
+             class="flex-1 flex items-center justify-center">
+            <div class="spinner"></div>
+        </div>
+
+        <!-- Mail-Inhalt -->
+        <div x-show="selectedMail && !loadingMail" class="flex-1 flex flex-col overflow-hidden">
+            <!-- Mail-Header -->
+            <div class="border-b dark:border-slate-700 p-4 flex-shrink-0">
+                <div class="flex items-start justify-between gap-4 mb-3">
+                    <h1 class="text-lg font-semibold text-slate-900 dark:text-white leading-tight"
+                        x-text="currentMail?.subject || '(kein Betreff)'"></h1>
+                    <!-- Aktions-Buttons -->
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button @click="toggleFlag('flagged')"
+                                :title="currentMail?.flagged ? 'Stern entfernen' : 'Markieren'"
+                                class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                            <i data-lucide="star" class="w-4 h-4"
+                               :class="currentMail?.flagged ? 'text-yellow-400 fill-yellow-400' : 'text-slate-400'"></i>
+                        </button>
+                        <button @click="deleteMail()"
+                                title="Löschen"
+                                class="p-2 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/20 text-slate-400 hover:text-red-500 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+                <!-- Absender-Info -->
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-full bg-primary-100 dark:bg-primary-900 flex items-center justify-center flex-shrink-0">
+                        <span class="text-sm font-bold text-primary-600 dark:text-primary-300"
+                              x-text="avatarInitial(currentMail?.from_addr)"></span>
+                    </div>
+                    <div class="min-w-0 flex-1">
+                        <div class="text-sm font-medium text-slate-900 dark:text-white truncate"
+                             x-text="senderName(currentMail?.from_addr)"></div>
+                        <div class="text-xs text-slate-400 dark:text-slate-500 truncate"
+                             x-text="currentMail?.from_addr"></div>
+                    </div>
+                    <div class="text-xs text-slate-400 dark:text-slate-500 flex-shrink-0"
+                         x-text="formatDateFull(currentMail?.date_iso)"></div>
+                </div>
+                <!-- An / CC -->
+                <div class="mt-2 text-xs text-slate-500 dark:text-slate-400 space-y-0.5" x-show="currentMail?.to">
+                    <span class="text-slate-400">An: </span>
+                    <span x-text="currentMail?.to"></span>
+                </div>
+                <div class="mt-0.5 text-xs text-slate-500 dark:text-slate-400" x-show="currentMail?.cc">
+                    <span class="text-slate-400">CC: </span>
+                    <span x-text="currentMail?.cc"></span>
+                </div>
+            </div>
+
+            <!-- Mail-Body -->
+            <div class="flex-1 overflow-y-auto">
+                <!-- HTML-Body in iframe (XSS-Isolation) -->
+                <div x-show="currentMail?.body_html" class="h-full">
+                    <iframe id="mailFrame"
+                            sandbox="allow-same-origin"
+                            class="w-full border-0"
+                            style="min-height: 400px;"
+                            @load="resizeFrame()">
+                    </iframe>
+                </div>
+                <!-- Plaintext-Fallback -->
+                <div x-show="!currentMail?.body_html && currentMail?.body_text"
+                     class="p-6 text-sm text-slate-700 dark:text-slate-300 font-mono whitespace-pre-wrap leading-relaxed"
+                     x-text="currentMail?.body_text">
+                </div>
+            </div>
+
+            <!-- Anhänge -->
+            <div x-show="currentMail?.attachments?.length > 0"
+                 class="border-t dark:border-slate-700 p-3 flex-shrink-0 bg-slate-50 dark:bg-slate-900">
+                <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-2 flex items-center gap-1">
+                    <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                    <span x-text="currentMail?.attachments?.length + ' Anhang/Anhänge'"></span>
+                </div>
+                <div class="flex flex-wrap gap-2">
+                    <template x-for="att in currentMail?.attachments || []" :key="att.part_id">
+                        <a :href="attachmentUrl(att)"
+                           download
+                           class="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 rounded-lg border dark:border-slate-700 text-xs text-slate-700 dark:text-slate-300 hover:border-primary-400 transition-colors">
+                            <i data-lucide="file" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span x-text="att.filename"></span>
+                            <span class="text-slate-400" x-text="formatBytes(att.size)"></span>
+                        </a>
+                    </template>
+                </div>
+            </div>
+        </div>
+    </article>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function inboxApp() {
+    return {
+        // State
+        accounts:        [],
+        selectedAccount: null,
+        selectedFolder:  null,
+        messages:        [],
+        totalMessages:   0,
+        selectedMail:    null,
+        currentMail:     null,
+        filterUnseen:    false,
+        loadingFolders:  false,
+        loadingMessages: false,
+        loadingMail:     false,
+        offset:          0,
+        PAGE_SIZE:       50,
+
+        async init() {
+            await this.loadAccounts();
+            this.startEventStream();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        // ── Konten & Ordner ──────────────────────────────────────────────────
+
+        async loadAccounts() {
+            this.loadingFolders = true;
+            try {
+                const res = await fetch('/api/accounts');
+                const list = await res.json();
+                // Für jeden Account Ordner laden
+                this.accounts = await Promise.all(list.map(async acc => {
+                    const fRes = await fetch(`/api/accounts/${encodeURIComponent(acc.name)}/folders`);
+                    const fData = await fRes.json();
+                    return { ...acc, folders: fData.folders || [] };
+                }));
+                // Ersten Account + INBOX automatisch auswählen
+                if (this.accounts.length > 0 && !this.selectedFolder) {
+                    const first = this.accounts[0];
+                    const inbox = first.folders.find(f => f.name === 'INBOX') || first.folders[0];
+                    if (inbox) this.selectFolder(first.name, inbox.name);
+                }
+            } catch (e) {
+                console.error('loadAccounts:', e);
+            } finally {
+                this.loadingFolders = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async refreshFolders() {
+            await this.loadAccounts();
+        },
+
+        async selectFolder(accountName, folderName) {
+            this.selectedAccount = accountName;
+            this.selectedFolder  = folderName;
+            this.messages        = [];
+            this.totalMessages   = 0;
+            this.offset          = 0;
+            this.selectedMail    = null;
+            this.currentMail     = null;
+            await this.loadMessages();
+        },
+
+        // ── Mails laden ──────────────────────────────────────────────────────
+
+        async loadMessages() {
+            if (!this.selectedAccount || !this.selectedFolder) return;
+            this.loadingMessages = true;
+            this.offset = 0;
+            try {
+                const criteria = this.filterUnseen ? 'UNSEEN' : 'ALL';
+                const url = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages?limit=${this.PAGE_SIZE}&offset=0&search=${criteria}`;
+                const res  = await fetch(url);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                this.messages      = data.messages || [];
+                this.totalMessages = data.total    || 0;
+            } catch (e) {
+                showNotification('Fehler: ' + e.message, 'error');
+            } finally {
+                this.loadingMessages = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        async loadMore() {
+            if (!this.selectedAccount || !this.selectedFolder) return;
+            this.offset += this.PAGE_SIZE;
+            this.loadingMessages = true;
+            try {
+                const criteria = this.filterUnseen ? 'UNSEEN' : 'ALL';
+                const url = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages?limit=${this.PAGE_SIZE}&offset=${this.offset}&search=${criteria}`;
+                const res  = await fetch(url);
+                const data = await res.json();
+                this.messages.push(...(data.messages || []));
+            } catch (e) {
+                showNotification('Fehler: ' + e.message, 'error');
+            } finally {
+                this.loadingMessages = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        // ── Mail lesen ───────────────────────────────────────────────────────
+
+        async selectMail(mail) {
+            this.selectedMail = mail;
+            this.loadingMail  = true;
+            this.currentMail  = null;
+            try {
+                const url = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages/${mail.uid}`;
+                const res  = await fetch(url);
+                const data = await res.json();
+                if (data.error) throw new Error(data.error);
+                this.currentMail = data;
+                // Als gelesen in Liste markieren
+                const m = this.messages.find(m => m.uid === mail.uid);
+                if (m) m.seen = true;
+                // HTML in iframe laden
+                this.$nextTick(() => this.renderHtml(data.body_html));
+            } catch (e) {
+                showNotification('Fehler: ' + e.message, 'error');
+            } finally {
+                this.loadingMail = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        renderHtml(html) {
+            if (!html) return;
+            const frame = document.getElementById('mailFrame');
+            if (!frame) return;
+            // Blob-URL in iframe: verhindert JS-Ausführung via sandbox
+            const blob = new Blob([html], { type: 'text/html' });
+            const url  = URL.createObjectURL(blob);
+            frame.src  = url;
+            frame.onload = () => {
+                try {
+                    const h = frame.contentDocument?.body?.scrollHeight;
+                    if (h) frame.style.height = (h + 32) + 'px';
+                } catch (e) {}
+                URL.revokeObjectURL(url);
+            };
+        },
+
+        resizeFrame() {
+            const frame = document.getElementById('mailFrame');
+            if (!frame) return;
+            try {
+                const h = frame.contentDocument?.body?.scrollHeight;
+                if (h) frame.style.height = (h + 32) + 'px';
+            } catch (e) {}
+        },
+
+        // ── Aktionen ─────────────────────────────────────────────────────────
+
+        async toggleFlag(flagName) {
+            if (!this.currentMail) return;
+            const newVal = !this.currentMail[flagName];
+            this.currentMail[flagName] = newVal;
+            const m = this.messages.find(m => m.uid === this.currentMail.uid);
+            if (m) m[flagName] = newVal;
+            try {
+                await fetch(
+                    `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages/${this.currentMail.uid}`,
+                    { method: 'PATCH', headers: {'Content-Type':'application/json'},
+                      body: JSON.stringify({ [flagName]: newVal }) }
+                );
+            } catch (e) {
+                showNotification('Fehler beim Setzen des Flags', 'error');
+            }
+        },
+
+        async deleteMail() {
+            if (!this.currentMail) return;
+            if (!confirm(`Mail löschen?\n"${this.currentMail.subject}"`)) return;
+            const uid = this.currentMail.uid;
+            try {
+                const res = await fetch(
+                    `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages/${uid}`,
+                    { method: 'DELETE' }
+                );
+                const data = await res.json();
+                if (data.success) {
+                    this.messages     = this.messages.filter(m => m.uid !== uid);
+                    this.totalMessages = Math.max(0, this.totalMessages - 1);
+                    this.currentMail  = null;
+                    this.selectedMail = null;
+                    showNotification('Mail gelöscht', 'success');
+                }
+            } catch (e) {
+                showNotification('Fehler beim Löschen', 'error');
+            }
+        },
+
+        attachmentUrl(att) {
+            return `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages/${this.currentMail?.uid}/attachments/${att.part_id}`;
+        },
+
+        // ── SSE: Echtzeit-Updates ─────────────────────────────────────────────
+
+        startEventStream() {
+            const es = new EventSource('/api/events');
+            es.onmessage = (e) => {
+                try {
+                    const ev = JSON.parse(e.data);
+                    if (ev.type === 'new_mail' && ev.account === this.selectedAccount) {
+                        showNotification(`${ev.count} neue Mail(s) in ${ev.folder}`, 'info');
+                        // Ordner-Zähler aktualisieren
+                        const acc = this.accounts.find(a => a.name === ev.account);
+                        if (acc) {
+                            const f = acc.folders.find(f => f.name === ev.folder);
+                            if (f) f.unread = (f.unread || 0) + ev.count;
+                        }
+                        // Liste neu laden wenn im selben Ordner
+                        if (ev.folder === this.selectedFolder) this.loadMessages();
+                    }
+                } catch (_) {}
+            };
+            es.onerror = () => {
+                // SSE-Reconnect ist automatisch im Browser
+            };
+        },
+
+        // ── Hilfsfunktionen ───────────────────────────────────────────────────
+
+        senderName(from) {
+            if (!from) return '';
+            const m = from.match(/^"?([^"<]+)"?\s*</);
+            return m ? m[1].trim() : from.replace(/<[^>]+>/, '').trim() || from;
+        },
+
+        avatarInitial(from) {
+            const name = this.senderName(from);
+            return name ? name.charAt(0).toUpperCase() : '?';
+        },
+
+        formatDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            const now = new Date();
+            if (d.toDateString() === now.toDateString()) {
+                return d.toLocaleTimeString('de-DE', {hour:'2-digit', minute:'2-digit'});
+            }
+            const diffDays = Math.floor((now - d) / 86400000);
+            if (diffDays < 7) {
+                return d.toLocaleDateString('de-DE', {weekday:'short'});
+            }
+            return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+        },
+
+        formatDateFull(iso) {
+            if (!iso) return '';
+            return new Date(iso).toLocaleString('de-DE', {
+                day: '2-digit', month: 'long', year: 'numeric',
+                hour: '2-digit', minute: '2-digit'
+            });
+        },
+
+        formatBytes(bytes) {
+            if (!bytes) return '';
+            if (bytes < 1024) return bytes + ' B';
+            if (bytes < 1048576) return (bytes / 1024).toFixed(1) + ' KB';
+            return (bytes / 1048576).toFixed(1) + ' MB';
+        },
+
+        folderIcon(name) {
+            const n = (name || '').toLowerCase();
+            if (n.includes('inbox') || n === 'inbox') return 'inbox';
+            if (n.includes('sent') || n.includes('gesendet')) return 'send';
+            if (n.includes('draft') || n.includes('entwurf')) return 'file-edit';
+            if (n.includes('trash') || n.includes('papierkorb') || n.includes('gelöscht')) return 'trash-2';
+            if (n.includes('spam') || n.includes('junk')) return 'alert-triangle';
+            if (n.includes('archiv')) return 'archive';
+            return 'folder';
+        },
+    };
+}
+</script>
+{% endblock %}

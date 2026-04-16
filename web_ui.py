@@ -1,23 +1,70 @@
 #!/usr/bin/env python3
 """
-Mail AI Sorter - Web UI
-Einfache Web-Oberfläche für den AI Email Sorter
+Mail AI Sorter - Web UI + Email Client
 """
+import io
 import os
 import json
+import queue as _queue
 import subprocess
 import threading
 import time
 from datetime import datetime
 from typing import Optional
-from flask import Flask, render_template, request, jsonify, redirect, url_for
+from flask import Flask, render_template, request, jsonify, redirect, url_for, Response, send_file
 from pathlib import Path
+
+import imap_client as _imap
 
 app = Flask(__name__)
 SORTER_DIR = Path(__file__).parent
 CONFIG_FILE = SORTER_DIR / "config.json"
 SECRETS_FILE = SORTER_DIR / "secrets.env"
 INDEX_DB = SORTER_DIR / "mail_index.db"
+
+# ─── Echtzeit-Event-Queue (SSE) ───────────────────────────────────────────────
+_event_queue: _queue.Queue = _queue.Queue()
+
+# Letzter bekannter UID pro Account/Ordner für Polling
+_last_uid: dict = {}
+
+# ─── Pool-Initialisierung ────────────────────────────────────────────────────
+
+def _init_pool() -> None:
+    """Liest Config und registriert alle Accounts im IMAP-Pool."""
+    try:
+        cfg = load_config()
+        accounts = cfg.get("accounts", [])
+        _imap.pool.init_from_config(accounts)
+    except Exception as e:
+        print(f"[pool] WARN: Konnte Accounts nicht laden: {e}", flush=True)
+
+
+def _polling_loop() -> None:
+    """Daemon-Thread: prüft alle 30s auf neue Mails und schreibt in Event-Queue."""
+    while True:
+        try:
+            cfg = load_config()
+            for acc in cfg.get("accounts", []):
+                name = acc.get("name", "")
+                folder = acc.get("source_folder", "INBOX")
+                key = f"{name}/{folder}"
+                try:
+                    session = _imap.pool.get(name)
+                    new_uids = session.poll_new_messages(folder, _last_uid.get(key))
+                    if new_uids:
+                        _last_uid[key] = new_uids[-1]
+                        _event_queue.put({
+                            "type":    "new_mail",
+                            "account": name,
+                            "folder":  folder,
+                            "count":   len(new_uids),
+                        })
+                except Exception:
+                    pass
+        except Exception:
+            pass
+        time.sleep(30)
 
 # ─── Helper Functions ─────────────────────────────────────────────────────
 
@@ -270,13 +317,181 @@ def api_search():
     except Exception as e:
         return jsonify({"error": str(e), "emails": []})
 
+# ─── Inbox-Seite ──────────────────────────────────────────────────────────────
+
+@app.route('/inbox')
+def inbox_page():
+    """Email-Client Hauptseite."""
+    return render_template('inbox.html')
+
+
+# ─── Inbox API ────────────────────────────────────────────────────────────────
+
+@app.route('/api/accounts')
+def api_accounts():
+    """Alle konfigurierten Accounts."""
+    cfg = load_config()
+    accounts = [
+        {"name": a.get("name"), "host": a.get("imap_host"),
+         "username": a.get("username")}
+        for a in cfg.get("accounts", [])
+    ]
+    return jsonify(accounts)
+
+
+@app.route('/api/accounts/<name>/folders')
+def api_folders(name):
+    """Ordner-Liste mit Unread-Count für einen Account."""
+    try:
+        session = _imap.pool.get(name)
+        folders = session.list_folders()
+        return jsonify({"folders": folders})
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages')
+def api_messages(name, folder):
+    """Paginierte Mail-Header-Liste."""
+    try:
+        limit  = max(1, min(int(request.args.get("limit",  50)), 200))
+        offset = max(0, int(request.args.get("offset", 0)))
+        search = request.args.get("search", "ALL")
+        # Erlaubte Suchkriterien whitelisten (verhindert IMAP-Injection)
+        allowed = {"ALL", "UNSEEN", "SEEN", "FLAGGED", "UNFLAGGED"}
+        if search not in allowed:
+            search = "ALL"
+
+        session = _imap.pool.get(name)
+        mails, total = session.fetch_headers(folder, limit=limit, offset=offset,
+                                             search_criteria=search)
+        return jsonify({"messages": mails, "total": total,
+                        "limit": limit, "offset": offset})
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>')
+def api_message(name, folder, uid):
+    """Vollständige Mail (HTML sanitized, Anhang-Metadaten)."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    try:
+        session = _imap.pool.get(name)
+        msg = session.fetch_message(folder, uid)
+        return jsonify(msg)
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>', methods=['PATCH'])
+def api_message_flag(name, folder, uid):
+    """Setzt Flags (seen, flagged) für eine Mail."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    data = request.json or {}
+    try:
+        session = _imap.pool.get(name)
+        results = {}
+        if "seen" in data:
+            results["seen"] = session.set_flag(folder, uid, "\\Seen", bool(data["seen"]))
+        if "flagged" in data:
+            results["flagged"] = session.set_flag(folder, uid, "\\Flagged", bool(data["flagged"]))
+        return jsonify({"success": True, **results})
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>', methods=['DELETE'])
+def api_message_delete(name, folder, uid):
+    """Löscht eine Mail (\\Deleted + Expunge)."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    try:
+        session = _imap.pool.get(name)
+        ok = session.delete_message(folder, uid)
+        return jsonify({"success": ok})
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>/move', methods=['POST'])
+def api_message_move(name, folder, uid):
+    """Verschiebt eine Mail in einen anderen Ordner."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    data = request.json or {}
+    target = data.get("target_folder", "").strip()
+    if not target:
+        return jsonify({"error": "target_folder fehlt"}), 400
+    try:
+        session = _imap.pool.get(name)
+        ok = session.move_message(folder, uid, target)
+        return jsonify({"success": ok})
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>/attachments/<int:part_id>')
+def api_attachment(name, folder, uid, part_id):
+    """Streamt einen Anhang direkt aus IMAP (kein Temp-File)."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    try:
+        session = _imap.pool.get(name)
+        data, filename, content_type = session.get_attachment(folder, uid, part_id)
+        return send_file(
+            io.BytesIO(data),
+            mimetype=content_type,
+            as_attachment=True,
+            download_name=filename,
+        )
+    except KeyError:
+        return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─── Server-Sent Events (Echtzeit-Updates) ────────────────────────────────────
+
+@app.route('/api/events')
+def api_events():
+    """SSE-Stream für neue Mails und andere Echtzeit-Events."""
+    def generate():
+        while True:
+            try:
+                event = _event_queue.get(timeout=30)
+                yield f"data: {json.dumps(event)}\n\n"
+            except _queue.Empty:
+                yield ": heartbeat\n\n"   # Verbindung aufrechterhalten
+    return Response(
+        generate(),
+        mimetype="text/event-stream",
+        headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+    )
+
+
 # ─── Main ──────────────────────────────────────────────────────────────────
 
 if __name__ == '__main__':
-    print("🌐 Mail AI Sorter Web UI")
+    print("Mail AI Sorter — Email Client")
     print("=" * 50)
-    print("Starte Web-Server auf http://localhost:5001")
-    print("Drücke STRG+C zum Beenden")
+    print("http://localhost:5001")
     print("=" * 50)
 
-    app.run(debug=False, host='127.0.0.1', port=5001)
+    _init_pool()
+    threading.Thread(target=_polling_loop, daemon=True).start()
+
+    app.run(debug=False, host='127.0.0.1', port=5001, threaded=True)
