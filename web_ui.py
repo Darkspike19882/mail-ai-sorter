@@ -718,17 +718,62 @@ def api_folders():
         conn = _imap_connect(acc)
         typ, data = conn.list()
         folders = []
+        delimiter = "/"
         if typ == "OK" and data:
             for item in data:
                 if not item:
                     continue
-                flags, delim, name = item.decode(errors="replace").partition(' "/" ')
-                name = name.strip('"').strip()
+                text = item.decode(errors="replace")
+                import re as _re
+
+                m = _re.match(r'\(([^)]*)\)\s+"([^"]+)"\s+"?([^"]*)"?\s*$', text)
+                if m:
+                    flags_str, delimiter, name = (
+                        m.group(1),
+                        m.group(2),
+                        m.group(3).strip('"').strip(),
+                    )
+                else:
+                    parts = text.rsplit(' "/" ', 1)
+                    if len(parts) > 1:
+                        flags_str, name = parts[0].strip(), parts[-1].strip('"').strip()
+                        delimiter = "/"
+                    else:
+                        continue
                 if not name:
                     continue
-                folders.append({"name": name, "flags": flags.strip()})
+                parts = name.split(delimiter) if delimiter else [name]
+                display = parts[-1] if len(parts) > 1 else name
+                folders.append(
+                    {
+                        "name": name,
+                        "display": display,
+                        "delimiter": delimiter,
+                        "depth": len(parts) - 1,
+                        "flags": flags_str,
+                        "parent": delimiter.join(parts[:-1]) if len(parts) > 1 else "",
+                    }
+                )
+        unread = {}
+        for f in folders:
+            fname = f["name"]
+            try:
+                st = conn.status(fname, "(UNSEEN)")
+                if st[0] == "OK" and st[1]:
+                    val = (
+                        st[1][0].decode(errors="replace")
+                        if isinstance(st[1][0], bytes)
+                        else str(st[1][0])
+                    )
+                    um = re.search(r"UNSEEN\s+(\d+)", val)
+                    if um:
+                        unread[fname] = int(um.group(1))
+            except Exception:
+                pass
+        for f in folders:
+            f["unread"] = unread.get(f["name"], 0)
         conn.logout()
-        return jsonify({"folders": folders})
+        return jsonify({"folders": folders, "delimiter": delimiter})
     except Exception as e:
         return jsonify({"error": str(e), "folders": []})
 
