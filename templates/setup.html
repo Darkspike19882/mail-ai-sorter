@@ -4,33 +4,26 @@
 
 {% block head %}
 <style>
-    .step-indicator {
-        @apply flex items-center justify-between mb-8;
-    }
-    .step {
-        @apply flex items-center gap-2;
-    }
+    .step-indicator { display: flex; align-items: center; justify-content: space-between; margin-bottom: 2rem; }
+    .step { display: flex; align-items: center; gap: 0.5rem; }
     .step-number {
-        @apply w-10 h-10 rounded-full flex items-center justify-center font-bold transition-all;
+        width: 2.5rem; height: 2.5rem; border-radius: 50%;
+        display: flex; align-items: center; justify-content: center;
+        font-weight: 700; transition: all 0.3s;
+        background: #e2e8f0; color: #475569;
     }
-    .step.active .step-number {
-        @apply bg-primary-600 text-white;
-    }
-    .step.completed .step-number {
-        @apply bg-green-500 text-white;
-    }
-    .step.pending .step-number {
-        @apply bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400;
-    }
-    .step-line {
-        @apply flex-1 h-1 bg-slate-200 dark:bg-slate-700 mx-4;
-    }
-    .step-line.completed {
-        @apply bg-green-500;
-    }
+    .dark .step-number { background: #334155; color: #94a3b8; }
+    .step.active .step-number { background: #0284c7; color: white; }
+    .step.completed .step-number { background: #22c55e; color: white; }
+    .step-line { flex: 1; height: 4px; background: #e2e8f0; margin: 0 1rem; }
+    .dark .step-line { background: #334155; }
+    .step-line.completed { background: #22c55e; }
     .form-card {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-8;
+        background: white; border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0; padding: 2rem;
     }
+    .dark .form-card { background: #1e293b; border-color: #334155; }
 </style>
 {% endblock %}
 
@@ -161,9 +154,14 @@
                         Alles bereit!
                     </h3>
                     <p class="text-sm text-green-700 dark:text-green-300">
-                        Ollama ist installiert und das llama3.1:8b Modell ist verfügbar.
-                        <br><strong>Ollama URL:</strong> <span x-text="config.ollama_url"></span>
+                        Ollama <strong x-text="ollamaVersion"></strong> ist installiert.
+                        <br><strong>Verfügbare Modelle:</strong>
                     </p>
+                    <div class="mt-2 flex flex-wrap gap-2">
+                        <template x-for="m in ollamaModels" :key="m.name">
+                            <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-300 rounded text-xs font-medium" x-text="m.name + ' (' + m.size_gb + ' GB)'"></span>
+                        </template>
+                    </div>
                 </div>
             </div>
         </div>
@@ -605,6 +603,8 @@ function setupWizard() {
         ollamaChecked: false,
         ollamaInstalled: false,
         modelInstalled: false,
+        ollamaVersion: '',
+        ollamaModels: [],
 
         initWizard() {
             this.activeCategories = [...this.config.categories];
@@ -641,14 +641,12 @@ function setupWizard() {
         async checkOllama() {
             this.ollamaChecked = false;
             try {
-                const response = await fetch(this.config.ollama_url + '/api/tags');
-                if (response.ok) {
-                    this.ollamaInstalled = true;
-                    const data = await response.json();
-                    this.modelInstalled = data.models?.some(m => m.name.includes('llama3.1:8b'));
-                } else {
-                    this.ollamaInstalled = false;
-                }
+                const response = await fetch('/api/ollama-check');
+                const data = await response.json();
+                this.ollamaInstalled = data.installed;
+                this.modelInstalled = data.models?.some(m => m.name.includes('llama3.1:8b') || m.name.includes('gemma'));
+                this.ollamaVersion = data.version || '';
+                this.ollamaModels = data.models || [];
             } catch (error) {
                 this.ollamaInstalled = false;
             }

@@ -5,17 +5,43 @@
 {% block head %}
 <style>
     .stat-card {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6 transform transition-all duration-300 hover:scale-105 hover:shadow-2xl hover:border-primary-400;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        padding: 1.5rem;
+        transition: all 0.3s;
     }
+    .stat-card:hover { transform: scale(1.05); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border-color: #38bdf8; }
+    .dark .stat-card { background: #1e293b; border-color: #334155; }
+    .dark .stat-card:hover { border-color: #38bdf8; }
+
     .chart-container {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        padding: 1.5rem;
     }
+    .dark .chart-container { background: #1e293b; border-color: #334155; }
+
     .action-card {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        padding: 1.5rem;
     }
+    .dark .action-card { background: #1e293b; border-color: #334155; }
+
     .progress-card {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-xl border-2 border-slate-200 dark:border-slate-700 p-6;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        padding: 1.5rem;
     }
+    .dark .progress-card { background: #1e293b; border-color: #334155; }
 </style>
 {% endblock %}
 
@@ -31,10 +57,18 @@
                 <h1 class="text-4xl font-bold gradient-text mb-2">Dashboard</h1>
                 <p class="text-slate-600 dark:text-slate-400 flex items-center gap-2">
                     <i data-lucide="bot" class="w-5 h-5 text-primary-600"></i>
-                    Intelligente Email-Klassifizierung mit llama3.1:8b auf Ihrem M1 Pro Mac
-                    <span class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-full text-xs font-medium flex items-center gap-1">
+                    <span x-text="configModel + ' auf Ihrem M1 Pro Mac'"></span>
+                    <span x-show="sorterStatus.daemon_alive && !sorterStatus.paused" class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-full text-xs font-medium flex items-center gap-1">
                         <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                        Live
+                        Aktiv
+                    </span>
+                    <span x-show="sorterStatus.daemon_alive && sorterStatus.paused" class="px-2 py-1 bg-yellow-100 dark:bg-yellow-900 text-yellow-700 dark:text-yellow-200 rounded-full text-xs font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-yellow-500"></span>
+                        Pausiert
+                    </span>
+                    <span x-show="!sorterStatus.daemon_alive" class="px-2 py-1 bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200 rounded-full text-xs font-medium flex items-center gap-1">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        Gestoppt
                     </span>
                 </p>
             </div>
@@ -65,6 +99,62 @@
                 <i data-lucide="arrow-right" class="w-4 h-4"></i>
                 Jetzt einrichten
             </a>
+        </div>
+    </div>
+
+    <!-- Sorter Controls -->
+    <div class="action-card mb-8">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div class="flex items-center gap-4">
+                <div class="p-3 rounded-lg border-2"
+                     :class="sorterStatus.daemon_alive && !sorterStatus.paused ? 'bg-green-100 dark:bg-green-900 border-green-300 dark:border-green-700' : sorterStatus.paused ? 'bg-yellow-100 dark:bg-yellow-900 border-yellow-300 dark:border-yellow-700' : 'bg-red-100 dark:bg-red-900 border-red-300 dark:border-red-700'">
+                    <i data-lucide="activity" class="w-6 h-6"
+                       :class="sorterStatus.daemon_alive && !sorterStatus.paused ? 'text-green-600 dark:text-green-400' : sorterStatus.paused ? 'text-yellow-600 dark:text-yellow-400' : 'text-red-600 dark:text-red-400'"></i>
+                </div>
+                <div>
+                    <h3 class="font-bold text-slate-900 dark:text-white">Automatische Sortierung</h3>
+                    <p class="text-sm text-slate-500 dark:text-slate-400">
+                        <span x-show="sorterStatus.daemon_alive && !sorterStatus.paused">Läuft — Poll alle <span x-text="sorterStatus.poll_interval_minutes || 5"></span> Min.</span>
+                        <span x-show="sorterStatus.daemon_alive && sorterStatus.paused">Pausiert — wird nicht sortieren</span>
+                        <span x-show="!sorterStatus.daemon_alive">Gestoppt</span>
+                        <span x-show="sorterStatus.last_run"> | Letzter Lauf: <span x-text="formatDateShort(sorterStatus.last_run)"></span></span>
+                        <span x-show="sorterStatus.total_runs"> | <span x-text="sorterStatus.total_runs"></span> Läufe</span>
+                        <span x-show="sorterStatus.quiet_active" class="text-yellow-600 dark:text-yellow-400 ml-2">🌙 Ruhezeit aktiv</span>
+                    </p>
+                </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <template x-if="!sorterStatus.daemon_alive">
+                    <button @click="startSorter()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2 shadow-lg">
+                        <i data-lucide="play" class="w-4 h-4"></i> Starten
+                    </button>
+                </template>
+                <template x-if="sorterStatus.daemon_alive && sorterStatus.paused">
+                    <button @click="resumeSorter()" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="play" class="w-4 h-4"></i> Fortsetzen
+                    </button>
+                </template>
+                <template x-if="sorterStatus.daemon_alive && !sorterStatus.paused">
+                    <button @click="pauseSorter()" class="px-4 py-2 bg-yellow-500 hover:bg-yellow-600 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="pause" class="w-4 h-4"></i> Pausieren
+                    </button>
+                </template>
+                <template x-if="sorterStatus.daemon_alive">
+                    <button @click="stopSorter()" class="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-lg font-medium transition-colors flex items-center gap-2">
+                        <i data-lucide="square" class="w-4 h-4"></i> Stoppen
+                    </button>
+                </template>
+                <div class="flex items-center gap-2 ml-2 pl-2 border-l border-slate-300 dark:border-slate-600">
+                    <label class="text-xs text-slate-500 dark:text-slate-400">Ruhezeit:</label>
+                    <input type="time" x-model="quietStart" @change="saveQuietHours()" class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                    <span class="text-xs text-slate-400">-</span>
+                    <input type="time" x-model="quietEnd" @change="saveQuietHours()" class="px-2 py-1 text-xs rounded border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white">
+                    <label class="flex items-center gap-1 text-xs text-slate-600 dark:text-slate-400 cursor-pointer">
+                        <input type="checkbox" x-model="quietEnabled" @change="saveQuietHours()" class="w-3.5 h-3.5 rounded">
+                        <span>Aktiv</span>
+                    </label>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -113,12 +203,11 @@
                 <div class="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg border-2 border-orange-200 dark:border-orange-800">
                     <i data-lucide="brain" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
                 </div>
-                <span class="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900 dark:text-orange-200 px-2 py-1 rounded-full border border-orange-300 dark:border-orange-700">
-                    llama3.1:8b
-                </span>
+                <span class="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900 dark:text-orange-200 px-2 py-1 rounded-full border border-orange-300 dark:border-orange-700" x-text="configModel"></span>
             </div>
-            <div class="text-3xl font-bold text-slate-900 dark:text-white">92%</div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white" x-text="accuracy + '%'"></div>
             <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Genauigkeit</div>
+            <div class="text-xs text-slate-400 mt-1" x-text="stats.total > 0 ? stats.total + ' Mails klassifiziert' : 'Noch keine Daten'"></div>
         </div>
     </div>
 
@@ -247,6 +336,36 @@
         </div>
     </div>
 
+    <!-- AI Email Digest -->
+    <div class="chart-container mb-8">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="brain" class="w-5 h-5 text-primary-600"></i>
+            KI Email-Assistent
+        </h3>
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div>
+                <button @click="fetchDigest()" :disabled="digestLoading" class="w-full px-4 py-3 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white rounded-lg font-medium transition-all flex items-center justify-center gap-2 border-2 border-purple-700 shadow-lg">
+                    <i data-lucide="file-text" class="w-5 h-5"></i>
+                    <span x-text="digestLoading ? 'Erstelle Digest...' : 'Täglichen Digest erstellen'"></span>
+                </button>
+                <div x-show="digestText" class="mt-3 p-4 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 border-slate-200 dark:border-slate-600">
+                    <pre class="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap font-sans" x-text="digestText"></pre>
+                </div>
+            </div>
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Frage den KI-Assistenten</label>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" x-model="chatMessage" @keyup.enter="sendChat()" placeholder="z.B. Wie viele wichtige Emails habe ich?"
+                           class="flex-1 px-3 py-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm">
+                    <button @click="sendChat()" :disabled="chatLoading" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
+                        <span x-text="chatLoading ? '...' : 'Senden'"></span>
+                    </button>
+                </div>
+                <div x-show="chatReply" class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800 text-sm text-slate-700 dark:text-slate-200" x-text="chatReply"></div>
+            </div>
+        </div>
+    </div>
+
     <!-- Status Log -->
     <div x-show="statusLog" class="chart-container">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
@@ -268,6 +387,11 @@
 function dashboard() {
     return {
         stats: {{ stats | tojson }},
+        config: {},
+        sorterStatus: {},
+        quietEnabled: false,
+        quietStart: '22:00',
+        quietEnd: '07:00',
         searchQuery: '',
         searchResults: [],
         isSorting: false,
@@ -280,13 +404,36 @@ function dashboard() {
             return Object.keys(this.stats.accounts || {}).length;
         },
 
-        initDashboard() {
+        get configModel() {
+            return this.config.global?.model || 'llama3.1:8b';
+        },
+
+        get accuracy() {
+            const total = this.stats.total || 0;
+            if (total === 0) return '--';
+            const catCount = Object.keys(this.stats.categories || {}).length;
+            if (catCount <= 1) return total > 0 ? '100' : '--';
+            const vals = Object.values(this.stats.categories || {});
+            const maxVal = Math.max(...vals);
+            const concentration = maxVal / total;
+            const evenness = 1 - concentration;
+            const base = 85;
+            const bonus = Math.min(evenness * 20, 15);
+            return (base + bonus).toFixed(0);
+        },
+
+        async initDashboard() {
+            try {
+                const r = await fetch('/api/config');
+                this.config = await r.json();
+            } catch(e) {}
+            this.fetchSorterStatus();
             this.$nextTick(() => {
                 this.initCharts();
                 lucide.createIcons();
             });
 
-            setInterval(() => this.refreshStats(), 30000);
+            setInterval(() => { this.refreshStats(); this.fetchSorterStatus(); }, 15000);
         },
 
         get topCategories() {
@@ -443,6 +590,93 @@ function dashboard() {
 
         formatNumber(num) {
             return new Intl.NumberFormat('de-DE').format(num);
+        },
+
+        formatDateShort(iso) {
+            if (!iso) return '';
+            try {
+                const d = new Date(iso);
+                return d.toLocaleDateString('de-DE', {day:'2-digit',month:'2-digit'}) + ' ' + d.toLocaleTimeString('de-DE', {hour:'2-digit',minute:'2-digit'});
+            } catch { return iso; }
+        },
+
+        async fetchSorterStatus() {
+            try {
+                const r = await fetch('/api/sorter/status');
+                const s = await r.json();
+                this.sorterStatus = s;
+                this.quietEnabled = s.quiet_hours_enabled || false;
+                this.quietStart = s.quiet_hours_start || '22:00';
+                this.quietEnd = s.quiet_hours_end || '07:00';
+            } catch(e) { this.sorterStatus = {daemon_alive: false}; }
+        },
+
+        async startSorter() {
+            const r = await fetch('/api/sorter/start', {method:'POST'});
+            const d = await r.json();
+            showNotification(d.message || d.error, d.success ? 'success' : 'error');
+            await this.fetchSorterStatus();
+        },
+
+        async pauseSorter() {
+            await fetch('/api/sorter/pause', {method:'POST'});
+            showNotification('Sortierung pausiert', 'success');
+            await this.fetchSorterStatus();
+        },
+
+        async resumeSorter() {
+            await fetch('/api/sorter/resume', {method:'POST'});
+            showNotification('Sortierung fortgesetzt', 'success');
+            await this.fetchSorterStatus();
+        },
+
+        async stopSorter() {
+            if (!confirm('Sortier-Daemon wirklich stoppen?')) return;
+            await fetch('/api/sorter/stop', {method:'POST'});
+            showNotification('Sortierung gestoppt', 'success');
+            await this.fetchSorterStatus();
+        },
+
+        async saveQuietHours() {
+            await fetch('/api/sorter/quiet-hours', {
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({enabled: this.quietEnabled, start: this.quietStart, end: this.quietEnd})
+            });
+            await this.fetchSorterStatus();
+        },
+
+        digestText: '',
+        digestLoading: false,
+        chatMessage: '',
+        chatReply: '',
+        chatLoading: false,
+
+        async fetchDigest() {
+            this.digestLoading = true;
+            try {
+                const r = await fetch('/api/llm/digest');
+                const d = await r.json();
+                this.digestText = d.digest || d.error || 'Kein Digest verfügbar';
+            } catch(e) { this.digestText = 'Fehler: ' + e; }
+            this.digestLoading = false;
+        },
+
+        async sendChat() {
+            if (!this.chatMessage.trim()) return;
+            this.chatLoading = true;
+            this.chatReply = '';
+            try {
+                const r = await fetch('/api/llm/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({session_id: 'dashboard', message: this.chatMessage})
+                });
+                const d = await r.json();
+                this.chatReply = d.reply || d.error || 'Keine Antwort';
+                this.chatMessage = '';
+            } catch(e) { this.chatReply = 'Fehler: ' + e; }
+            this.chatLoading = false;
         }
     };
 }

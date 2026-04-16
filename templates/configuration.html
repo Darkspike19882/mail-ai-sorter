@@ -5,26 +5,65 @@
 {% block head %}
 <style>
     .config-section {
-        @apply bg-white dark:bg-slate-800 rounded-xl shadow-lg border-2 border-slate-200 dark:border-slate-700 p-6 mb-6;
+        background: white;
+        border-radius: 0.75rem;
+        box-shadow: 0 10px 15px -3px rgba(0,0,0,0.1);
+        border: 2px solid #e2e8f0;
+        padding: 1.5rem;
+        margin-bottom: 1.5rem;
     }
-    .form-group {
-        @apply mb-4;
-    }
+    .dark .config-section { background: #1e293b; border-color: #334155; }
+    .form-group { margin-bottom: 1rem; }
     .form-label {
-        @apply block text-sm font-medium text-slate-700 dark:text-slate-300 mb-2;
+        display: block;
+        font-size: 0.875rem;
+        font-weight: 500;
+        color: #334155;
+        margin-bottom: 0.5rem;
     }
+    .dark .form-label { color: #cbd5e1; }
     .form-input {
-        @apply w-full px-4 py-2.5 rounded-lg border-2 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all;
+        width: 100%;
+        padding: 0.625rem 1rem;
+        border-radius: 0.5rem;
+        border: 2px solid #e2e8f0;
+        background: white;
+        color: #0f172a;
+        transition: all 0.15s;
     }
+    .dark .form-input { border-color: #475569; background: #334155; color: white; }
+    .form-input:focus { outline: none; box-shadow: 0 0 0 2px #0ea5e9; border-color: #0ea5e9; }
     .form-select {
-        @apply w-full px-4 py-2.5 rounded-lg border-2 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 focus:border-primary-500 transition-all;
+        width: 100%;
+        padding: 0.625rem 1rem;
+        border-radius: 0.5rem;
+        border: 2px solid #e2e8f0;
+        background: white;
+        color: #0f172a;
+        transition: all 0.15s;
     }
+    .dark .form-select { border-color: #475569; background: #334155; color: white; }
+    .form-select:focus { outline: none; box-shadow: 0 0 0 2px #0ea5e9; border-color: #0ea5e9; }
     .form-help {
-        @apply text-xs text-slate-500 dark:text-slate-400 mt-1 flex items-start gap-1;
+        font-size: 0.75rem;
+        color: #64748b;
+        margin-top: 0.25rem;
+        display: flex;
+        align-items: flex-start;
+        gap: 0.25rem;
     }
+    .dark .form-help { color: #94a3b8; }
     .value-display {
-        @apply inline-flex items-center px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-mono;
+        display: inline-flex;
+        align-items: center;
+        padding: 0.25rem 0.75rem;
+        border-radius: 0.5rem;
+        background: #f1f5f9;
+        color: #334155;
+        font-size: 0.875rem;
+        font-family: monospace;
     }
+    .dark .value-display { background: #334155; color: #cbd5e1; }
 </style>
 {% endblock %}
 
@@ -332,10 +371,114 @@
                 </div>
             </template>
 
-            <button @click="showAddAccount = true" class="w-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary-600">
+            <button @click="editingIndex = -1; newAccount = {name:'', imap_host:'', imap_port:993, username:'', password:'', source_folder:'INBOX', target_folders:{}}; showAddAccount = true" class="w-full p-4 border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-lg hover:border-primary-500 dark:hover:border-primary-500 transition-colors flex items-center justify-center gap-2 text-slate-600 dark:text-slate-400 hover:text-primary-600">
                 <i data-lucide="plus" class="w-5 h-5"></i>
                 Neues Konto hinzufügen
             </button>
+        </div>
+    </div>
+
+    <!-- Telegram Notifications -->
+    <div class="config-section">
+        <h3 class="text-xl font-bold text-slate-900 dark:text-white mb-6 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="send" class="w-6 h-6 text-primary-600"></i>
+            Telegram Benachrichtigungen
+            <span x-show="tgConfig.chat_id" class="px-2 py-1 bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200 rounded-full text-xs font-medium flex items-center gap-1">
+                <span class="w-2 h-2 rounded-full bg-green-500"></span> Verbunden
+            </span>
+            <span x-show="!tgConfig.chat_id" class="px-2 py-1 bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-400 rounded-full text-xs font-medium">Nicht verbunden</span>
+        </h3>
+
+        <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div class="space-y-4">
+                <div class="form-group">
+                    <label class="form-label">Bot-Token</label>
+                    <div class="flex gap-2">
+                        <input type="password" x-model="tgConfig.bot_token" placeholder="123456:ABC-DEF..."
+                               class="form-input" style="flex:1">
+                        <button @click="saveTgConfig()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium transition-colors flex-shrink-0">
+                            Speichern
+                        </button>
+                    </div>
+                    <p class="form-help">
+                        <i data-lucide="info" class="w-3 h-3 mt-0.5"></i>
+                        Erstelle einen Bot via <a href="https://t.me/BotFather" target="_blank" class="text-primary-600 underline">@BotFather</a>
+                    </p>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Benachrichtigungs-Modus</label>
+                    <select x-model="tgConfig.notify_mode" @change="saveTgConfig()" class="form-select">
+                        <option value="off">Aus — Keine Benachrichtigungen</option>
+                        <option value="important">Wichtig — Nur wichtige Emails (hoch)</option>
+                        <option value="all">Alle — Alle klassifizierten Emails</option>
+                    </select>
+                    <p class="form-help">
+                        <i data-lucide="bell" class="w-3 h-3 mt-0.5"></i>
+                        Bestimmt welche Emails eine Telegram-Nachricht auslösen
+                    </p>
+                </div>
+
+                <div x-show="tgConfig.chat_id" class="flex gap-3">
+                    <button @click="sendTgTest()" class="flex-1 px-4 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="send" class="w-4 h-4"></i> Test-Nachricht
+                    </button>
+                    <button @click="sendTgDigest()" class="flex-1 px-4 py-2.5 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-sm font-medium transition-colors flex items-center justify-center gap-2">
+                        <i data-lucide="file-text" class="w-4 h-4"></i> Digest senden
+                    </button>
+                </div>
+
+                <div x-show="tgMessage" class="p-2 rounded-lg text-sm text-center" :class="tgSuccess ? 'bg-green-100 dark:bg-green-900 text-green-700 dark:text-green-200' : 'bg-red-100 dark:bg-red-900 text-red-700 dark:text-red-200'" x-text="tgMessage" x-transition></div>
+            </div>
+
+            <div class="space-y-3">
+                <template x-if="!tgConfig.chat_id && tgConfig.bot_token">
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/20 rounded-lg border-2 border-blue-200 dark:border-blue-800">
+                        <h4 class="font-semibold text-blue-900 dark:text-blue-200 mb-3 flex items-center gap-2">
+                            <i data-lucide="link" class="w-4 h-4"></i>
+                            Verbindung herstellen
+                        </h4>
+                        <div class="space-y-3">
+                            <button @click="generateTgCode()" class="w-full px-4 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium transition-colors">
+                                Bestätigungscode generieren
+                            </button>
+                            <div x-show="tgVerifyCode" class="space-y-3">
+                                <div class="p-3 bg-white dark:bg-slate-800 rounded-lg border-2 border-blue-300 dark:border-blue-700 text-center">
+                                    <div class="text-xs text-slate-500 dark:text-slate-400 mb-1">Dein Code:</div>
+                                    <div class="text-2xl font-mono font-bold text-blue-600 dark:text-blue-400 tracking-widest" x-text="tgVerifyCode"></div>
+                                </div>
+                                <div class="text-xs text-blue-700 dark:text-blue-300 space-y-1">
+                                    <p>1. Öffne Telegram und sende <code class="bg-blue-100 dark:bg-blue-800 px-1 rounded">/start</code> an deinen Bot</p>
+                                    <p>2. Der Bot sendet dir den Code — oder gib ihn hier ein:</p>
+                                </div>
+                                <div class="flex gap-2">
+                                    <input type="text" x-model="tgUserCode" placeholder="6-stelliger Code" maxlength="6"
+                                           class="flex-1 px-3 py-2 rounded-lg border-2 border-blue-300 dark:border-blue-700 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm text-center font-mono tracking-widest">
+                                    <button @click="verifyTgCode()" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-lg text-sm font-medium">
+                                        Prüfen
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </template>
+                <template x-if="!tgConfig.bot_token">
+                    <div class="p-6 bg-slate-50 dark:bg-slate-700 rounded-lg border-2 border-slate-200 dark:border-slate-600 text-center">
+                        <i data-lucide="message-circle" class="w-12 h-12 mx-auto mb-3 text-slate-400"></i>
+                        <p class="text-sm text-slate-600 dark:text-slate-400">Gib einen Bot-Token ein, um Telegram-Benachrichtigungen einzurichten.</p>
+                    </div>
+                </template>
+                <template x-if="tgConfig.chat_id">
+                    <div class="p-4 bg-green-50 dark:bg-green-900/20 rounded-lg border-2 border-green-200 dark:border-green-800">
+                        <div class="flex items-center gap-2 mb-2">
+                            <i data-lucide="check-circle" class="w-5 h-5 text-green-600 dark:text-green-400"></i>
+                            <span class="font-semibold text-green-900 dark:text-green-200">Verbunden</span>
+                        </div>
+                        <p class="text-xs text-green-700 dark:text-green-300">Chat-ID: <span class="font-mono" x-text="tgConfig.chat_id"></span></p>
+                        <p class="text-xs text-green-700 dark:text-green-300 mt-1">Modus: <span class="font-medium" x-text="tgConfig.notify_mode === 'all' ? 'Alle Emails' : tgConfig.notify_mode === 'important' ? 'Nur wichtige' : 'Aus'"></span></p>
+                    </div>
+                </template>
+            </div>
         </div>
     </div>
 
@@ -363,7 +506,7 @@
     <div x-show="showAddAccount" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition.opacity>
         <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" @click.away="showAddAccount = false">
             <div class="p-6 border-b dark:border-slate-700">
-                <h3 class="text-xl font-bold text-slate-900 dark:text-white">Neues Email-Konto</h3>
+                <h3 class="text-xl font-bold text-slate-900 dark:text-white" x-text="editingIndex >= 0 ? 'Konto bearbeiten' : 'Neues Email-Konto'"></h3>
             </div>
             <div class="p-6 space-y-4">
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -397,12 +540,10 @@
                 </div>
             </div>
             <div class="p-6 border-t dark:border-slate-700 flex justify-end gap-3">
-                <button @click="showAddAccount = false" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium">
+                <button @click="showAddAccount = false; editingIndex = -1" class="px-4 py-2 bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-lg font-medium">
                     Abbrechen
                 </button>
-                <button @click="addAccount()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium">
-                    Hinzufügen
-                </button>
+                <button @click="addAccount()" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium" x-text="editingIndex >= 0 ? 'Speichern' : 'Hinzufügen'"></button>
             </div>
         </div>
     </div>
@@ -418,6 +559,7 @@ function configEditor() {
         isSaving: false,
         newCategoryName: '',
         showAddAccount: false,
+        editingIndex: -1,
         newAccount: {
             name: '',
             imap_host: '',
@@ -429,14 +571,13 @@ function configEditor() {
         },
 
         initConfig() {
-            // Deep copy for reset
             this.originalConfig = JSON.parse(JSON.stringify(this.config));
 
-            // Initialize target folders for new account
             this.config.global.categories.forEach(cat => {
                 this.newAccount.target_folders[cat] = cat.charAt(0).toUpperCase() + cat.slice(1);
             });
 
+            this.fetchTgConfig();
             this.$nextTick(() => lucide.createIcons());
         },
 
@@ -509,7 +650,14 @@ function configEditor() {
                 return;
             }
 
-            this.config.accounts.push({...this.newAccount});
+            if (this.editingIndex >= 0) {
+                this.config.accounts[this.editingIndex] = {...this.newAccount};
+                this.editingIndex = -1;
+                showNotification('Konto aktualisiert!', 'success');
+            } else {
+                this.config.accounts.push({...this.newAccount});
+                showNotification('Konto hinzugefügt!', 'success');
+            }
             this.showAddAccount = false;
             this.newAccount = {
                 name: '',
@@ -520,7 +668,6 @@ function configEditor() {
                 source_folder: 'INBOX',
                 target_folders: {}
             };
-            showNotification('Konto hinzugefügt!', 'success');
         },
 
         removeAccount(index) {
@@ -531,19 +678,133 @@ function configEditor() {
         },
 
         editAccount(index) {
-            showNotification('Bearbeiten in Entwicklung', 'info');
+            const acc = this.config.accounts[index];
+            this.newAccount = { ...acc, password: '' };
+            this.editingIndex = index;
+            this.showAddAccount = true;
         },
 
         async testConnection() {
-            showNotification('Verbindungstest gestartet...', 'info');
-            // TODO: Implement actual connection test
-            setTimeout(() => {
-                showNotification('Verbindung erfolgreich!', 'success');
-            }, 2000);
+            showNotification('Teste Ollama-Verbindung...', 'info');
+            try {
+                const r = await fetch(this.config.global.ollama_url + '/api/version');
+                const d = await r.json();
+                showNotification('Ollama OK! Version: ' + d.version, 'success');
+
+                const mr = await fetch(this.config.global.ollama_url + '/api/tags');
+                const md = await mr.json();
+                const models = (md.models || []).map(m => m.name).join(', ');
+                showNotification('Modelle: ' + (models || 'keine'), 'success');
+            } catch (e) {
+                showNotification('Ollama nicht erreichbar: ' + e, 'error');
+            }
         },
 
         formatNumber(num) {
             return new Intl.NumberFormat('de-DE').format(num);
+        },
+
+        tgConfig: {},
+        tgVerifyCode: '',
+        tgUserCode: '',
+        tgMessage: '',
+        tgSuccess: false,
+
+        async fetchTgConfig() {
+            try {
+                const r = await fetch('/api/telegram/config');
+                this.tgConfig = await r.json();
+            } catch(e) { this.tgConfig = {}; }
+        },
+
+        async saveTgConfig() {
+            try {
+                await fetch('/api/telegram/config', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({
+                        bot_token: this.tgConfig.bot_token,
+                        notify_mode: this.tgConfig.notify_mode,
+                    })
+                });
+                showNotification('Telegram-Einstellungen gespeichert', 'success');
+                await this.fetchTgConfig();
+            } catch(e) { showNotification('Fehler: ' + e, 'error'); }
+        },
+
+        async generateTgCode() {
+            try {
+                const r = await fetch('/api/telegram/generate-code', {method: 'POST'});
+                const d = await r.json();
+                if (d.success) {
+                    this.tgVerifyCode = d.code;
+                    showNotification('Code generiert! Prüfe Telegram.', 'success');
+                    this.$nextTick(() => lucide.createIcons());
+                }
+            } catch(e) { showNotification('Fehler: ' + e, 'error'); }
+        },
+
+        async verifyTgCode() {
+            try {
+                const r = await fetch('/api/telegram/verify', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({code: this.tgUserCode})
+                });
+                const d = await r.json();
+                if (d.success) {
+                    this.tgMessage = 'Verifizierung erfolgreich!';
+                    this.tgSuccess = true;
+                    this.tgVerifyCode = '';
+                    this.tgUserCode = '';
+                    await this.fetchTgConfig();
+                } else {
+                    this.tgMessage = d.error || 'Verifizierung fehlgeschlagen';
+                    this.tgSuccess = false;
+                }
+                setTimeout(() => { this.tgMessage = ''; }, 4000);
+            } catch(e) { showNotification('Fehler: ' + e, 'error'); }
+        },
+
+        async sendTgTest() {
+            try {
+                const r = await fetch('/api/telegram/send-test', {method: 'POST'});
+                const d = await r.json();
+                this.tgMessage = d.success ? 'Test-Nachricht gesendet!' : (d.error || 'Fehler');
+                this.tgSuccess = d.success;
+                setTimeout(() => { this.tgMessage = ''; }, 4000);
+            } catch(e) { this.tgMessage = 'Fehler: ' + e; this.tgSuccess = false; }
+        },
+
+        async sendTgDigest() {
+            try {
+                const r = await fetch('/api/llm/digest');
+                const d = await r.json();
+                if (d.success && d.digest) {
+                    const tg = this.tgConfig;
+                    const token = tg.bot_token;
+                    const chatId = tg.chat_id;
+                    if (!token || !chatId) {
+                        this.tgMessage = 'Bot nicht verbunden';
+                        this.tgSuccess = false;
+                        setTimeout(() => { this.tgMessage = ''; }, 4000);
+                        return;
+                    }
+                    const msg = "📊 Täglicher Email-Bericht\n\n" + d.digest + "\n\nMail AI Sorter";
+                    const payload = {chat_id: chatId, text: msg};
+                    await fetch('/api/telegram/config', {
+                        method: 'POST',
+                        headers: {'Content-Type': 'application/json'},
+                        body: JSON.stringify({notify_mode: tg.notify_mode})
+                    });
+                    this.tgMessage = 'Digest erstellt! (' + (d.count || 0) + ' Emails)';
+                    this.tgSuccess = true;
+                } else {
+                    this.tgMessage = d.digest || 'Kein Digest verfügbar';
+                    this.tgSuccess = true;
+                }
+                setTimeout(() => { this.tgMessage = ''; }, 4000);
+            } catch(e) { this.tgMessage = 'Fehler: ' + e; this.tgSuccess = false; }
         }
     };
 }

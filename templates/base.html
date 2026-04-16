@@ -117,6 +117,10 @@
                             <span class="text-xl font-bold gradient-text">Mail AI Sorter</span>
                         </div>
                         <div class="hidden md:ml-10 md:flex md:space-x-4">
+                            <a href="/inbox" class="nav-link {% block nav_inbox %}{% endblock %}">
+                                <i data-lucide="inbox" class="w-4 h-4 inline mr-1"></i>
+                                Inbox
+                            </a>
                             <a href="/" class="nav-link {% block nav_dashboard %}{% endblock %}">
                                 <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1"></i>
                                 Dashboard
@@ -128,6 +132,10 @@
                             <a href="/logs" class="nav-link {% block nav_logs %}{% endblock %}">
                                 <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>
                                 Logs
+                            </a>
+                            <a href="/stats" class="nav-link {% block nav_stats %}{% endblock %}">
+                                <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-1"></i>
+                                Statistiken
                             </a>
                         </div>
                     </div>
@@ -146,6 +154,10 @@
             <!-- Mobile Menu -->
             <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="md:hidden bg-white dark:bg-slate-800 border-t dark:border-slate-700">
                 <div class="px-2 pt-2 pb-3 space-y-1">
+                    <a href="/inbox" class="mobile-nav-link {% block nav_mobile_inbox %}{% endblock %}">
+                        <i data-lucide="inbox" class="w-4 h-4 inline mr-2"></i>
+                        Inbox
+                    </a>
                     <a href="/" class="mobile-nav-link {% block nav_mobile_dashboard %}{% endblock %}">
                         <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-2"></i>
                         Dashboard
@@ -157,6 +169,10 @@
                     <a href="/logs" class="mobile-nav-link {% block nav_mobile_logs %}{% endblock %}">
                         <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
                         Logs
+                    </a>
+                    <a href="/stats" class="mobile-nav-link {% block nav_mobile_stats %}{% endblock %}">
+                        <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-2"></i>
+                        Statistiken
                     </a>
                 </div>
             </div>
@@ -215,17 +231,35 @@
 
     <style>
         .nav-link {
-            @apply px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center;
+            display: flex;
+            align-items: center;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 0.875rem;
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.15s;
         }
-        .nav-link.active {
-            @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200;
-        }
+        .dark .nav-link { color: #e2e8f0; }
+        .nav-link:hover { background: #f1f5f9; }
+        .dark .nav-link:hover { background: #334155; }
+        .nav-link.active { background: #e0f2fe; color: #0369a1; }
+        .dark .nav-link.active { background: #0c4a6e; color: #7dd3fc; }
+
         .mobile-nav-link {
-            @apply block px-3 py-2 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors;
+            display: block;
+            padding: 0.5rem 0.75rem;
+            border-radius: 0.5rem;
+            font-size: 1rem;
+            font-weight: 500;
+            color: #334155;
+            transition: all 0.15s;
         }
-        .mobile-nav-link.active {
-            @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200;
-        }
+        .dark .mobile-nav-link { color: #e2e8f0; }
+        .mobile-nav-link:hover { background: #f1f5f9; }
+        .dark .mobile-nav-link:hover { background: #334155; }
+        .mobile-nav-link.active { background: #e0f2fe; color: #0369a1; }
+        .dark .mobile-nav-link.active { background: #0c4a6e; color: #7dd3fc; }
     </style>
 
     {% block scripts %}{% endblock %}
