@@ -107,18 +107,18 @@
             <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Konten</div>
         </div>
 
-        <!-- Accuracy -->
+        <!-- Learned Senders -->
         <div class="stat-card">
             <div class="flex items-center justify-between mb-4">
                 <div class="p-3 bg-orange-100 dark:bg-orange-900 rounded-lg border-2 border-orange-200 dark:border-orange-800">
                     <i data-lucide="brain" class="w-6 h-6 text-orange-600 dark:text-orange-400"></i>
                 </div>
                 <span class="text-xs font-medium text-orange-600 bg-orange-100 dark:bg-orange-900 dark:text-orange-200 px-2 py-1 rounded-full border border-orange-300 dark:border-orange-700">
-                    llama3.1:8b
+                    Cache
                 </span>
             </div>
-            <div class="text-3xl font-bold text-slate-900 dark:text-white">92%</div>
-            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Genauigkeit</div>
+            <div class="text-3xl font-bold text-slate-900 dark:text-white" x-text="formatNumber(stats.learned_senders ?? 0)"></div>
+            <div class="text-sm text-slate-600 dark:text-slate-400 mt-1 font-medium">Gelernte Absender</div>
         </div>
     </div>
 
@@ -146,6 +146,27 @@
             <div class="h-64">
                 <canvas id="accountChart"></canvas>
             </div>
+        </div>
+    </div>
+
+    <!-- Timeline Chart -->
+    <div class="chart-container mb-8">
+        <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
+            <i data-lucide="trending-up" class="w-5 h-5 text-primary-600"></i>
+            Mails der letzten 30 Tage
+            <span class="ml-auto">
+                <select x-model="timelineDays" @change="loadTimeline()"
+                        class="text-xs border dark:border-slate-600 rounded-lg px-2 py-1 bg-white dark:bg-slate-700 text-slate-700 dark:text-slate-200 focus:ring-2 focus:ring-primary-500 outline-none">
+                    <option value="7">7 Tage</option>
+                    <option value="14">14 Tage</option>
+                    <option value="30" selected>30 Tage</option>
+                    <option value="60">60 Tage</option>
+                    <option value="90">90 Tage</option>
+                </select>
+            </span>
+        </h3>
+        <div class="h-56">
+            <canvas id="timelineChart"></canvas>
         </div>
     </div>
 
@@ -275,6 +296,8 @@ function dashboard() {
         statusLog: '',
         categoryChart: null,
         accountChart: null,
+        timelineChart: null,
+        timelineDays: 30,
 
         get accountsCount() {
             return Object.keys(this.stats.accounts || {}).length;
@@ -283,6 +306,7 @@ function dashboard() {
         initDashboard() {
             this.$nextTick(() => {
                 this.initCharts();
+                this.loadTimeline();
                 lucide.createIcons();
             });
 
@@ -381,6 +405,71 @@ function dashboard() {
                     }
                 }
             });
+        },
+
+        async loadTimeline() {
+            try {
+                const res  = await fetch(`/api/stats/timeline?days=${this.timelineDays}`);
+                const rows = await res.json();
+                if (!Array.isArray(rows)) return;
+
+                const labels = rows.map(r => {
+                    const d = new Date(r.day + 'T00:00:00');
+                    return d.toLocaleDateString('de-DE', {day:'2-digit', month:'2-digit'});
+                });
+                const counts = rows.map(r => r.count);
+                const isDark = document.documentElement.classList.contains('dark');
+
+                if (this.timelineChart) {
+                    this.timelineChart.data.labels   = labels;
+                    this.timelineChart.data.datasets[0].data = counts;
+                    this.timelineChart.update();
+                    return;
+                }
+
+                const ctx = document.getElementById('timelineChart').getContext('2d');
+                this.timelineChart = new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels,
+                        datasets: [{
+                            label: 'Mails',
+                            data: counts,
+                            backgroundColor: 'rgba(14, 165, 233, 0.5)',
+                            borderColor: '#0ea5e9',
+                            borderWidth: 1,
+                            borderRadius: 4,
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: { legend: { display: false } },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                ticks: {
+                                    color: isDark ? '#e2e8f0' : '#475569',
+                                    precision: 0,
+                                },
+                                grid: { color: isDark ? '#334155' : '#e2e8f0', drawBorder: false }
+                            },
+                            x: {
+                                ticks: {
+                                    color: isDark ? '#e2e8f0' : '#475569',
+                                    font: { size: 10 },
+                                    maxRotation: 45,
+                                    autoSkip: true,
+                                    maxTicksLimit: 15,
+                                },
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            } catch (e) {
+                console.error('Timeline-Fehler:', e);
+            }
         },
 
         async refreshStats() {

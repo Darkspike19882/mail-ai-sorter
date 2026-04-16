@@ -687,7 +687,7 @@ def process_account(
     model = global_cfg["model"]
     ollama_timeout_sec = int(global_cfg.get("ollama_timeout_sec", 120))
     ollama_think = global_cfg.get("ollama_think", False)
-    ollama_num_predict = int(global_cfg.get("ollama_num_predict", 20))
+    ollama_num_predict = int(global_cfg.get("ollama_num_predict", 60))
     ollama_num_ctx = int(global_cfg.get("ollama_num_ctx", 4096))
     categories = global_cfg["categories"]
     if len(categories) > 15:

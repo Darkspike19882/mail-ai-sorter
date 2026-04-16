@@ -65,9 +65,13 @@ class PaperlessNGXIntegration:
         return type_mapping.get(category, "Allgemein")
 
     def extract_pdf_from_email(self, email_data):
-        """Extrahiert PDF-Anhänge aus Email"""
-        # Implementierung mit email图书馆
-        pass
+        """Extrahiert PDF-Anhänge aus Email.
+
+        Noch nicht implementiert — Paperless-ngx kann Anhänge selbst über
+        seinen Consume-Ordner einlesen. Diese Methode ist ein Platzhalter
+        für eine zukünftige direkte Übergabe per API.
+        """
+        raise NotImplementedError("PDF-Extraktion noch nicht implementiert")
 
     def extract_tags(self, email_data):
         """Extrahiert Tags aus Email-Daten"""
