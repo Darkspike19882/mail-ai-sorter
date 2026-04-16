@@ -441,7 +441,14 @@ function inboxApp() {
                 try {
                     const r = await fetch('/api/search?q=' + encodeURIComponent(this.searchQuery));
                     const d = await r.json();
-                    this.mails = d.emails || [];
+                    this.mails = (d.emails || []).map(e => ({
+                        ...e,
+                        uid: String(e.id || ''),
+                        from: e.from_addr || '',
+                        date: e.date_iso || '',
+                        seen: true,
+                        flagged: false,
+                    }));
                     this.totalMails = this.mails.length;
                 } catch(e) { console.error(e); }
                 finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
@@ -464,7 +471,7 @@ function inboxApp() {
 
         openReply(mail) {
             this.composeMode = 'reply';
-            this.compose = { account: mail.account, to: extractEmail(mail.from), cc: '', subject: prefixSubject(mail.subject, 'Re'), body: '\n\n--- Original ---\n' + (mail.body_text || ''), in_reply_to: mail.message_id, references: mail.message_id, sending: false, attachments: [] };
+            this.compose = { account: mail.account, to: extractEmail(mail.from), cc: '', subject: prefixSubject(mail.subject, 'Re'), body: '\n\n--- Original ---\n' + (mail.body_text || ''), in_reply_to: mail.message_id, references: ((mail.references ? mail.references + ' ' : '') + (mail.message_id || '')).trim() || undefined, sending: false, attachments: [] };
             this.showCompose = true;
             this.$nextTick(() => lucide.createIcons());
         },
@@ -473,7 +480,7 @@ function inboxApp() {
             const toList = [extractEmail(mail.from)];
             if (mail.to) toList.push(...mail.to.split(',').map(s => s.trim()).filter(s => s));
             this.composeMode = 'replyAll';
-            this.compose = { account: mail.account, to: toList.join(', '), cc: mail.cc || '', subject: prefixSubject(mail.subject, 'Re'), body: '\n\n--- Original ---\n' + (mail.body_text || ''), in_reply_to: mail.message_id, references: mail.message_id, sending: false, attachments: [] };
+            this.compose = { account: mail.account, to: toList.join(', '), cc: mail.cc || '', subject: prefixSubject(mail.subject, 'Re'), body: '\n\n--- Original ---\n' + (mail.body_text || ''), in_reply_to: mail.message_id, references: ((mail.references ? mail.references + ' ' : '') + (mail.message_id || '')).trim() || undefined, sending: false, attachments: [] };
             this.showCompose = true;
             this.$nextTick(() => lucide.createIcons());
         },

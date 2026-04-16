@@ -228,6 +228,7 @@ def send_email(
 
 
 def _save_to_sent(account: Dict[str, Any], raw_msg: bytes) -> bool:
+    conn = None
     try:
         imap_host = account["imap_host"]
         imap_port = int(account.get("imap_port", 993))
@@ -264,7 +265,12 @@ def _save_to_sent(account: Dict[str, Any], raw_msg: bytes) -> bool:
             sent_folder = "Sent"
 
         conn.append(sent_folder, None, imaplib.Time2Internaldate(time.time()), raw_msg)
-        conn.logout()
         return True
     except Exception:
         return False
+    finally:
+        if conn:
+            try:
+                conn.logout()
+            except Exception:
+                pass

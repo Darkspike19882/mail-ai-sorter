@@ -517,7 +517,7 @@ def api_sorter_quiet_hours():
     if "end" in data:
         state["quiet_hours_end"] = data["end"]
     if "poll_interval" in data:
-        state["poll_interval_minutes"] = int(data["poll_interval"])
+        state["poll_interval_minutes"] = max(1, int(data["poll_interval"]))
     _save_state(state)
     return jsonify({"success": True, "state": state})
 
@@ -907,6 +907,7 @@ def api_email_detail(account_name, folder, uid):
     if not acc:
         return jsonify({"error": "Account nicht gefunden"})
 
+    conn = None
     try:
         conn = _imap_connect(acc)
         typ, _ = conn.select(folder, readonly=True)
@@ -1027,31 +1028,17 @@ def api_email_detail(account_name, folder, uid):
             except Exception:
                 pass
 
-        conn.logout()
-
-        result = {
-            "uid": uid,
-            "folder": folder,
-            "account": account_name,
-            "seen": True,
-            "flagged": is_flagged,
-            **envelope,
-            "body_text": body_text,
-            "body_html": body_html,
-            "attachments": [
-                {
-                    "filename": a["filename"],
-                    "size": a["size"],
-                    "content_type": a["content_type"],
-                }
-                for a in attachments
-            ],
-        }
         if thread_emails:
             result["thread"] = thread_emails
         return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)})
+    finally:
+        if conn:
+            try:
+                conn.logout()
+            except Exception:
+                pass
 
 
 @app.route("/api/email/<account_name>/<folder>/<uid>/attachment/<int:att_index>")
@@ -1081,18 +1068,24 @@ def api_email_attachment(account_name, folder, uid, att_index):
         msg = email_lib.message_from_bytes(raw_bytes)
         att_list = []
         for part in msg.walk():
+            ctype = part.get_content_type()
             disp = str(part.get("Content-Disposition") or "").lower()
             filename = part.get_filename()
-            if "attachment" in disp or filename:
-                payload = part.get_payload(decode=True)
-                if payload:
-                    att_list.append(
-                        {
-                            "filename": _decode_hdr(filename or "attachment"),
-                            "data": payload,
-                            "content_type": part.get_content_type(),
-                        }
-                    )
+            payload = part.get_payload(decode=True)
+            if not payload:
+                continue
+            if (
+                "attachment" in disp
+                or "inline" in disp
+                or (filename and ctype != "text/plain" and ctype != "text/html")
+            ):
+                att_list.append(
+                    {
+                        "filename": _decode_hdr(filename or "attachment"),
+                        "data": payload,
+                        "content_type": ctype,
+                    }
+                )
 
         if att_index >= len(att_list):
             return jsonify({"error": "Anhang nicht gefunden"}), 404
@@ -1414,10 +1407,13 @@ def api_telegram_verify():
         secrets = _load_secrets()
         token = secrets.get("TELEGRAM_BOT_TOKEN", "")
         msg = "✅ Verifizierung erfolgreich! Du erhältst jetzt Benachrichtigungen für wichtige Emails."
-        urllib.request.urlopen(
-            f"https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={msg}",
-            timeout=10,
+        payload = json.dumps({"chat_id": chat_id, "text": msg}).encode()
+        req = urllib.request.Request(
+            f"https://api.telegram.org/bot{token}/sendMessage",
+            data=payload,
+            headers={"Content-Type": "application/json"},
         )
+        urllib.request.urlopen(req, timeout=10)
     except Exception:
         pass
     return jsonify({"success": True, "chat_id": chat_id})

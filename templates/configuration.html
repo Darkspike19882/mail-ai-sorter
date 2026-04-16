@@ -585,6 +585,16 @@ function configEditor() {
         },
 
         initConfig() {
+            if (!this.config.global) {
+                this.config.global = {
+                    ollama_url: 'http://127.0.0.1:11434', model: 'llama3.1:8b',
+                    ollama_timeout_sec: 60, ollama_num_ctx: 4096, ollama_num_predict: 50,
+                    ollama_think: false, delay_minutes: 30, poll_minutes: 5,
+                    max_body_chars: 2000, imap_timeout_sec: 25,
+                    categories: ['paperless','apple','finanzen','vertraege','einkauf','reisen','rettung','arbeit','politik','behoerden','wohnen','tech','community','newsletter','privat'],
+                };
+            }
+            if (!this.config.accounts) this.config.accounts = [];
             this.originalConfig = JSON.parse(JSON.stringify(this.config));
 
             this.config.global.categories.forEach(cat => {
