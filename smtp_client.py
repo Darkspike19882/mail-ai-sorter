@@ -231,14 +231,19 @@ def _save_to_sent(account: Dict[str, Any], raw_msg: bytes) -> bool:
     try:
         imap_host = account["imap_host"]
         imap_port = int(account.get("imap_port", 993))
+        imap_encryption = str(account.get("imap_encryption", "ssl")).lower()
         username = account["username"]
         pw = account.get("password") or os.getenv(account.get("password_env", ""), "")
         if not pw:
             return False
 
-        conn = imaplib.IMAP4_SSL(
-            imap_host, imap_port, ssl_context=ssl.create_default_context()
-        )
+        if imap_encryption == "starttls":
+            conn = imaplib.IMAP4(imap_host, imap_port)
+            conn.starttls(ssl_context=ssl.create_default_context())
+        else:
+            conn = imaplib.IMAP4_SSL(
+                imap_host, imap_port, ssl_context=ssl.create_default_context()
+            )
         conn.login(username, pw)
 
         sent_folder = None

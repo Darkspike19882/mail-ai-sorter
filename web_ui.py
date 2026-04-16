@@ -645,6 +645,10 @@ def _get_account(account_name: str):
     cfg = load_config()
     for acc in cfg.get("accounts", []):
         if acc["name"] == account_name:
+            env_key = acc.get("password_env", "")
+            if env_key and not acc.get("password"):
+                secrets = _load_secrets()
+                acc["password"] = secrets.get(env_key, os.getenv(env_key, ""))
             return acc
     return None
 
@@ -984,28 +988,65 @@ def api_email_detail(account_name, folder, uid):
             except Exception:
                 pass
 
+        thread_emails = []
+        refs_header = envelope.get("references", "") or envelope.get("in_reply_to", "")
+        if refs_header:
+            try:
+                ref_ids = [
+                    r.strip().strip("<>")
+                    for r in refs_header.split()
+                    if r.strip().startswith("<")
+                ]
+                if ref_ids:
+                    search_criteria = f'(OR HEADER Message-ID "<{ref_ids[-1]}>" HEADER References "{ref_ids[-1]}")'
+                    typ_s, data_s = conn.search("UTF-8", search_criteria)
+                    if typ_s == "OK" and data_s and data_s[0]:
+                        thread_ids = data_s[0].split()
+                        if len(thread_ids) > 1:
+                            id_str_t = b",".join(thread_ids[:10])
+                            typ_f, fetched_t = conn.fetch(
+                                id_str_t,
+                                "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])",
+                            )
+                            if typ_f == "OK" and fetched_t:
+                                for item_t in fetched_t:
+                                    if not isinstance(item_t, tuple) or len(item_t) < 2:
+                                        continue
+                                    hdr = (
+                                        item_t[1]
+                                        if isinstance(item_t[1], bytes)
+                                        else item_t[1].encode()
+                                    )
+                                    env_t = _extract_envelope(hdr)
+                                    mid = env_t.get("message_id", "")
+                                    if mid != envelope.get("message_id", ""):
+                                        thread_emails.append(env_t)
+            except Exception:
+                pass
+
         conn.logout()
 
-        return jsonify(
-            {
-                "uid": uid,
-                "folder": folder,
-                "account": account_name,
-                "seen": True,
-                "flagged": is_flagged,
-                **envelope,
-                "body_text": body_text,
-                "body_html": body_html,
-                "attachments": [
-                    {
-                        "filename": a["filename"],
-                        "size": a["size"],
-                        "content_type": a["content_type"],
-                    }
-                    for a in attachments
-                ],
-            }
-        )
+        result = {
+            "uid": uid,
+            "folder": folder,
+            "account": account_name,
+            "seen": True,
+            "flagged": is_flagged,
+            **envelope,
+            "body_text": body_text,
+            "body_html": body_html,
+            "attachments": [
+                {
+                    "filename": a["filename"],
+                    "size": a["size"],
+                    "content_type": a["content_type"],
+                }
+                for a in attachments
+            ],
+        }
+        if thread_emails:
+            result["thread"] = thread_emails
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)})
 
