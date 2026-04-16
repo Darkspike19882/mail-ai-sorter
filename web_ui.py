@@ -1366,12 +1366,45 @@ def api_telegram_config():
     return jsonify(result)
 
 
-@app.route("/api/telegram/test", methods=["POST"])
-def api_telegram_test():
-    secrets = _load_secrets()
-    token = secrets.get("TELEGRAM_BOT_TOKEN", "")
-    if not token:
-        return jsonify({"success": False, "error": "Kein Bot-Token konfiguriert"})
+@app.route("/api/telegram/generate-code", methods=["POST"])
+def api_telegram_generate_code():
+    import random
+
+    code = str(random.randint(100000, 999999))
+    cfg = load_config()
+    if "telegram" not in cfg:
+        cfg["telegram"] = {}
+    cfg["telegram"]["verify_code"] = code
+    cfg["telegram"]["verify_code_created"] = datetime.now().isoformat()
+    cfg["telegram"].pop("chat_id", None)
+    save_config(cfg)
+    from telegram_bot import start_verification_poller
+
+    start_verification_poller()
+    return jsonify({"success": True, "code": code})
+
+
+@app.route("/api/telegram/verify", methods=["POST"])
+def api_telegram_verify():
+    data = request.json or {}
+    user_code = str(data.get("code", ""))
+    cfg = load_config()
+    stored_code = cfg.get("telegram", {}).get("verify_code", "")
+    if not stored_code or user_code != stored_code:
+        return jsonify({"success": False, "error": "Falscher Code"})
+    chat_id = cfg.get("telegram", {}).get("pending_chat_id")
+    if not chat_id:
+        return jsonify(
+            {
+                "success": False,
+                "error": "Noch keine Chat-ID empfangen. Sende /start an den Bot.",
+            }
+        )
+    cfg["telegram"]["chat_id"] = chat_id
+    cfg["telegram"].pop("verify_code", None)
+    cfg["telegram"].pop("pending_chat_id", None)
+    cfg["telegram"].pop("verify_code_created", None)
+    save_config(cfg)
     try:
         import urllib.request
 
@@ -1385,6 +1418,33 @@ def api_telegram_test():
     except Exception:
         pass
     return jsonify({"success": True, "chat_id": chat_id})
+
+
+@app.route("/api/telegram/test", methods=["POST"])
+def api_telegram_test():
+    secrets = _load_secrets()
+    token = secrets.get("TELEGRAM_BOT_TOKEN", "")
+    if not token:
+        return jsonify({"success": False, "error": "Kein Bot-Token konfiguriert"})
+    try:
+        import urllib.request
+
+        r = urllib.request.urlopen(
+            f"https://api.telegram.org/bot{token}/getMe", timeout=10
+        )
+        data = json.loads(r.read().decode())
+        if data.get("ok"):
+            bot_info = data.get("result", {})
+            return jsonify(
+                {
+                    "success": True,
+                    "bot_name": bot_info.get("first_name", ""),
+                    "bot_username": bot_info.get("username", ""),
+                }
+            )
+        return jsonify({"success": False, "error": "Ungültiger Token"})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 
 @app.route("/api/telegram/send-test", methods=["POST"])
