@@ -211,10 +211,150 @@ def setup_page():
     """Setup-Assistent"""
     return render_template('setup.html')
 
+@app.route('/rules')
+def rules_page():
+    """Regeln-Verwaltung"""
+    return render_template('rules.html')
+
 @app.route('/api/stats')
 def api_stats():
     """Statistiken API"""
     return jsonify(get_stats())
+
+
+# ─── Regeln-API ───────────────────────────────────────────────────────────────
+
+def _rule_valid(rule: dict) -> Optional[str]:
+    """Gibt Fehlermeldung zurück wenn Regel ungültig, sonst None."""
+    if not isinstance(rule, dict):
+        return "Regel muss ein Objekt sein"
+    if not rule.get("if_from_contains") and not rule.get("if_subject_contains"):
+        return "Mindestens if_from_contains oder if_subject_contains erforderlich"
+    if not rule.get("then_category"):
+        return "then_category ist erforderlich"
+    for field in ("if_from_contains", "if_subject_contains"):
+        val = rule.get(field)
+        if val is not None and not isinstance(val, list):
+            return f"{field} muss eine Liste von Strings sein"
+    return None
+
+
+@app.route('/api/rules/global', methods=['GET'])
+def api_rules_global_get():
+    """Globale Regeln abrufen (gelten für alle Konten)."""
+    cfg = load_config()
+    return jsonify(cfg.get("global", {}).get("global_rules", []))
+
+
+@app.route('/api/rules/global', methods=['POST'])
+def api_rules_global_add():
+    """Neue globale Regel hinzufügen."""
+    rule = request.json or {}
+    err = _rule_valid(rule)
+    if err:
+        return jsonify({"error": err}), 400
+    cfg = load_config()
+    cfg.setdefault("global", {}).setdefault("global_rules", []).append(rule)
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
+
+
+@app.route('/api/rules/global/<int:idx>', methods=['PUT'])
+def api_rules_global_update(idx):
+    """Globale Regel aktualisieren."""
+    rule = request.json or {}
+    err = _rule_valid(rule)
+    if err:
+        return jsonify({"error": err}), 400
+    cfg = load_config()
+    rules = cfg.get("global", {}).get("global_rules", [])
+    if idx < 0 or idx >= len(rules):
+        return jsonify({"error": "Index außerhalb des Bereichs"}), 404
+    rules[idx] = rule
+    cfg.setdefault("global", {})["global_rules"] = rules
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
+
+
+@app.route('/api/rules/global/<int:idx>', methods=['DELETE'])
+def api_rules_global_delete(idx):
+    """Globale Regel löschen."""
+    cfg = load_config()
+    rules = cfg.get("global", {}).get("global_rules", [])
+    if idx < 0 or idx >= len(rules):
+        return jsonify({"error": "Index außerhalb des Bereichs"}), 404
+    rules.pop(idx)
+    cfg.setdefault("global", {})["global_rules"] = rules
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
+
+
+@app.route('/api/rules/accounts/<name>', methods=['GET'])
+def api_rules_account_get(name):
+    """Konto-spezifische Regeln abrufen."""
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts", []) if a.get("name") == name), None)
+    if acc is None:
+        return jsonify({"error": "Konto nicht gefunden"}), 404
+    return jsonify(acc.get("rules", []))
+
+
+@app.route('/api/rules/accounts/<name>', methods=['POST'])
+def api_rules_account_add(name):
+    """Neue konto-spezifische Regel hinzufügen."""
+    rule = request.json or {}
+    err = _rule_valid(rule)
+    if err:
+        return jsonify({"error": err}), 400
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts", []) if a.get("name") == name), None)
+    if acc is None:
+        return jsonify({"error": "Konto nicht gefunden"}), 404
+    acc.setdefault("rules", []).append(rule)
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
+
+
+@app.route('/api/rules/accounts/<name>/<int:idx>', methods=['PUT'])
+def api_rules_account_update(name, idx):
+    """Konto-spezifische Regel aktualisieren."""
+    rule = request.json or {}
+    err = _rule_valid(rule)
+    if err:
+        return jsonify({"error": err}), 400
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts", []) if a.get("name") == name), None)
+    if acc is None:
+        return jsonify({"error": "Konto nicht gefunden"}), 404
+    rules = acc.get("rules", [])
+    if idx < 0 or idx >= len(rules):
+        return jsonify({"error": "Index außerhalb des Bereichs"}), 404
+    rules[idx] = rule
+    acc["rules"] = rules
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
+
+
+@app.route('/api/rules/accounts/<name>/<int:idx>', methods=['DELETE'])
+def api_rules_account_delete(name, idx):
+    """Konto-spezifische Regel löschen."""
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts", []) if a.get("name") == name), None)
+    if acc is None:
+        return jsonify({"error": "Konto nicht gefunden"}), 404
+    rules = acc.get("rules", [])
+    if idx < 0 or idx >= len(rules):
+        return jsonify({"error": "Index außerhalb des Bereichs"}), 404
+    rules.pop(idx)
+    acc["rules"] = rules
+    if not save_config(cfg):
+        return jsonify({"error": "Speichern fehlgeschlagen"}), 500
+    return jsonify({"success": True})
 
 def _validate_config(cfg) -> Optional[str]:
     """Gibt eine Fehlermeldung zurück wenn die Konfiguration ungültig ist, sonst None."""
@@ -543,6 +683,26 @@ def api_ai_check_phishing():
         )
         result = future.result(timeout=90)
         return jsonify(result)
+    except KeyError:
+        return jsonify({"error": "Account nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/ai/extract-events', methods=['POST'])
+def api_ai_extract_events():
+    """Erkennt Termine, Meetings und Aufgaben in einer Mail via LLM."""
+    data = request.json or {}
+    try:
+        mail = _load_mail_for_ai(data)
+        ollama_url, model = _get_ollama_cfg()
+        future = _ai_executor.submit(
+            _ai.extract_events,
+            mail["subject"], mail["body_text"], mail["from_addr"],
+            ollama_url, model,
+        )
+        events = future.result(timeout=90)
+        return jsonify({"events": events})
     except KeyError:
         return jsonify({"error": "Account nicht gefunden"}), 404
     except Exception as e:

@@ -126,6 +126,10 @@
                                 Inbox
                                 <span x-show="unread > 0" x-text="unread" class="ml-1 bg-red-500 text-white rounded-full text-xs px-1.5 py-0.5 leading-none"></span>
                             </a>
+                            <a href="/rules" class="nav-link {% block nav_rules %}{% endblock %}">
+                                <i data-lucide="filter" class="w-4 h-4 inline mr-1"></i>
+                                Regeln
+                            </a>
                             <a href="/config" class="nav-link {% block nav_config %}{% endblock %}">
                                 <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>
                                 Konfiguration
@@ -158,6 +162,10 @@
                     <a href="/inbox" class="mobile-nav-link {% block nav_mobile_inbox %}{% endblock %}">
                         <i data-lucide="inbox" class="w-4 h-4 inline mr-2"></i>
                         Inbox
+                    </a>
+                    <a href="/rules" class="mobile-nav-link {% block nav_mobile_rules %}{% endblock %}">
+                        <i data-lucide="filter" class="w-4 h-4 inline mr-2"></i>
+                        Regeln
                     </a>
                     <a href="/config" class="mobile-nav-link {% block nav_mobile_config %}{% endblock %}">
                         <i data-lucide="settings" class="w-4 h-4 inline mr-2"></i>

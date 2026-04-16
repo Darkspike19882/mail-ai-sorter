@@ -350,3 +350,88 @@ def check_phishing(
         "reasons":         llm_reasons[:5],
         "suspicious_links": suspicious_urls[:5],
     }
+
+
+# ── Termin- und Aufgaben-Erkennung ────────────────────────────────────────────
+
+def extract_events(
+    subject: str,
+    body: str,
+    from_addr: str,
+    ollama_url: str,
+    model: str,
+    timeout: int = 90,
+) -> List[Dict[str, Any]]:
+    """
+    Erkennt Termine, Deadlines und Aufgaben in einer Mail.
+
+    Gibt eine Liste von Ereignissen zurück:
+    [
+      {
+        "title":    str,   # Bezeichnung des Termins/der Aufgabe
+        "type":     str,   # "meeting" | "deadline" | "task" | "event"
+        "date":     str,   # ISO-Datum oder beschreibend, z.B. "2025-06-15"
+        "time":     str,   # Uhrzeit z.B. "14:30" oder ""
+        "location": str,   # Ort oder Videolink oder ""
+        "notes":    str,   # Zusätzliche Hinweise oder ""
+      }
+    ]
+    Leere Liste wenn keine Ereignisse erkannt.
+    """
+    system = (
+        "Du bist ein intelligenter Email-Assistent. "
+        "Extrahiere alle Termine, Meetings, Deadlines und Aufgaben aus der Email. "
+        "Antworte NUR mit einem JSON-Array. Wenn nichts gefunden, antworte mit []."
+    )
+    body_excerpt = (body or "")[:2500]
+    user = (
+        f"Betreff: {subject}\n"
+        f"Von: {from_addr}\n\n"
+        f"{body_excerpt}\n\n"
+        f"---\n"
+        f"Extrahiere alle Termine, Meetings, Deadlines und Aufgaben als JSON-Array.\n"
+        f"Jedes Element hat: title, type (meeting/deadline/task/event), date, time, location, notes.\n"
+        f"Fehlende Felder als leeren String. Nur tatsächlich erkannte Ereignisse zurückgeben."
+    )
+    schema = {
+        "type": "array",
+        "items": {
+            "type": "object",
+            "properties": {
+                "title":    {"type": "string"},
+                "type":     {"type": "string", "enum": ["meeting", "deadline", "task", "event"]},
+                "date":     {"type": "string"},
+                "time":     {"type": "string"},
+                "location": {"type": "string"},
+                "notes":    {"type": "string"},
+            },
+            "required": ["title", "type", "date"],
+        },
+    }
+
+    try:
+        content = _call_ollama(
+            ollama_url, model, system, user,
+            response_schema=schema,
+            temperature=0.1,
+            num_predict=500,
+            timeout=timeout,
+        )
+        parsed = _parse_json_safe(content, fallback=[])
+        if isinstance(parsed, list):
+            events = []
+            for ev in parsed:
+                if not isinstance(ev, dict) or not ev.get("title"):
+                    continue
+                events.append({
+                    "title":    str(ev.get("title", ""))[:120],
+                    "type":     ev.get("type", "event") if ev.get("type") in ("meeting", "deadline", "task", "event") else "event",
+                    "date":     str(ev.get("date", "")),
+                    "time":     str(ev.get("time", "")),
+                    "location": str(ev.get("location", "")),
+                    "notes":    str(ev.get("notes", ""))[:200],
+                })
+            return events
+        return []
+    except RuntimeError:
+        return []

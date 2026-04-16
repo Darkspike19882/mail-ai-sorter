@@ -1,0 +1,468 @@
+{% extends "base.html" %}
+
+{% block title %}Sortierregeln — Mail AI{% endblock %}
+{% block nav_rules %}active{% endblock %}
+{% block nav_mobile_rules %}active{% endblock %}
+
+{% block content %}
+<div x-data="rulesApp()" x-init="init()" class="animate-fade-in">
+
+    <!-- Header -->
+    <div class="mb-8">
+        <div class="flex items-center justify-between">
+            <div>
+                <h1 class="text-4xl font-bold gradient-text mb-2">Sortierregeln</h1>
+                <p class="text-slate-500 dark:text-slate-400 text-sm">
+                    Regeln werden vor der KI-Klassifizierung angewandt — erste Übereinstimmung gewinnt.
+                </p>
+            </div>
+            <button @click="openAddDialog('global')"
+                    class="flex items-center gap-2 px-5 py-2.5 bg-primary-600 hover:bg-primary-700 text-white font-medium rounded-xl shadow-sm transition-colors text-sm">
+                <i data-lucide="plus" class="w-4 h-4"></i> Neue Regel
+            </button>
+        </div>
+    </div>
+
+    <!-- Info-Banner -->
+    <div class="mb-6 p-4 bg-blue-50 dark:bg-blue-950/30 rounded-xl border border-blue-200 dark:border-blue-800 flex gap-3">
+        <i data-lucide="info" class="w-5 h-5 text-blue-500 flex-shrink-0 mt-0.5"></i>
+        <div class="text-sm text-blue-700 dark:text-blue-300">
+            <strong>Globale Regeln</strong> gelten für alle Konten.
+            <strong>Konto-Regeln</strong> nur für das jeweilige Konto.
+            Beide Bedingungen müssen zutreffen (AND-Verknüpfung). Innerhalb einer Bedingung reicht ein Treffer (OR).
+        </div>
+    </div>
+
+    <!-- Tabs -->
+    <div class="flex gap-1 mb-6 bg-slate-100 dark:bg-slate-800 rounded-xl p-1 max-w-lg">
+        <button @click="activeTab = 'global'"
+                :class="activeTab === 'global' ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
+                class="flex-1 py-2 text-sm font-medium rounded-lg transition-all">
+            <i data-lucide="globe" class="w-3.5 h-3.5 inline-block mr-1"></i>
+            Globale Regeln
+            <span class="ml-1 bg-primary-100 dark:bg-primary-900/40 text-primary-600 dark:text-primary-300 text-xs px-1.5 py-0.5 rounded-full"
+                  x-text="globalRules.length"></span>
+        </button>
+        <template x-for="acc in accounts" :key="acc">
+            <button @click="activeTab = acc"
+                    :class="activeTab === acc ? 'bg-white dark:bg-slate-700 shadow-sm text-slate-900 dark:text-white' : 'text-slate-500 dark:text-slate-400 hover:text-slate-700'"
+                    class="flex-1 py-2 text-sm font-medium rounded-lg transition-all truncate px-2">
+                <i data-lucide="user" class="w-3.5 h-3.5 inline-block mr-1"></i>
+                <span x-text="acc.split(' ')[0]"></span>
+                <span class="ml-1 bg-slate-200 dark:bg-slate-600 text-slate-600 dark:text-slate-300 text-xs px-1.5 py-0.5 rounded-full"
+                      x-text="(accountRules[acc] || []).length"></span>
+            </button>
+        </template>
+    </div>
+
+    <!-- Regeln-Liste -->
+    <div class="space-y-3">
+        <!-- Lade-Spinner -->
+        <div x-show="loading" class="flex justify-center py-12">
+            <div class="spinner" style="width:40px;height:40px;border-width:3px"></div>
+        </div>
+
+        <!-- Leerer Zustand -->
+        <div x-show="!loading && currentRules.length === 0"
+             class="text-center py-16 bg-white dark:bg-slate-800 rounded-2xl border dark:border-slate-700">
+            <i data-lucide="filter-x" class="w-12 h-12 mx-auto mb-3 text-slate-300 dark:text-slate-600"></i>
+            <p class="text-slate-500 dark:text-slate-400 font-medium">Keine Regeln vorhanden</p>
+            <p class="text-sm text-slate-400 dark:text-slate-500 mt-1">Klicke auf „Neue Regel" um eine Regel zu erstellen.</p>
+        </div>
+
+        <!-- Regel-Karten -->
+        <template x-for="(rule, idx) in currentRules" :key="idx">
+            <div class="bg-white dark:bg-slate-800 rounded-xl border dark:border-slate-700 shadow-sm hover:shadow-md transition-shadow">
+                <div class="p-4 flex items-start gap-4">
+                    <!-- Prio-Badge -->
+                    <div class="flex-shrink-0 w-8 h-8 rounded-lg bg-primary-100 dark:bg-primary-900/40 flex items-center justify-center">
+                        <span class="text-xs font-bold text-primary-600 dark:text-primary-300" x-text="idx + 1"></span>
+                    </div>
+                    <!-- Regelinhalt -->
+                    <div class="flex-1 min-w-0">
+                        <div class="flex flex-wrap gap-2 mb-2">
+                            <!-- if_from_contains -->
+                            <template x-if="rule.if_from_contains && rule.if_from_contains.length > 0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-xs text-slate-400 dark:text-slate-500">Absender enthält</span>
+                                    <template x-for="val in rule.if_from_contains">
+                                        <span class="px-2 py-0.5 bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300 text-xs rounded-full font-mono"
+                                              x-text="val"></span>
+                                    </template>
+                                </div>
+                            </template>
+                            <!-- AND wenn beide gesetzt -->
+                            <template x-if="rule.if_from_contains?.length > 0 && rule.if_subject_contains?.length > 0">
+                                <span class="text-xs font-bold text-slate-400 dark:text-slate-500 uppercase tracking-wider self-center">UND</span>
+                            </template>
+                            <!-- if_subject_contains -->
+                            <template x-if="rule.if_subject_contains && rule.if_subject_contains.length > 0">
+                                <div class="flex items-center gap-1.5 flex-wrap">
+                                    <span class="text-xs text-slate-400 dark:text-slate-500">Betreff enthält</span>
+                                    <template x-for="val in rule.if_subject_contains">
+                                        <span class="px-2 py-0.5 bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300 text-xs rounded-full font-mono"
+                                              x-text="val"></span>
+                                    </template>
+                                </div>
+                            </template>
+                        </div>
+                        <!-- then_category -->
+                        <div class="flex items-center gap-2">
+                            <i data-lucide="arrow-right" class="w-3.5 h-3.5 text-slate-400"></i>
+                            <span class="text-xs text-slate-400">Kategorie:</span>
+                            <span class="px-2.5 py-1 bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 text-xs font-semibold rounded-full"
+                                  x-text="rule.then_category"></span>
+                        </div>
+                    </div>
+                    <!-- Aktionen -->
+                    <div class="flex items-center gap-1 flex-shrink-0">
+                        <button @click="moveRule(idx, -1)"
+                                :disabled="idx === 0"
+                                title="Nach oben"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
+                            <i data-lucide="chevron-up" class="w-4 h-4"></i>
+                        </button>
+                        <button @click="moveRule(idx, 1)"
+                                :disabled="idx === currentRules.length - 1"
+                                title="Nach unten"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-700 disabled:opacity-30 transition-colors">
+                            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+                        </button>
+                        <button @click="openEditDialog(idx)"
+                                title="Bearbeiten"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-primary-600 hover:bg-primary-50 dark:hover:bg-primary-900/20 transition-colors">
+                            <i data-lucide="pencil" class="w-4 h-4"></i>
+                        </button>
+                        <button @click="deleteRule(idx)"
+                                title="Löschen"
+                                class="p-1.5 rounded-lg text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 transition-colors">
+                            <i data-lucide="trash-2" class="w-4 h-4"></i>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </template>
+    </div>
+
+    <!-- Neue Regel am Ende -->
+    <div x-show="!loading" class="mt-4">
+        <button @click="openAddDialog(activeTab)"
+                class="w-full py-3 border-2 border-dashed dark:border-slate-600 rounded-xl text-slate-400 dark:text-slate-500 hover:border-primary-400 hover:text-primary-500 transition-colors text-sm flex items-center justify-center gap-2">
+            <i data-lucide="plus" class="w-4 h-4"></i> Regel hinzufügen
+        </button>
+    </div>
+</div>
+
+<!-- ── Regel-Dialog (Hinzufügen / Bearbeiten) ─────────────────────────────────── -->
+<div x-data="ruleDialog()"
+     x-show="open"
+     x-transition:enter="transition ease-out duration-200"
+     x-transition:enter-start="opacity-0"
+     x-transition:enter-end="opacity-100"
+     @keydown.escape.window="open && close()"
+     @rule-open.window="openFrom($event.detail)"
+     class="fixed inset-0 z-50 flex items-center justify-center p-4">
+    <!-- Backdrop -->
+    <div @click="close()" class="absolute inset-0 bg-black/50"></div>
+    <!-- Panel -->
+    <div class="relative bg-white dark:bg-slate-800 rounded-2xl shadow-2xl w-full max-w-lg">
+        <!-- Header -->
+        <div class="flex items-center justify-between p-5 border-b dark:border-slate-700">
+            <h3 class="font-semibold text-slate-800 dark:text-white" x-text="editIdx === null ? 'Neue Regel' : 'Regel bearbeiten'"></h3>
+            <button @click="close()" class="p-1.5 rounded-lg text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <!-- Felder -->
+        <div class="p-5 space-y-5">
+            <!-- Absender -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Absender enthält
+                    <span class="text-slate-400 font-normal text-xs ml-1">(kommagetrennt, optional)</span>
+                </label>
+                <input type="text"
+                       x-model="fromRaw"
+                       placeholder="amazon.de, @paypal.com, newsletter"
+                       class="w-full px-3 py-2 text-sm border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                <p class="text-xs text-slate-400 dark:text-slate-500 mt-1">Mehrere Werte mit Komma trennen. Reicht einer davon → Treffer.</p>
+            </div>
+            <!-- Betreff -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Betreff enthält
+                    <span class="text-slate-400 font-normal text-xs ml-1">(kommagetrennt, optional)</span>
+                </label>
+                <input type="text"
+                       x-model="subjRaw"
+                       placeholder="Rechnung, Invoice, Bestellung"
+                       class="w-full px-3 py-2 text-sm border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none">
+            </div>
+            <!-- Kategorie -->
+            <div>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">
+                    Dann Kategorie <span class="text-red-500">*</span>
+                </label>
+                <select x-model="category"
+                        class="w-full px-3 py-2 text-sm border dark:border-slate-600 rounded-lg bg-white dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-2 focus:ring-primary-500 outline-none">
+                    <option value="">— wählen —</option>
+                    <template x-for="cat in categories" :key="cat">
+                        <option :value="cat" x-text="cat"></option>
+                    </template>
+                </select>
+            </div>
+            <!-- Fehler -->
+            <p x-show="error" class="text-sm text-red-500 bg-red-50 dark:bg-red-950/30 px-3 py-2 rounded-lg" x-text="error"></p>
+        </div>
+        <!-- Footer -->
+        <div class="flex items-center justify-end gap-3 px-5 py-4 border-t dark:border-slate-700">
+            <button @click="close()"
+                    class="px-4 py-2 text-sm text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg transition-colors">
+                Abbrechen
+            </button>
+            <button @click="save()"
+                    :disabled="saving || !category"
+                    class="flex items-center gap-2 px-5 py-2 bg-primary-600 hover:bg-primary-700 disabled:opacity-50 text-white text-sm font-medium rounded-lg transition-colors">
+                <i data-lucide="save" class="w-4 h-4"></i>
+                <span x-text="saving ? 'Speichern...' : 'Speichern'"></span>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+function rulesApp() {
+    return {
+        loading:      true,
+        activeTab:    'global',
+        globalRules:  [],
+        accountRules: {},   // { accountName: [rules] }
+        accounts:     [],   // Konto-Namen aus Config
+
+        get currentRules() {
+            return this.activeTab === 'global'
+                ? this.globalRules
+                : (this.accountRules[this.activeTab] || []);
+        },
+
+        get categories() {
+            return window._categories || [
+                'paperless','apple','finanzen','vertraege','einkauf',
+                'reisen','arbeit','behoerden','newsletter','privat','tech',
+            ];
+        },
+
+        async init() {
+            await this.load();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async load() {
+            this.loading = true;
+            try {
+                const [cfgRes, globalRes] = await Promise.all([
+                    fetch('/api/config'),
+                    fetch('/api/rules/global'),
+                ]);
+                const cfg   = await cfgRes.json();
+                this.globalRules = await globalRes.json();
+
+                // Kategorien aus Config
+                window._categories = cfg?.global?.categories || window._categories;
+
+                // Konto-Namen sammeln
+                this.accounts = (cfg?.accounts || []).map(a => a.name).filter(Boolean);
+
+                // Konto-Regeln laden
+                const entries = await Promise.all(
+                    this.accounts.map(async name => {
+                        const r = await fetch(`/api/rules/accounts/${encodeURIComponent(name)}`);
+                        return [name, await r.json()];
+                    })
+                );
+                this.accountRules = Object.fromEntries(entries);
+            } catch (e) {
+                showNotification('Fehler beim Laden: ' + e.message, 'error');
+            } finally {
+                this.loading = false;
+                this.$nextTick(() => lucide.createIcons());
+            }
+        },
+
+        openAddDialog(scope) {
+            window.dispatchEvent(new CustomEvent('rule-open', {
+                detail: { scope, editIdx: null, rule: null, categories: this.categories }
+            }));
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        openEditDialog(idx) {
+            const rule = this.currentRules[idx];
+            window.dispatchEvent(new CustomEvent('rule-open', {
+                detail: { scope: this.activeTab, editIdx: idx, rule, categories: this.categories }
+            }));
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        async deleteRule(idx) {
+            if (!confirm('Regel wirklich löschen?')) return;
+            const scope = this.activeTab;
+            const url   = scope === 'global'
+                ? `/api/rules/global/${idx}`
+                : `/api/rules/accounts/${encodeURIComponent(scope)}/${idx}`;
+            try {
+                const res  = await fetch(url, { method: 'DELETE' });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error);
+                if (scope === 'global') this.globalRules.splice(idx, 1);
+                else this.accountRules[scope].splice(idx, 1);
+                showNotification('Regel gelöscht', 'success');
+                this.$nextTick(() => lucide.createIcons());
+            } catch (e) {
+                showNotification('Fehler: ' + e.message, 'error');
+            }
+        },
+
+        async moveRule(idx, dir) {
+            const rules = this.currentRules;
+            const newIdx = idx + dir;
+            if (newIdx < 0 || newIdx >= rules.length) return;
+            // Lokal tauschen
+            [rules[idx], rules[newIdx]] = [rules[newIdx], rules[idx]];
+            // Beide speichern
+            const scope = this.activeTab;
+            try {
+                await Promise.all([
+                    this._saveRule(scope, idx, rules[idx]),
+                    this._saveRule(scope, newIdx, rules[newIdx]),
+                ]);
+                this.$nextTick(() => lucide.createIcons());
+            } catch (e) {
+                showNotification('Fehler beim Verschieben: ' + e.message, 'error');
+                await this.load();
+            }
+        },
+
+        async _saveRule(scope, idx, rule) {
+            const url = scope === 'global'
+                ? `/api/rules/global/${idx}`
+                : `/api/rules/accounts/${encodeURIComponent(scope)}/${idx}`;
+            const res  = await fetch(url, {
+                method: 'PUT', headers: {'Content-Type':'application/json'},
+                body: JSON.stringify(rule),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || 'Speichern fehlgeschlagen');
+        },
+
+        // Wird vom Dialog aufgerufen nach erfolgreichem Speichern
+        async onRuleSaved(scope, editIdx, rule) {
+            if (editIdx === null) {
+                // Neue Regel hinzugefügt → ans Ende
+                if (scope === 'global') this.globalRules.push(rule);
+                else (this.accountRules[scope] = this.accountRules[scope] || []).push(rule);
+            } else {
+                if (scope === 'global') this.globalRules[editIdx] = rule;
+                else this.accountRules[scope][editIdx] = rule;
+            }
+            this.$nextTick(() => lucide.createIcons());
+        },
+    };
+}
+
+function ruleDialog() {
+    return {
+        open:     false,
+        scope:    'global',
+        editIdx:  null,
+        fromRaw:  '',
+        subjRaw:  '',
+        category: '',
+        categories: [],
+        saving:   false,
+        error:    '',
+
+        openFrom(detail) {
+            this.scope      = detail.scope;
+            this.editIdx    = detail.editIdx;
+            this.categories = detail.categories || [];
+            this.error      = '';
+            this.saving     = false;
+            if (detail.rule) {
+                this.fromRaw  = (detail.rule.if_from_contains  || []).join(', ');
+                this.subjRaw  = (detail.rule.if_subject_contains || []).join(', ');
+                this.category = detail.rule.then_category || '';
+            } else {
+                this.fromRaw = '';
+                this.subjRaw = '';
+                this.category = '';
+            }
+            this.open = true;
+            this.$nextTick(() => {
+                lucide.createIcons();
+            });
+        },
+
+        close() {
+            this.open = false;
+        },
+
+        _buildRule() {
+            const fromList = this.fromRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const subjList = this.subjRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const rule = { then_category: this.category };
+            if (fromList.length > 0) rule.if_from_contains    = fromList;
+            if (subjList.length > 0) rule.if_subject_contains = subjList;
+            return rule;
+        },
+
+        async save() {
+            this.error = '';
+            if (!this.category) {
+                this.error = 'Bitte eine Kategorie auswählen.';
+                return;
+            }
+            const fromList = this.fromRaw.split(',').map(s => s.trim()).filter(Boolean);
+            const subjList = this.subjRaw.split(',').map(s => s.trim()).filter(Boolean);
+            if (fromList.length === 0 && subjList.length === 0) {
+                this.error = 'Mindestens Absender oder Betreff muss angegeben werden.';
+                return;
+            }
+
+            this.saving = true;
+            const rule  = this._buildRule();
+            const isNew = this.editIdx === null;
+            const url   = this.scope === 'global'
+                ? (isNew ? '/api/rules/global' : `/api/rules/global/${this.editIdx}`)
+                : (isNew
+                    ? `/api/rules/accounts/${encodeURIComponent(this.scope)}`
+                    : `/api/rules/accounts/${encodeURIComponent(this.scope)}/${this.editIdx}`);
+
+            try {
+                const res  = await fetch(url, {
+                    method: isNew ? 'POST' : 'PUT',
+                    headers: {'Content-Type':'application/json'},
+                    body: JSON.stringify(rule),
+                });
+                const data = await res.json();
+                if (!data.success) throw new Error(data.error || 'Fehler beim Speichern');
+
+                // Eltern-App informieren
+                const parent = document.querySelector('[x-data]').__x.$data;
+                if (parent && parent.onRuleSaved) {
+                    await parent.onRuleSaved(this.scope, this.editIdx, rule);
+                }
+                showNotification(isNew ? 'Regel hinzugefügt' : 'Regel aktualisiert', 'success');
+                this.close();
+            } catch (e) {
+                this.error = e.message;
+            } finally {
+                this.saving = false;
+            }
+        },
+    };
+}
+</script>
+{% endblock %}
