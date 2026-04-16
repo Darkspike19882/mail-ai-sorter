@@ -16,7 +16,11 @@ import json
 import os
 import sqlite3
 import sys
+import threading
 from typing import Any, Dict, List, Optional
+
+# Schreibzugriffe thread-sicher machen (mehrere Flask-Threads)
+_write_lock = threading.Lock()
 
 
 DB_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), "mail_index.db")
@@ -75,11 +79,27 @@ END;
 """
 
 
+def migrate_schema(conn: sqlite3.Connection) -> None:
+    """Fügt neue Spalten hinzu ohne bestehende Daten zu zerstören."""
+    existing = {row[1] for row in conn.execute("PRAGMA table_info(emails)")}
+    new_cols: Dict[str, str] = {
+        "body_html":   "TEXT",
+        "flags":       "TEXT DEFAULT ''",
+        "thread_id":   "TEXT",
+        "in_reply_to": "TEXT",
+        "message_id":  "TEXT",
+    }
+    for col, typ in new_cols.items():
+        if col not in existing:
+            conn.execute(f"ALTER TABLE emails ADD COLUMN {col} {typ}")
+    conn.commit()
+
+
 def get_db(path: str = DB_PATH) -> sqlite3.Connection:
     conn = sqlite3.connect(path, timeout=10, check_same_thread=False)
     conn.row_factory = sqlite3.Row
     conn.executescript(SCHEMA)
-    conn.commit()
+    migrate_schema(conn)
     return conn
 
 
@@ -99,24 +119,38 @@ def index_email(
 ) -> None:
     """Insert or update one email in the index."""
     kw_str = " ".join(keywords) if keywords else ""
-    conn.execute(
-        """
-        INSERT INTO emails (account, folder, msg_uid, from_addr, subject,
-                            date_iso, category, keywords, snippet)
-        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ON CONFLICT(account, folder, msg_uid) WHERE msg_uid IS NOT NULL
-        DO UPDATE SET
-            from_addr  = excluded.from_addr,
-            subject    = excluded.subject,
-            date_iso   = excluded.date_iso,
-            category   = excluded.category,
-            keywords   = excluded.keywords,
-            snippet    = excluded.snippet,
-            indexed_at = datetime('now')
-        """,
-        (account, folder, msg_uid, from_addr, subject, date_iso, category, kw_str, snippet),
-    )
-    conn.commit()
+    with _write_lock:
+        conn.execute(
+            """
+            INSERT INTO emails (account, folder, msg_uid, from_addr, subject,
+                                date_iso, category, keywords, snippet)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON CONFLICT(account, folder, msg_uid) WHERE msg_uid IS NOT NULL
+            DO UPDATE SET
+                from_addr  = excluded.from_addr,
+                subject    = excluded.subject,
+                date_iso   = excluded.date_iso,
+                category   = excluded.category,
+                keywords   = excluded.keywords,
+                snippet    = excluded.snippet,
+                indexed_at = datetime('now')
+            """,
+            (account, folder, msg_uid, from_addr, subject, date_iso, category, kw_str, snippet),
+        )
+        conn.commit()
+
+
+def get_message_by_uid(
+    conn: sqlite3.Connection,
+    account: str,
+    folder: str,
+    uid: str,
+) -> Optional[sqlite3.Row]:
+    """Gibt einen indizierten Mail-Eintrag anhand von Account/Ordner/UID zurück."""
+    return conn.execute(
+        "SELECT * FROM emails WHERE account = ? AND folder = ? AND msg_uid = ?",
+        (account, folder, uid),
+    ).fetchone()
 
 
 # ── Search ──────────────────────────────────────────────────────────────────────
@@ -162,7 +196,8 @@ def search(
         params.append(since)
 
     sql += " ORDER BY e.date_iso DESC" if query else " ORDER BY date_iso DESC"
-    sql += f" LIMIT {limit}"
+    sql += " LIMIT ?"
+    params.append(int(limit))
 
     return conn.execute(sql, params).fetchall()
 

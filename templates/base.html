@@ -1,11 +1,10 @@
 <!DOCTYPE html>
-<html lang="de" x-data="{ darkMode: false }" :class="{ 'dark': darkMode }">
+<html lang="de" x-data="{ darkMode: localStorage.getItem('darkMode') === 'true', mobileOpen: false }" x-init="$watch('darkMode', v => localStorage.setItem('darkMode', v))" :class="{ 'dark': darkMode }">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>{% block title %}Mail AI Sorter{% endblock %}</title>
 
-    <!-- Tailwind CSS (via CDN für einfache Integration) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -14,7 +13,7 @@
                 extend: {
                     colors: {
                         primary: {
-                            50: '#f0f9ff',
+                            50:  '#f0f9ff',
                             100: '#e0f2fe',
                             200: '#bae6fd',
                             300: '#7dd3fc',
@@ -24,188 +23,256 @@
                             700: '#0369a1',
                             800: '#075985',
                             900: '#0c4a6e',
+                            950: '#082f49',
                         },
                     },
                     animation: {
-                        'fade-in': 'fadeIn 0.5s ease-in',
-                        'slide-up': 'slideUp 0.3s ease-out',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+                        'fade-in':    'fadeIn .35s ease-out',
+                        'slide-up':   'slideUp .25s ease-out',
+                        'slide-in-r': 'slideInR .25s ease-out',
                     },
                     keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(10px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
+                        fadeIn:   { from: { opacity: 0 },                          to: { opacity: 1 } },
+                        slideUp:  { from: { transform: 'translateY(6px)', opacity: 0 }, to: { transform: 'translateY(0)', opacity: 1 } },
+                        slideInR: { from: { transform: 'translateX(100%)' },       to: { transform: 'translateX(0)' } },
                     },
                 },
             },
         }
     </script>
 
-    <!-- Alpine.js für interaktive UI -->
     <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <!-- Chart.js für Diagramme -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
 
     <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
+        /* ── Scrollbar ──────────────────────────────────────────────────────── */
+        ::-webkit-scrollbar       { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 99px; }
+        .dark ::-webkit-scrollbar-thumb { background: #475569; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        /* Glassmorphism Effect */
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
+        /* ── Focus ──────────────────────────────────────────────────────────── */
+        :focus-visible { outline: 2px solid #0ea5e9; outline-offset: 2px; }
 
-        /* Loading Spinner */
+        /* ── Typography ─────────────────────────────────────────────────────── */
+        body { font-feature-settings: "cv11", "ss01"; }
+
+        /* ── Spinner ────────────────────────────────────────────────────────── */
         .spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #0ea5e9;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
             border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
+            width: 20px; height: 20px;
+            animation: spin .7s linear infinite;
+            opacity: .6;
         }
+        @keyframes spin { to { transform: rotate(360deg); } }
 
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
+        /* ── Nav links ──────────────────────────────────────────────────────── */
+        .nav-link {
+            display: inline-flex; align-items: center; gap: 6px;
+            padding: 6px 10px; border-radius: 8px;
+            font-size: .875rem; font-weight: 500;
+            color: #475569; transition: all .15s;
+            white-space: nowrap;
         }
+        .nav-link:hover  { color: #0f172a; background: #f1f5f9; }
+        .dark .nav-link  { color: #94a3b8; }
+        .dark .nav-link:hover { color: #f1f5f9; background: #1e293b; }
+        .nav-link.active { color: #0284c7; background: #e0f2fe; }
+        .dark .nav-link.active { color: #38bdf8; background: #082f49; }
 
-        /* Gradient Text */
+        .mobile-nav-link {
+            display: flex; align-items: center; gap: 10px;
+            padding: 10px 12px; border-radius: 8px;
+            font-size: .9375rem; font-weight: 500;
+            color: #475569; transition: all .15s;
+        }
+        .mobile-nav-link:hover  { color: #0f172a; background: #f1f5f9; }
+        .dark .mobile-nav-link  { color: #94a3b8; }
+        .dark .mobile-nav-link:hover { color: #f1f5f9; background: #1e293b; }
+        .mobile-nav-link.active { color: #0284c7; background: #e0f2fe; }
+        .dark .mobile-nav-link.active { color: #38bdf8; background: #082f49; }
+
+        /* ── Cards ──────────────────────────────────────────────────────────── */
+        .card {
+            background: white; border-radius: 12px;
+            border: 1px solid #e2e8f0;
+            box-shadow: 0 1px 3px rgba(0,0,0,.06), 0 1px 2px rgba(0,0,0,.04);
+        }
+        .dark .card {
+            background: #1e293b; border-color: #334155;
+            box-shadow: 0 1px 3px rgba(0,0,0,.3);
+        }
+        .card-hover { transition: box-shadow .2s, border-color .2s; }
+        .card-hover:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,.1);
+            border-color: #bae6fd;
+        }
+        .dark .card-hover:hover { border-color: #0369a1; }
+
+        /* ── Gradient heading ───────────────────────────────────────────────── */
         .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
+            background: linear-gradient(135deg, #0284c7 0%, #7c3aed 100%);
+            -webkit-background-clip: text; -webkit-text-fill-color: transparent;
             background-clip: text;
         }
+
+        /* ── Page fade ──────────────────────────────────────────────────────── */
+        .page-content { animation: fadeIn .3s ease-out; }
     </style>
 
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen transition-colors duration-300">
-    <div x-data="{ mobileMenuOpen: false }" class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-white dark:bg-slate-800 shadow-lg sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 flex items-center gap-2">
-                            <i data-lucide="bot" class="w-8 h-8 text-primary-600"></i>
-                            <span class="text-xl font-bold gradient-text">Mail AI Sorter</span>
-                        </div>
-                        <div class="hidden md:ml-10 md:flex md:space-x-4">
-                            <a href="/" class="nav-link {% block nav_dashboard %}{% endblock %}">
-                                <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1"></i>
-                                Dashboard
-                            </a>
-                            <a href="/config" class="nav-link {% block nav_config %}{% endblock %}">
-                                <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>
-                                Konfiguration
-                            </a>
-                            <a href="/logs" class="nav-link {% block nav_logs %}{% endblock %}">
-                                <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>
-                                Logs
-                            </a>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <button @click="darkMode = !darkMode" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                            <i x-show="!darkMode" data-lucide="moon" class="w-5 h-5"></i>
-                            <i x-show="darkMode" data-lucide="sun" class="w-5 h-5"></i>
-                        </button>
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-                            <i data-lucide="menu" class="w-6 h-6"></i>
-                        </button>
-                    </div>
-                </div>
-            </div>
+<body class="bg-slate-50 dark:bg-slate-950 min-h-screen text-slate-900 dark:text-slate-100 antialiased">
 
-            <!-- Mobile Menu -->
-            <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="md:hidden bg-white dark:bg-slate-800 border-t dark:border-slate-700">
-                <div class="px-2 pt-2 pb-3 space-y-1">
-                    <a href="/" class="mobile-nav-link {% block nav_mobile_dashboard %}{% endblock %}">
-                        <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-2"></i>
-                        Dashboard
+    <!-- ── Navigation ──────────────────────────────────────────────────────── -->
+    <nav class="sticky top-0 z-50 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border-b border-slate-200 dark:border-slate-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center h-14 gap-6">
+
+                <!-- Logo -->
+                <a href="/" class="flex items-center gap-2.5 flex-shrink-0 group">
+                    <div class="w-7 h-7 bg-primary-600 rounded-lg flex items-center justify-center shadow-sm group-hover:bg-primary-700 transition-colors">
+                        <i data-lucide="bot" class="w-4 h-4 text-white"></i>
+                    </div>
+                    <span class="font-semibold text-slate-900 dark:text-white tracking-tight">Mail AI</span>
+                </a>
+
+                <!-- Desktop nav -->
+                <div class="hidden md:flex items-center gap-0.5 flex-1">
+                    <a href="/"      class="nav-link {% block nav_dashboard %}{% endblock %}">
+                        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
                     </a>
-                    <a href="/config" class="mobile-nav-link {% block nav_mobile_config %}{% endblock %}">
-                        <i data-lucide="settings" class="w-4 h-4 inline mr-2"></i>
-                        Konfiguration
+                    <a href="/inbox" class="nav-link {% block nav_inbox %}{% endblock %}"
+                       x-data="{ unread: 0 }"
+                       x-init="fetch('/api/accounts').then(r=>r.json()).then(accs=>accs.forEach(a=>fetch('/api/accounts/'+encodeURIComponent(a.name)+'/folders').then(r=>r.json()).then(d=>(d.folders||[]).forEach(f=>{ if(f.name==='INBOX') unread+=f.unread }))))">
+                        <i data-lucide="inbox" class="w-4 h-4"></i> Inbox
+                        <span x-show="unread > 0" x-text="unread"
+                              class="ml-0.5 px-1.5 py-0.5 bg-red-500 text-white text-xs rounded-full leading-none font-medium"></span>
                     </a>
-                    <a href="/logs" class="mobile-nav-link {% block nav_mobile_logs %}{% endblock %}">
-                        <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
-                        Logs
+                    <a href="/rules"  class="nav-link {% block nav_rules %}{% endblock %}">
+                        <i data-lucide="filter" class="w-4 h-4"></i> Regeln
+                    </a>
+                    <a href="/config" class="nav-link {% block nav_config %}{% endblock %}">
+                        <i data-lucide="settings" class="w-4 h-4"></i> Einstellungen
+                    </a>
+                    <a href="/logs"   class="nav-link {% block nav_logs %}{% endblock %}">
+                        <i data-lucide="scroll-text" class="w-4 h-4"></i> Logs
                     </a>
                 </div>
-            </div>
-        </nav>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-            {% block content %}{% endblock %}
-        </main>
-
-        <!-- Footer -->
-        <footer class="bg-white dark:bg-slate-800 border-t dark:border-slate-700 mt-auto">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <i data-lucide="heart" class="w-4 h-4 text-red-500"></i>
-                        <span>Made with ❤️ for Open Source</span>
-                    </div>
-                    <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="cpu" class="w-4 h-4"></i>
-                            Optimized for Apple Silicon
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="shield" class="w-4 h-4"></i>
-                            100% Local & Private
-                        </span>
-                    </div>
+                <!-- Actions -->
+                <div class="flex items-center gap-1 ml-auto">
+                    <!-- Dark mode toggle -->
+                    <button @click="darkMode = !darkMode"
+                            class="p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-all"
+                            :title="darkMode ? 'Helles Design' : 'Dunkles Design'">
+                        <i x-show="!darkMode" data-lucide="moon"  class="w-4 h-4"></i>
+                        <i x-show="darkMode"  data-lucide="sun"   class="w-4 h-4"></i>
+                    </button>
+                    <!-- Mobile menu button -->
+                    <button @click="mobileOpen = !mobileOpen"
+                            class="md:hidden p-2 rounded-lg text-slate-500 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-all">
+                        <i x-show="!mobileOpen" data-lucide="menu"  class="w-5 h-5"></i>
+                        <i x-show="mobileOpen"  data-lucide="x"     class="w-5 h-5"></i>
+                    </button>
                 </div>
             </div>
-        </footer>
+        </div>
+
+        <!-- Mobile menu -->
+        <div x-show="mobileOpen"
+             @click.away="mobileOpen = false"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             x-transition:leave="transition ease-in duration-100"
+             x-transition:leave-start="opacity-100 translate-y-0"
+             x-transition:leave-end="opacity-0 -translate-y-1"
+             class="md:hidden border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+            <div class="px-3 py-3 space-y-1">
+                <a href="/"      class="mobile-nav-link {% block nav_mobile_dashboard %}{% endblock %}">
+                    <i data-lucide="layout-dashboard" class="w-5 h-5 opacity-70"></i> Dashboard
+                </a>
+                <a href="/inbox" class="mobile-nav-link {% block nav_mobile_inbox %}{% endblock %}">
+                    <i data-lucide="inbox" class="w-5 h-5 opacity-70"></i> Inbox
+                </a>
+                <a href="/rules" class="mobile-nav-link {% block nav_mobile_rules %}{% endblock %}">
+                    <i data-lucide="filter" class="w-5 h-5 opacity-70"></i> Regeln
+                </a>
+                <a href="/config" class="mobile-nav-link {% block nav_mobile_config %}{% endblock %}">
+                    <i data-lucide="settings" class="w-5 h-5 opacity-70"></i> Einstellungen
+                </a>
+                <a href="/logs" class="mobile-nav-link {% block nav_mobile_logs %}{% endblock %}">
+                    <i data-lucide="scroll-text" class="w-5 h-5 opacity-70"></i> Logs
+                </a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- ── Main content ─────────────────────────────────────────────────────── -->
+    {% block main %}
+    <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 page-content">
+        {% block content %}{% endblock %}
+    </main>
+    {% endblock %}
+
+    <!-- ── Footer ───────────────────────────────────────────────────────────── -->
+    <footer class="mt-auto border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-3">
+            <div class="flex items-center justify-between text-xs text-slate-400 dark:text-slate-500">
+                <span>Mail AI Sorter — 100% lokal &amp; privat</span>
+                <span class="hidden sm:flex items-center gap-1">
+                    <i data-lucide="cpu" class="w-3.5 h-3.5"></i>
+                    Optimiert für Apple Silicon
+                </span>
+            </div>
+        </div>
+    </footer>
+
+    <!-- ── Notification container ───────────────────────────────────────────── -->
+    <div id="notif-container"
+         class="fixed top-4 right-4 z-[200] flex flex-col gap-2 items-end pointer-events-none">
     </div>
 
     <script>
-        // Lucide Icons initialisieren
         lucide.createIcons();
 
-        // Globale Funktionen
+        /* ── Notification system ──────────────────────────────────────────── */
         function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 animate-slide-up ${
-                type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            } text-white`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
+            const container = document.getElementById('notif-container');
+            const cfg = {
+                success: { icon: 'check-circle-2', cls: 'bg-emerald-500 border-emerald-400/40' },
+                error:   { icon: 'x-circle',       cls: 'bg-red-500 border-red-400/40' },
+                info:    { icon: 'info',            cls: 'bg-sky-500 border-sky-400/40' },
+                warning: { icon: 'alert-triangle',  cls: 'bg-amber-500 border-amber-400/40' },
+            };
+            const c = cfg[type] || cfg.info;
+
+            const n = document.createElement('div');
+            n.className = `pointer-events-auto flex items-center gap-3 pl-3.5 pr-2.5 py-3 rounded-xl shadow-lg border text-white text-sm font-medium ${c.cls} max-w-xs w-max translate-x-[110%] opacity-0 transition-all duration-300 ease-out`;
+            n.innerHTML = `
+                <i data-lucide="${c.icon}" class="w-4 h-4 flex-shrink-0"></i>
+                <span class="flex-1 leading-snug">${message}</span>
+                <button onclick="this.closest('[data-notif]').remove()"
+                        class="p-0.5 rounded opacity-60 hover:opacity-100 transition-opacity ml-1">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>`;
+            n.dataset.notif = '1';
+            container.appendChild(n);
+            lucide.createIcons({ nodes: [n] });
+
+            requestAnimationFrame(() => requestAnimationFrame(() => {
+                n.classList.remove('translate-x-[110%]', 'opacity-0');
+            }));
 
             setTimeout(() => {
-                notification.remove();
-            }, 3000);
+                n.classList.add('translate-x-[110%]', 'opacity-0');
+                setTimeout(() => n.remove(), 300);
+            }, 4000);
         }
 
         function formatNumber(num) {
@@ -214,18 +281,8 @@
     </script>
 
     <style>
-        .nav-link {
-            @apply px-3 py-2 rounded-lg text-sm font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors flex items-center;
-        }
-        .nav-link.active {
-            @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200;
-        }
-        .mobile-nav-link {
-            @apply block px-3 py-2 rounded-lg text-base font-medium text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors;
-        }
-        .mobile-nav-link.active {
-            @apply bg-primary-100 dark:bg-primary-900 text-primary-700 dark:text-primary-200;
-        }
+        .nav-link.active       { @apply text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950; }
+        .mobile-nav-link.active{ @apply text-primary-700 bg-primary-50 dark:text-primary-400 dark:bg-primary-950; }
     </style>
 
     {% block scripts %}{% endblock %}
