@@ -509,6 +509,69 @@ class IMAPSession:
             except Exception:
                 return []
 
+    def bulk_set_flag(self, folder: str, uids: List[str], flag: str, value: bool) -> int:
+        """
+        Setzt/entfernt ein Flag für mehrere Mails gleichzeitig (eine IMAP-Anfrage).
+        Gibt Anzahl der erfolgreich verarbeiteten Mails zurück.
+        """
+        if not uids:
+            return 0
+        uid_set = b",".join(u.encode() for u in uids)
+        op = "+FLAGS" if value else "-FLAGS"
+        with self._lock:
+            self.reconnect_if_needed()
+            self._select(folder)
+            try:
+                typ, _ = self._conn.uid("store", uid_set, op, flag)
+                return len(uids) if typ == "OK" else 0
+            except Exception:
+                return 0
+
+    def bulk_delete(self, folder: str, uids: List[str]) -> int:
+        """Markiert mehrere Mails als gelöscht und expungiert."""
+        if not uids:
+            return 0
+        uid_set = b",".join(u.encode() for u in uids)
+        with self._lock:
+            self.reconnect_if_needed()
+            self._select(folder)
+            try:
+                typ, _ = self._conn.uid("store", uid_set, "+FLAGS", "\\Deleted")
+                if typ != "OK":
+                    return 0
+                self._conn.expunge()
+                self._last_folder = None
+                return len(uids)
+            except Exception:
+                return 0
+
+    def bulk_move(self, folder: str, uids: List[str], target: str) -> int:
+        """Verschiebt mehrere Mails in einen anderen Ordner."""
+        if not uids:
+            return 0
+        uid_set = b",".join(u.encode() for u in uids)
+        with self._lock:
+            self.reconnect_if_needed()
+            self._select(folder)
+            try:
+                typ, _ = self._conn.uid("move", uid_set, target)
+                if typ == "OK":
+                    self._last_folder = None
+                    return len(uids)
+            except (imaplib.IMAP4.error, AttributeError):
+                pass
+            # Fallback: COPY + DELETE
+            try:
+                typ2, _ = self._conn.uid("copy", uid_set, target)
+                if typ2 != "OK":
+                    return 0
+                self._conn.uid("store", uid_set, "+FLAGS", "\\Deleted")
+                self._conn.expunge()
+                self._last_folder = None
+                return len(uids)
+            except Exception:
+                return 0
+
     def logout(self) -> None:
         try:
             if self._conn:

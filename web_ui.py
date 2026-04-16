@@ -689,6 +689,78 @@ def api_ai_check_phishing():
         return jsonify({"error": str(e)}), 500
 
 
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/bulk', methods=['POST'])
+def api_bulk_action(name, folder):
+    """
+    Massen-Aktion auf mehrere Mails gleichzeitig.
+
+    Body: {
+      "action": "delete" | "mark_read" | "mark_unread" | "flag" | "unflag" | "move",
+      "uids":   ["123", "456", ...],
+      "target": "INBOX/Archiv"   # nur für "move"
+    }
+    """
+    data = request.json or {}
+    action = data.get("action", "").strip()
+    uids   = [str(u) for u in data.get("uids", []) if str(u).isdigit()]
+
+    if not action:
+        return jsonify({"error": "action erforderlich"}), 400
+    if not uids:
+        return jsonify({"error": "uids erforderlich"}), 400
+    if len(uids) > 200:
+        return jsonify({"error": "Maximal 200 UIDs pro Anfrage"}), 400
+
+    try:
+        session = _imap.pool.get(name)
+        if action == "delete":
+            count = session.bulk_delete(folder, uids)
+        elif action == "mark_read":
+            count = session.bulk_set_flag(folder, uids, "\\Seen", True)
+        elif action == "mark_unread":
+            count = session.bulk_set_flag(folder, uids, "\\Seen", False)
+        elif action == "flag":
+            count = session.bulk_set_flag(folder, uids, "\\Flagged", True)
+        elif action == "unflag":
+            count = session.bulk_set_flag(folder, uids, "\\Flagged", False)
+        elif action == "move":
+            target = data.get("target", "").strip()
+            if not target:
+                return jsonify({"error": "target für move erforderlich"}), 400
+            count = session.bulk_move(folder, uids, target)
+        else:
+            return jsonify({"error": f"Unbekannte Aktion: {action}"}), 400
+        return jsonify({"success": True, "processed": count})
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/stats/timeline', methods=['GET'])
+def api_stats_timeline():
+    """Mails pro Tag für die letzten N Tage aus dem SQLite-Index."""
+    days = min(int(request.args.get("days", 30)), 90)
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT substr(date_iso, 1, 10) AS day, COUNT(*) AS count
+            FROM emails
+            WHERE date_iso >= date('now', ? || ' days')
+            GROUP BY day
+            ORDER BY day ASC
+            """,
+            (f"-{days}",),
+        ).fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
 @app.route('/api/ai/extract-events', methods=['POST'])
 def api_ai_extract_events():
     """Erkennt Termine, Meetings und Aufgaben in einer Mail via LLM."""
