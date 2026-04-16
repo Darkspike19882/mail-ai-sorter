@@ -37,6 +37,11 @@
       "imap_port": 993,
       "username": "deine.email@gmail.com",
       "password_env": "GMAIL_PASSWORD",
+      "smtp_host": "smtp.gmail.com",
+      "smtp_port": 587,
+      "smtp_encryption": "starttls",
+      "smtp_password_env": "GMAIL_PASSWORD",
+      "from_name": "Dein Name",
       "source_folder": "INBOX",
       "target_folders": {
         "paperless": "Paperless",

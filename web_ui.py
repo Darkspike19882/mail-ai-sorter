@@ -15,6 +15,11 @@ from flask import Flask, render_template, request, jsonify, redirect, url_for, R
 from pathlib import Path
 
 import imap_client as _imap
+import ai_features as _ai
+import smtp_client as _smtp
+from concurrent.futures import ThreadPoolExecutor
+
+_ai_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ai")
 
 app = Flask(__name__)
 SORTER_DIR = Path(__file__).parent
@@ -460,6 +465,173 @@ def api_attachment(name, folder, uid, part_id):
         )
     except KeyError:
         return jsonify({"error": f"Account '{name}' nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─── AI-Features API ──────────────────────────────────────────────────────────
+
+def _get_ollama_cfg():
+    cfg = load_config()
+    g = cfg.get("global", {})
+    return g.get("ollama_url", "http://127.0.0.1:11434"), g.get("model", "llama3.1:8b")
+
+
+def _load_mail_for_ai(data: dict) -> dict:
+    """Lädt eine Mail aus IMAP anhand von {account, folder, uid}."""
+    account = data.get("account", "")
+    folder  = data.get("folder", "")
+    uid     = data.get("uid", "")
+    if not account or not folder or not uid:
+        raise ValueError("account, folder und uid sind erforderlich")
+    session = _imap.pool.get(account)
+    return session.fetch_message(folder, uid)
+
+
+@app.route('/api/ai/summarize', methods=['POST'])
+def api_ai_summarize():
+    """Zusammenfassung einer Mail via LLM."""
+    data = request.json or {}
+    try:
+        mail = _load_mail_for_ai(data)
+        ollama_url, model = _get_ollama_cfg()
+        future = _ai_executor.submit(
+            _ai.summarize,
+            mail["subject"], mail["body_text"], mail["from_addr"],
+            ollama_url, model,
+        )
+        summary = future.result(timeout=90)
+        return jsonify({"summary": summary})
+    except KeyError:
+        return jsonify({"error": "Account nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/ai/suggest-replies', methods=['POST'])
+def api_ai_suggest_replies():
+    """Reply-Vorschläge für eine Mail via LLM."""
+    data = request.json or {}
+    try:
+        mail = _load_mail_for_ai(data)
+        ollama_url, model = _get_ollama_cfg()
+        future = _ai_executor.submit(
+            _ai.suggest_replies,
+            mail["subject"], mail["body_text"], mail["from_addr"],
+            ollama_url, model,
+        )
+        replies = future.result(timeout=120)
+        return jsonify({"replies": replies})
+    except KeyError:
+        return jsonify({"error": "Account nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/ai/check-phishing', methods=['POST'])
+def api_ai_check_phishing():
+    """Phishing-Analyse einer Mail (regelbasiert + LLM)."""
+    data = request.json or {}
+    try:
+        mail = _load_mail_for_ai(data)
+        ollama_url, model = _get_ollama_cfg()
+        future = _ai_executor.submit(
+            _ai.check_phishing,
+            mail["from_addr"], mail["subject"], mail["body_text"],
+            ollama_url, model,
+        )
+        result = future.result(timeout=90)
+        return jsonify(result)
+    except KeyError:
+        return jsonify({"error": "Account nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─── SMTP API ──────────────────────────────────────────────────────────────────
+
+def _get_smtp_client(account_name: str) -> "_smtp.SMTPClient":
+    cfg = load_config()
+    acc = next((a for a in cfg.get("accounts", []) if a.get("name") == account_name), None)
+    if not acc:
+        raise KeyError(f"Account '{account_name}' nicht gefunden")
+    return _smtp.SMTPClient(acc)
+
+
+@app.route('/api/accounts/<name>/send', methods=['POST'])
+def api_send(name):
+    """Neue Mail senden."""
+    data = request.json or {}
+    to      = data.get("to", [])
+    subject = data.get("subject", "")
+    body    = data.get("body_text", "")
+    if not to or not subject or not body:
+        return jsonify({"error": "to, subject und body_text sind erforderlich"}), 400
+    if not isinstance(to, list):
+        to = [to]
+    try:
+        client = _get_smtp_client(name)
+        msg_id = client.send(
+            to=to,
+            subject=subject,
+            body_text=body,
+            body_html=data.get("body_html"),
+            cc=data.get("cc"),
+            in_reply_to=data.get("in_reply_to"),
+            references=data.get("references"),
+        )
+        return jsonify({"success": True, "message_id": msg_id})
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>/reply', methods=['POST'])
+def api_reply(name, folder, uid):
+    """Antwortet auf eine Mail."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    data = request.json or {}
+    reply_text = data.get("body_text", "")
+    if not reply_text:
+        return jsonify({"error": "body_text ist erforderlich"}), 400
+    try:
+        session = _imap.pool.get(name)
+        original = session.fetch_message(folder, uid)
+        client   = _get_smtp_client(name)
+        params   = client.build_reply(
+            original, reply_text,
+            reply_all=bool(data.get("reply_all", False)),
+        )
+        msg_id = client.send(**params)
+        return jsonify({"success": True, "message_id": msg_id})
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/accounts/<name>/folders/<path:folder>/messages/<uid>/forward', methods=['POST'])
+def api_forward(name, folder, uid):
+    """Leitet eine Mail weiter."""
+    if not uid.isdigit():
+        return jsonify({"error": "Ungültige UID"}), 400
+    data = request.json or {}
+    to = data.get("to", [])
+    if not to:
+        return jsonify({"error": "to ist erforderlich"}), 400
+    if not isinstance(to, list):
+        to = [to]
+    try:
+        session = _imap.pool.get(name)
+        original = session.fetch_message(folder, uid)
+        client   = _get_smtp_client(name)
+        params   = client.build_forward(original, to, data.get("body_prefix", ""))
+        msg_id   = client.send(**params)
+        return jsonify({"success": True, "message_id": msg_id})
+    except KeyError as e:
+        return jsonify({"error": str(e)}), 404
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
