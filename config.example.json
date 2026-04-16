@@ -18,6 +18,11 @@
       "newsletter",
       "privat"
     ],
+    "telegram": {
+      "bot_token_env": "TELEGRAM_BOT_TOKEN",
+      "allowed_users_env": "TELEGRAM_ALLOWED_USERS",
+      "max_results": 10
+    },
     "extensions": {
       "enabled": false,
       "paperless_enabled": false,

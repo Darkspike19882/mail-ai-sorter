@@ -17,6 +17,7 @@ from pathlib import Path
 import imap_client as _imap
 import ai_features as _ai
 import smtp_client as _smtp
+import rag_service as _rag
 from concurrent.futures import ThreadPoolExecutor
 
 _ai_executor = ThreadPoolExecutor(max_workers=2, thread_name_prefix="ai")
@@ -544,6 +545,100 @@ def api_ai_check_phishing():
         return jsonify(result)
     except KeyError:
         return jsonify({"error": "Account nicht gefunden"}), 404
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+# ─── RAG API ──────────────────────────────────────────────────────────────────
+
+@app.route('/api/rag/query', methods=['POST'])
+def api_rag_query():
+    """
+    RAG-Anfrage über den Mail-Index.
+
+    Body: {"question": "Wann kommt mein Paket von DHL?"}
+    Returns: {"answer": str, "sources": [...], "filters": {...}, "found": int}
+    """
+    data = request.json or {}
+    question = data.get("question", "").strip()
+    if not question:
+        return jsonify({"error": "question ist erforderlich"}), 400
+
+    limit = min(int(data.get("limit", 8)), 20)
+
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        ollama_url, model = _get_ollama_cfg()
+        result = _rag.answer(question, conn, ollama_url, model, limit=limit)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rag/senders', methods=['GET'])
+def api_rag_senders():
+    """Listet die häufigsten Absender aus dem Mail-Index."""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        conn.row_factory = sqlite3.Row
+        rows = conn.execute(
+            """
+            SELECT from_addr, COUNT(*) as count, MAX(date_iso) as latest
+            FROM emails
+            GROUP BY from_addr
+            ORDER BY count DESC
+            LIMIT 50
+            """
+        ).fetchall()
+        conn.close()
+        return jsonify([dict(r) for r in rows])
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rag/categories', methods=['GET'])
+def api_rag_categories():
+    """Gibt Kategorie-Statistiken aus dem Mail-Index zurück."""
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        result = _rag.category_summary(conn)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rag/sender/<path:from_filter>', methods=['GET'])
+def api_rag_sender(from_filter):
+    """Mails von einem bestimmten Absender."""
+    limit = min(int(request.args.get("limit", 20)), 100)
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        result = _rag.sender_stats(conn, from_filter, limit=limit)
+        conn.close()
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+@app.route('/api/rag/topic', methods=['GET'])
+def api_rag_topic():
+    """FTS5-Suche nach Thema."""
+    topic = request.args.get("q", "").strip()
+    if not topic:
+        return jsonify({"error": "q ist erforderlich"}), 400
+    limit = min(int(request.args.get("limit", 20)), 100)
+    try:
+        import sqlite3
+        conn = sqlite3.connect(str(INDEX_DB), check_same_thread=False)
+        result = _rag.topic_stats(conn, topic, limit=limit)
+        conn.close()
+        return jsonify(result)
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
