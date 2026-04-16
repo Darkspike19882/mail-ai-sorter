@@ -628,3 +628,49 @@ class IMAPSessionPool:
 
 # Singleton — wird in web_ui.py beim Start initialisiert
 pool = IMAPSessionPool()
+
+
+# ── Suche ─────────────────────────────────────────────────────────────────────
+
+def build_search_criteria(
+    status: str = "ALL",
+    from_filter: str = "",
+    subject_filter: str = "",
+    since_days: int = 0,
+) -> str:
+    """
+    Baut einen sicheren IMAP-SEARCH-Kriterienstring aus einzelnen Filtern.
+
+    status        : ALL | UNSEEN | SEEN | FLAGGED | UNFLAGGED
+    from_filter   : Teilstring im Absender (Anführungszeichen werden entfernt)
+    subject_filter: Teilstring im Betreff
+    since_days    : 0 = kein Filter; N = Mails der letzten N Tage
+    """
+    import datetime as _dt
+
+    parts: list = []
+
+    status_map = {
+        "UNSEEN": "UNSEEN",
+        "SEEN": "SEEN",
+        "FLAGGED": "FLAGGED",
+        "UNFLAGGED": "UNFLAGGED",
+    }
+    if status in status_map:
+        parts.append(status_map[status])
+
+    if from_filter:
+        safe = from_filter.replace('"', "").replace("\\", "")[:100]
+        parts.append(f'FROM "{safe}"')
+
+    if subject_filter:
+        safe = subject_filter.replace('"', "").replace("\\", "")[:100]
+        parts.append(f'SUBJECT "{safe}"')
+
+    if since_days > 0:
+        since_date = (_dt.datetime.utcnow() - _dt.timedelta(days=since_days)).strftime(
+            "%d-%b-%Y"
+        )
+        parts.append(f"SINCE {since_date}")
+
+    return " ".join(parts) if parts else "ALL"

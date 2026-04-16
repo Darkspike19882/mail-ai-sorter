@@ -88,10 +88,74 @@
                         title="Nur ungelesene">
                     <i data-lucide="mail" class="w-3.5 h-3.5"></i>
                 </button>
+                <button @click="search.visible = !search.visible; $nextTick(() => lucide.createIcons())"
+                        :class="search.visible || search.fromFilter || search.subjectFilter || parseInt(search.sinceDays) > 0
+                            ? 'bg-primary-100 dark:bg-primary-900 text-primary-600'
+                            : 'text-slate-400 hover:text-slate-600 dark:hover:text-slate-200'"
+                        class="p-1.5 rounded-lg transition-colors"
+                        title="Erweiterte Suche">
+                    <i data-lucide="sliders" class="w-3.5 h-3.5"></i>
+                </button>
                 <button @click="loadMessages()" title="Aktualisieren"
                         class="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition-colors">
                     <i data-lucide="refresh-cw" class="w-3.5 h-3.5" :class="{'animate-spin': loadingMessages}"></i>
                 </button>
+            </div>
+        </div>
+
+        <!-- Erweiterte Suche -->
+        <div x-show="search.visible"
+             x-transition:enter="transition ease-out duration-150"
+             x-transition:enter-start="opacity-0 -translate-y-1"
+             x-transition:enter-end="opacity-100 translate-y-0"
+             class="px-3 py-2 bg-white dark:bg-slate-800 border-b dark:border-slate-700 space-y-2">
+            <input type="text"
+                   x-model="search.fromFilter"
+                   @keydown.enter="applySearch()"
+                   placeholder="Von (Absender enthält)"
+                   class="w-full px-2.5 py-1.5 text-xs border dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-1 focus:ring-primary-500 outline-none">
+            <input type="text"
+                   x-model="search.subjectFilter"
+                   @keydown.enter="applySearch()"
+                   placeholder="Betreff enthält"
+                   class="w-full px-2.5 py-1.5 text-xs border dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-1 focus:ring-primary-500 outline-none">
+            <div class="flex items-center gap-2">
+                <select x-model="search.sinceDays"
+                        class="flex-1 px-2.5 py-1.5 text-xs border dark:border-slate-600 rounded-lg bg-slate-50 dark:bg-slate-700 text-slate-900 dark:text-white focus:ring-1 focus:ring-primary-500 outline-none">
+                    <option value="0">Zeitraum: Alle</option>
+                    <option value="7">Letzte 7 Tage</option>
+                    <option value="14">Letzte 14 Tage</option>
+                    <option value="30">Letzte 30 Tage</option>
+                    <option value="90">Letzte 90 Tage</option>
+                    <option value="365">Letztes Jahr</option>
+                </select>
+                <button @click="applySearch()"
+                        class="px-3 py-1.5 bg-primary-600 hover:bg-primary-700 text-white text-xs font-medium rounded-lg transition-colors flex items-center gap-1 flex-shrink-0">
+                    <i data-lucide="search" class="w-3 h-3"></i> Suchen
+                </button>
+                <button @click="clearSearch()" title="Filter zurücksetzen"
+                        class="p-1.5 text-slate-400 hover:text-red-500 transition-colors flex-shrink-0">
+                    <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+            <!-- Aktive Filter-Chips -->
+            <div x-show="search.fromFilter || search.subjectFilter || parseInt(search.sinceDays) > 0"
+                 class="flex flex-wrap gap-1">
+                <span x-show="search.fromFilter"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs rounded-full">
+                    Von: <span x-text="search.fromFilter" class="max-w-20 truncate"></span>
+                    <button @click="search.fromFilter = ''; applySearch()" class="hover:text-red-500">×</button>
+                </span>
+                <span x-show="search.subjectFilter"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs rounded-full">
+                    Betreff: <span x-text="search.subjectFilter" class="max-w-20 truncate"></span>
+                    <button @click="search.subjectFilter = ''; applySearch()" class="hover:text-red-500">×</button>
+                </span>
+                <span x-show="parseInt(search.sinceDays) > 0"
+                      class="inline-flex items-center gap-1 px-1.5 py-0.5 bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-300 text-xs rounded-full">
+                    <span x-text="'≤ ' + search.sinceDays + ' Tage'"></span>
+                    <button @click="search.sinceDays = 0; applySearch()" class="hover:text-red-500">×</button>
+                </span>
             </div>
         </div>
 
@@ -125,6 +189,11 @@
                     title="Löschen"
                     class="p-1.5 rounded text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 disabled:opacity-50 transition-colors flex items-center gap-1">
                 <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Löschen
+            </button>
+            <button @click="exportCsv()" :disabled="bulkLoading"
+                    title="Auswahl als CSV exportieren"
+                    class="p-1.5 rounded text-xs text-green-600 hover:bg-green-50 dark:hover:bg-green-900/20 disabled:opacity-50 transition-colors flex items-center gap-1">
+                <i data-lucide="download" class="w-3.5 h-3.5"></i> CSV
             </button>
             <button @click="clearSelection()" class="ml-auto p-1 text-slate-400 hover:text-slate-600 transition-colors">
                 <i data-lucide="x" class="w-3.5 h-3.5"></i>
@@ -722,6 +791,14 @@ function inboxApp() {
         selectMode:      false,
         bulkLoading:     false,
 
+        // Erweiterte Suche
+        search: {
+            visible:       false,
+            fromFilter:    '',
+            subjectFilter: '',
+            sinceDays:     0,
+        },
+
         // Tastatur-Shortcuts Hilfe
         shortcutsVisible: false,
 
@@ -833,14 +910,25 @@ function inboxApp() {
 
         // ── Mails laden ──────────────────────────────────────────────────────
 
+        _buildMsgUrl(offset) {
+            const base = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages`;
+            const params = new URLSearchParams({
+                limit:  this.PAGE_SIZE,
+                offset,
+                search: this.filterUnseen ? 'UNSEEN' : 'ALL',
+            });
+            if (this.search.fromFilter)    params.set('from_filter',    this.search.fromFilter);
+            if (this.search.subjectFilter) params.set('subject_filter', this.search.subjectFilter);
+            if (parseInt(this.search.sinceDays) > 0) params.set('since_days', this.search.sinceDays);
+            return `${base}?${params}`;
+        },
+
         async loadMessages() {
             if (!this.selectedAccount || !this.selectedFolder) return;
             this.loadingMessages = true;
             this.offset = 0;
             try {
-                const criteria = this.filterUnseen ? 'UNSEEN' : 'ALL';
-                const url = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages?limit=${this.PAGE_SIZE}&offset=0&search=${criteria}`;
-                const res  = await fetch(url);
+                const res  = await fetch(this._buildMsgUrl(0));
                 const data = await res.json();
                 if (data.error) throw new Error(data.error);
                 this.messages      = data.messages || [];
@@ -858,9 +946,7 @@ function inboxApp() {
             this.offset += this.PAGE_SIZE;
             this.loadingMessages = true;
             try {
-                const criteria = this.filterUnseen ? 'UNSEEN' : 'ALL';
-                const url = `/api/accounts/${encodeURIComponent(this.selectedAccount)}/folders/${encodeURIComponent(this.selectedFolder)}/messages?limit=${this.PAGE_SIZE}&offset=${this.offset}&search=${criteria}`;
-                const res  = await fetch(url);
+                const res  = await fetch(this._buildMsgUrl(this.offset));
                 const data = await res.json();
                 this.messages.push(...(data.messages || []));
             } catch (e) {
@@ -869,6 +955,17 @@ function inboxApp() {
                 this.loadingMessages = false;
                 this.$nextTick(() => lucide.createIcons());
             }
+        },
+
+        applySearch() {
+            this.loadMessages();
+        },
+
+        clearSearch() {
+            this.search.fromFilter    = '';
+            this.search.subjectFilter = '';
+            this.search.sinceDays     = 0;
+            this.loadMessages();
         },
 
         // ── Mail lesen ───────────────────────────────────────────────────────
@@ -1228,6 +1325,37 @@ function inboxApp() {
                 this.bulkLoading = false;
                 this.$nextTick(() => lucide.createIcons());
             }
+        },
+
+        // ── CSV-Export ────────────────────────────────────────────────────────
+
+        exportCsv() {
+            const selected = this.messages.filter(m => this.selectedUids.has(m.uid));
+            if (!selected.length) {
+                showNotification('Keine Mails ausgewählt', 'error');
+                return;
+            }
+            const header = ['UID', 'Von', 'Betreff', 'Datum', 'Gelesen', 'Markiert'];
+            const rows = selected.map(m => [
+                m.uid        || '',
+                m.from_addr  || '',
+                (m.subject   || '').replace(/"/g, '""'),
+                m.date_iso   || '',
+                m.seen    ? 'Ja' : 'Nein',
+                m.flagged ? 'Ja' : 'Nein',
+            ]);
+            const csv = [header, ...rows]
+                .map(row => row.map(cell => `"${cell}"`).join(','))
+                .join('\r\n');
+            // BOM für korrekte UTF-8-Erkennung in Excel
+            const blob = new Blob(['\uFEFF' + csv], { type: 'text/csv;charset=utf-8;' });
+            const url  = URL.createObjectURL(blob);
+            const a    = document.createElement('a');
+            a.href     = url;
+            a.download = `mails_${new Date().toISOString().slice(0, 10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showNotification(`${selected.length} Mail(s) als CSV exportiert`, 'success');
         },
 
         // ── Hilfsfunktionen ───────────────────────────────────────────────────

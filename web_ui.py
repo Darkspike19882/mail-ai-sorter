@@ -500,19 +500,32 @@ def api_folders(name):
 
 @app.route('/api/accounts/<name>/folders/<path:folder>/messages')
 def api_messages(name, folder):
-    """Paginierte Mail-Header-Liste."""
+    """Paginierte Mail-Header-Liste mit optionalen Filtern."""
     try:
         limit  = max(1, min(int(request.args.get("limit",  50)), 200))
         offset = max(0, int(request.args.get("offset", 0)))
-        search = request.args.get("search", "ALL")
-        # Erlaubte Suchkriterien whitelisten (verhindert IMAP-Injection)
+
+        # Status-Filter whitelisten (verhindert IMAP-Injection)
+        status = request.args.get("search", "ALL")
         allowed = {"ALL", "UNSEEN", "SEEN", "FLAGGED", "UNFLAGGED"}
-        if search not in allowed:
-            search = "ALL"
+        if status not in allowed:
+            status = "ALL"
+
+        # Erweiterte Filter — werden serverseitig sicher zusammengebaut
+        from_filter    = request.args.get("from_filter", "").strip()[:100]
+        subject_filter = request.args.get("subject_filter", "").strip()[:100]
+        since_days     = max(0, min(int(request.args.get("since_days", 0) or 0), 3650))
+
+        search_criteria = _imap.build_search_criteria(
+            status=status,
+            from_filter=from_filter,
+            subject_filter=subject_filter,
+            since_days=since_days,
+        )
 
         session = _imap.pool.get(name)
         mails, total = session.fetch_headers(folder, limit=limit, offset=offset,
-                                             search_criteria=search)
+                                             search_criteria=search_criteria)
         return jsonify({"messages": mails, "total": total,
                         "limit": limit, "offset": offset})
     except KeyError:
