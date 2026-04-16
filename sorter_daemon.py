@@ -112,7 +112,17 @@ def _send_digest_if_due(state):
             cfg = _json.load(f)
         tg = cfg.get("telegram", {})
         mode = tg.get("notify_mode", "off")
-        if mode == "off" or not tg.get("chat_id") or not tg.get("bot_token"):
+        sf = BASE_DIR / "secrets.env"
+        secrets = {}
+        if sf.exists():
+            for line in sf.read_text(encoding="utf-8").splitlines():
+                line = line.strip()
+                if line and not line.startswith("#") and "=" in line:
+                    k2, _, v2 = line.partition("=")
+                    secrets[k2.strip()] = v2.strip()
+        token = secrets.get("TELEGRAM_BOT_TOKEN", "")
+        chat_id = tg.get("chat_id", "")
+        if mode == "off" or not chat_id or not token:
             return
 
         last_digest = state.get("last_digest_sent", "")

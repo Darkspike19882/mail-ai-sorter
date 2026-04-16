@@ -135,7 +135,9 @@ def get_detailed_stats(days="30"):
             except ValueError:
                 pass
 
-        total = cursor.execute("SELECT COUNT(*) FROM emails").fetchone()[0]
+        total = cursor.execute(
+            f"SELECT COUNT(*) FROM emails WHERE 1=1{where_date}"
+        ).fetchone()[0]
 
         categories = cursor.execute(f"""
             SELECT category, COUNT(*) as count
@@ -455,13 +457,11 @@ def api_sorter_start():
 
     daemon_script = str(SORTER_DIR / "sorter_daemon.py")
     try:
-        devnull_out = open(os.devnull, "w")
-        devnull_err = open(os.devnull, "w")
         subprocess.Popen(
             [sys.executable, daemon_script],
             cwd=str(SORTER_DIR),
-            stdout=devnull_out,
-            stderr=devnull_err,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
             start_new_session=True,
         )
         time.sleep(1)
@@ -703,6 +703,7 @@ def _extract_envelope(raw_header: bytes) -> dict:
         "date": msg.get("Date", ""),
         "message_id": msg.get("Message-ID", ""),
         "in_reply_to": msg.get("In-Reply-To", ""),
+        "references": msg.get("References", ""),
         "list_unsubscribe": msg.get("List-Unsubscribe", ""),
     }
 
@@ -950,8 +951,10 @@ def api_email_detail(account_name, folder, uid):
                 if not payload:
                     continue
 
-                if "attachment" in disp or (
-                    filename and ctype != "text/plain" and ctype != "text/html"
+                if (
+                    "attachment" in disp
+                    or "inline" in disp
+                    or (filename and ctype != "text/plain" and ctype != "text/html")
                 ):
                     decoded_name = _decode_hdr(filename) if filename else "attachment"
                     size = len(payload)

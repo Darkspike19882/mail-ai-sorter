@@ -504,7 +504,7 @@
 
     <!-- Add Account Modal -->
     <div x-show="showAddAccount" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-transition.opacity>
-        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto" @click.away="showAddAccount = false">
+        <div class="bg-white dark:bg-slate-800 rounded-xl shadow-xl max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
             <div class="p-6 border-b dark:border-slate-700">
                 <h3 class="text-xl font-bold text-slate-900 dark:text-white" x-text="editingIndex >= 0 ? 'Konto bearbeiten' : 'Neues Email-Konto'"></h3>
             </div>
@@ -534,6 +534,23 @@
                     <input type="password" x-model="newAccount.password" placeholder="••••••••" class="form-input">
                     <p class="text-xs text-slate-500 mt-1">Wird in secrets.env gespeichert</p>
                 </div>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">SMTP Server</label>
+                        <input type="text" x-model="newAccount.smtp_host" placeholder="smtp.gmail.com" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">SMTP Port</label>
+                        <input type="number" x-model="newAccount.smtp_port" placeholder="587" class="form-input">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Verschlüsselung</label>
+                        <select x-model="newAccount.smtp_encryption" class="form-select">
+                            <option value="starttls">STARTTLS</option>
+                            <option value="ssl">SSL/TLS</option>
+                        </select>
+                    </div>
+                </div>
                 <div>
                     <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Quellordner</label>
                     <input type="text" x-model="newAccount.source_folder" placeholder="INBOX" class="form-input">
@@ -561,13 +578,10 @@ function configEditor() {
         showAddAccount: false,
         editingIndex: -1,
         newAccount: {
-            name: '',
-            imap_host: '',
-            imap_port: 993,
-            username: '',
-            password: '',
-            source_folder: 'INBOX',
-            target_folders: {}
+            name: '', imap_host: '', imap_port: 993,
+            smtp_host: '', smtp_port: 587, smtp_encryption: 'starttls',
+            username: '', password: '',
+            source_folder: 'INBOX', target_folders: {}
         },
 
         initConfig() {
@@ -682,7 +696,7 @@ function configEditor() {
 
         editAccount(index) {
             const acc = this.config.accounts[index];
-            this.newAccount = { ...acc, password: '' };
+            this.newAccount = { ...acc, password: '', target_folders: { ...(acc.target_folders || {}) } };
             this.editingIndex = index;
             this._editOriginalPassword = acc.password || '';
             this.showAddAccount = true;
@@ -691,16 +705,18 @@ function configEditor() {
         async testConnection() {
             showNotification('Teste Ollama-Verbindung...', 'info');
             try {
-                const r = await fetch(this.config.global.ollama_url + '/api/version');
+                const r = await fetch('/api/ollama-check');
                 const d = await r.json();
-                showNotification('Ollama OK! Version: ' + d.version, 'success');
-
-                const mr = await fetch(this.config.global.ollama_url + '/api/tags');
-                const md = await mr.json();
-                const models = (md.models || []).map(m => m.name).join(', ');
-                showNotification('Modelle: ' + (models || 'keine'), 'success');
+                if (d.installed) {
+                    showNotification('Ollama OK! Version: ' + d.version, 'success');
+                    if (d.models && d.models.length > 0) {
+                        showNotification('Modelle: ' + d.models.map(m => m.name).join(', '), 'success');
+                    }
+                } else {
+                    showNotification('Ollama nicht erreichbar', 'error');
+                }
             } catch (e) {
-                showNotification('Ollama nicht erreichbar: ' + e, 'error');
+                showNotification('Fehler: ' + e, 'error');
             }
         },
 

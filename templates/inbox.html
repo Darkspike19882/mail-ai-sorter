@@ -224,9 +224,16 @@
         </template>
         <template x-if="!selectedMail">
             <div class="flex flex-col items-center justify-center h-full text-slate-400">
-                <i data-lucide="mail" class="w-16 h-16 mb-4 opacity-30"></i>
-                <p class="text-lg">Email auswählen</p>
-                <p class="text-sm">Wähle eine Email aus der Liste</p>
+                <template x-if="selectedUid && !selectedMail">
+                    <div class="flex items-center justify-center"><div class="spinner"></div></div>
+                </template>
+                <template x-if="!selectedUid">
+                    <div class="text-center">
+                        <i data-lucide="mail" class="w-16 h-16 mb-4 opacity-30"></i>
+                        <p class="text-lg">Email auswählen</p>
+                        <p class="text-sm">Wähle eine Email aus der Liste</p>
+                    </div>
+                </template>
             </div>
         </template>
     </div>
@@ -428,12 +435,22 @@ function inboxApp() {
 
         debounceSearch() {
             clearTimeout(this.searchTimer);
-            this.searchTimer = setTimeout(() => this.loadMails(), 300);
+            this.searchTimer = setTimeout(async () => {
+                if (!this.searchQuery) { this.page = 1; this.loadMails(); return; }
+                this.loading = true;
+                try {
+                    const r = await fetch('/api/search?q=' + encodeURIComponent(this.searchQuery));
+                    const d = await r.json();
+                    this.mails = d.emails || [];
+                    this.totalMails = this.mails.length;
+                } catch(e) { console.error(e); }
+                finally { this.loading = false; this.$nextTick(() => lucide.createIcons()); }
+            }, 300);
         },
 
         onScroll(e) {
             const el = e.target;
-            if (el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
+            if (!this.loading && this.searchQuery === '' && el.scrollTop + el.clientHeight >= el.scrollHeight - 50) {
                 if (this.mails.length < this.totalMails) { this.page++; this.loadMails(); }
             }
         },
@@ -611,7 +628,8 @@ function extractEmail(str) {
 
 function prefixSubject(sub, prefix) {
     if (!sub) return prefix + ': ';
-    if (sub.startsWith(prefix + ':') || sub.startsWith(prefix.toLowerCase() + ':')) return sub;
+    const map = { 'Re': /^((Re|AW|Aw):\s*)+/i, 'Fwd': /^((Fwd?|WG):\s*)+/i };
+    if (map[prefix] && map[prefix].test(sub)) return sub;
     return prefix + ': ' + sub;
 }
 </script>

@@ -238,7 +238,7 @@ def _save_to_sent(account: Dict[str, Any], raw_msg: bytes) -> bool:
             return False
 
         if imap_encryption == "starttls":
-            conn = imaplib.IMAP4(imap_host, imap_port)
+            conn = imaplib.IMAP4(imap_host, imap_port, timeout=30)
             conn.starttls(ssl_context=ssl.create_default_context())
         else:
             conn = imaplib.IMAP4_SSL(

@@ -773,24 +773,22 @@ function setupWizard() {
                     },
                     accounts: this.accounts.map(acc => ({
                         ...acc,
-                        password_env: acc.name.toUpperCase() + '_PASSWORD'
+                        password_env: acc.name.toUpperCase().replace(/ /g, '_') + '_PASSWORD'
                     }))
                 };
 
-                // Save config
                 const response = await fetch('/api/config', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify(finalConfig)
                 });
 
-                if (await response.json()) {
+                const result = await response.json();
+                if (result.success) {
                     showNotification('Setup erfolgreich! Weiterleitung...', 'success');
-                    setTimeout(() => {
-                        window.location.href = '/';
-                    }, 2000);
+                    setTimeout(() => { window.location.href = '/'; }, 2000);
                 } else {
-                    showNotification('Fehler beim Speichern', 'error');
+                    showNotification('Fehler beim Speichern: ' + (result.error || 'Unbekannt'), 'error');
                 }
             } catch (error) {
                 showNotification('Fehler: ' + error, 'error');
