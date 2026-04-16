@@ -733,12 +733,19 @@ def api_folders():
         return jsonify({"error": str(e), "folders": []})
 
 
+def _safe_int(val, default=1):
+    try:
+        return max(1, int(val))
+    except (ValueError, TypeError):
+        return default
+
+
 @app.route("/api/inbox")
 def api_inbox():
     account_name = request.args.get("account", "")
     folder = request.args.get("folder", "INBOX")
-    page = int(request.args.get("page", 1))
-    per_page = int(request.args.get("per_page", 50))
+    page = _safe_int(request.args.get("page", 1))
+    per_page = _safe_int(request.args.get("per_page", 50), 50)
 
     acc = _get_account(account_name)
     if not acc:
@@ -873,36 +880,9 @@ def _fetch_account_inbox(acc, per_page, page):
 
 @app.route("/api/unified-inbox")
 def api_unified_inbox():
-    page = int(request.args.get("page", 1))
-    per_page = int(request.args.get("per_page", 50))
+    page = _safe_int(request.args.get("page", 1))
+    per_page = _safe_int(request.args.get("per_page", 50), 50)
     cfg = load_config()
-    all_emails = []
-
-    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
-        futures = {
-            executor.submit(_fetch_account_inbox, acc, per_page, page): acc
-            for acc in cfg.get("accounts", [])
-        }
-        for future in concurrent.futures.as_completed(futures):
-            all_emails.extend(future.result())
-
-    all_emails.sort(
-        key=lambda e: email_lib.utils.parsedate_to_datetime(e.get("date", ""))
-        if email_lib.utils.parsedate(e.get("date", ""))
-        else datetime.min,
-        reverse=True,
-    )
-    total = len(all_emails)
-    start = (page - 1) * per_page
-    paged = all_emails[start : start + per_page]
-
-    return jsonify(
-        {"emails": paged, "total": total, "page": page, "per_page": per_page}
-    )
-
-
-@app.route("/api/email/<account_name>/<folder>/<uid>")
-def api_email_detail(account_name, folder, uid):
     acc = _get_account(account_name)
     if not acc:
         return jsonify({"error": "Account nicht gefunden"})

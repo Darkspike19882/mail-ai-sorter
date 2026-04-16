@@ -7,6 +7,7 @@ Wraps Ollama API with conversation memory and structured outputs.
 import json
 import os
 import sqlite3
+import threading
 import urllib.request
 import urllib.error
 from datetime import datetime
