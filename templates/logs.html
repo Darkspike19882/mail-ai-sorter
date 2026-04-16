@@ -284,10 +284,13 @@ function logs() {
             this.$nextTick(() => lucide.createIcons());
         },
 
-        clearLogs() {
+        async clearLogs() {
             if (confirm('Möchten Sie alle Logs löschen?')) {
-                this.logs = [];
-                showNotification('Logs gelöscht', 'info');
+                try {
+                    await fetch('/api/logs/clear', {method: 'POST'});
+                    this.logs = [];
+                    showNotification('Logs gelöscht', 'info');
+                } catch(e) { showNotification('Fehler: ' + e, 'error'); }
             }
         },
 
@@ -325,12 +328,5 @@ function logs() {
         }
     };
 }
-
-// Watch für Auto-Refresh Änderungen
-Alpine.effect(() => {
-    if (window.Alpine?.store?.logs) {
-        window.Alpine.store.logs.startAutoRefresh();
-    }
-});
 </script>
 {% endblock %}

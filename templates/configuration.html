@@ -651,6 +651,9 @@ function configEditor() {
             }
 
             if (this.editingIndex >= 0) {
+                if (!this.newAccount.password && this._editOriginalPassword) {
+                    this.newAccount.password = this._editOriginalPassword;
+                }
                 this.config.accounts[this.editingIndex] = {...this.newAccount};
                 this.editingIndex = -1;
                 showNotification('Konto aktualisiert!', 'success');
@@ -681,6 +684,7 @@ function configEditor() {
             const acc = this.config.accounts[index];
             this.newAccount = { ...acc, password: '' };
             this.editingIndex = index;
+            this._editOriginalPassword = acc.password || '';
             this.showAddAccount = true;
         },
 
@@ -781,24 +785,14 @@ function configEditor() {
                 const r = await fetch('/api/llm/digest');
                 const d = await r.json();
                 if (d.success && d.digest) {
-                    const tg = this.tgConfig;
-                    const token = tg.bot_token;
-                    const chatId = tg.chat_id;
-                    if (!token || !chatId) {
-                        this.tgMessage = 'Bot nicht verbunden';
-                        this.tgSuccess = false;
-                        setTimeout(() => { this.tgMessage = ''; }, 4000);
-                        return;
-                    }
-                    const msg = "📊 Täglicher Email-Bericht\n\n" + d.digest + "\n\nMail AI Sorter";
-                    const payload = {chat_id: chatId, text: msg};
-                    await fetch('/api/telegram/config', {
+                    const tr = await fetch('/api/telegram/send-test', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({notify_mode: tg.notify_mode})
+                        body: JSON.stringify({ message: "📊 Täglicher Email-Bericht\n\n" + d.digest + "\n\nMail AI Sorter" })
                     });
-                    this.tgMessage = 'Digest erstellt! (' + (d.count || 0) + ' Emails)';
-                    this.tgSuccess = true;
+                    const td = await tr.json();
+                    this.tgMessage = td.success ? 'Digest an Telegram gesendet!' : (td.error || 'Fehler');
+                    this.tgSuccess = td.success;
                 } else {
                     this.tgMessage = d.digest || 'Kein Digest verfügbar';
                     this.tgSuccess = true;

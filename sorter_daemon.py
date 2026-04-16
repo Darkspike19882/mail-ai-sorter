@@ -200,11 +200,11 @@ def main():
         run_sorter(state)
 
         interval = state.get("poll_interval_minutes", 5) * 60
-        for _ in range(interval):
+        for _ in range(interval // 5):
             s = load_state()
             if not s.get("running") or s.get("paused"):
                 break
-            time.sleep(1)
+            time.sleep(5)
 
     state = load_state()
     state["running"] = False

@@ -3,6 +3,7 @@
 AI IMAP Mail Sorter — Gemma4 via Ollama
 Features: 15 categories, sender cache, batch header fetch, global rules, parallel accounts
 """
+
 import argparse
 import concurrent.futures
 import datetime as dt
@@ -26,14 +27,15 @@ from typing import Any, Dict, List, Optional, Tuple
 # Optional index module (same directory)
 try:
     import importlib.util, pathlib
+
     _spec = importlib.util.spec_from_file_location(
         "index", pathlib.Path(__file__).parent / "index.py"
     )
     _idx_mod = importlib.util.module_from_spec(_spec)  # type: ignore
     _spec.loader.exec_module(_idx_mod)  # type: ignore
     _index_email = _idx_mod.index_email
-    _get_db      = _idx_mod.get_db
-    _DB_PATH     = _idx_mod.DB_PATH
+    _get_db = _idx_mod.get_db
+    _DB_PATH = _idx_mod.DB_PATH
     HAS_INDEX = True
 except Exception:
     HAS_INDEX = False
@@ -41,6 +43,7 @@ except Exception:
 # Optional extensions module (same directory)
 try:
     import importlib.util, pathlib
+
     _spec_ext = importlib.util.spec_from_file_location(
         "extensions", pathlib.Path(__file__).parent / "extensions.py"
     )
@@ -52,6 +55,7 @@ except Exception:
 
 
 # ── Config & Cache ─────────────────────────────────────────────────────────────
+
 
 def load_config(path: str) -> Dict[str, Any]:
     with open(path, "r", encoding="utf-8") as f:
@@ -69,7 +73,9 @@ def load_sender_cache(cache_path: str) -> Dict[str, str]:
     return {}
 
 
-def save_sender_cache(cache_path: str, cache: Dict[str, str], lock: threading.Lock) -> None:
+def save_sender_cache(
+    cache_path: str, cache: Dict[str, str], lock: threading.Lock
+) -> None:
     """Atomically save sender cache (thread-safe)."""
     tmp = cache_path + ".tmp"
     with lock:
@@ -87,6 +93,7 @@ def extract_email_addr(from_str: str) -> str:
 
 
 # ── Email parsing ───────────────────────────────────────────────────────────────
+
 
 def decode_header_value(value: Any) -> str:
     if not value:
@@ -166,8 +173,15 @@ def should_delay(msg_date: Optional[dt.datetime], delay_minutes: int) -> bool:
 
 # ── Extensions ────────────────────────────────────────────────────────────────────
 
-def run_extensions(category: str, from_addr: str, subject: str, body: str,
-                   extensions_cfg: Dict[str, Any], global_cfg: Dict[str, Any]) -> None:
+
+def run_extensions(
+    category: str,
+    from_addr: str,
+    subject: str,
+    body: str,
+    extensions_cfg: Dict[str, Any],
+    global_cfg: Dict[str, Any],
+) -> None:
     """Führt Erweiterungen basierend auf Kategorie aus"""
     if not HAS_EXTENSIONS or not extensions_cfg.get("enabled", False):
         return
@@ -184,8 +198,10 @@ def run_extensions(category: str, from_addr: str, subject: str, body: str,
         if category in ["paperless", "finanzen", "vertraege", "einkauf"]:
             try:
                 paperless = _ext_mod.PaperlessNGXIntegration(
-                    paperless_url=extensions_cfg.get("paperless_url", "http://localhost:8000"),
-                    api_token=extensions_cfg.get("paperless_api_token")
+                    paperless_url=extensions_cfg.get(
+                        "paperless_url", "http://localhost:8000"
+                    ),
+                    api_token=extensions_cfg.get("paperless_api_token"),
                 )
                 paperless.create_document_from_email(email_data)
                 log(f"✅ Nach Paperless-ngx gesendet")
@@ -230,7 +246,10 @@ def run_extensions(category: str, from_addr: str, subject: str, body: str,
 
 # ── Rules ───────────────────────────────────────────────────────────────────────
 
-def first_match_rule(rules: List[Dict[str, Any]], from_addr: str, subject: str) -> Optional[str]:
+
+def first_match_rule(
+    rules: List[Dict[str, Any]], from_addr: str, subject: str
+) -> Optional[str]:
     f = from_addr.lower()
     s = subject.lower()
     for r in rules:
@@ -245,11 +264,18 @@ def first_match_rule(rules: List[Dict[str, Any]], from_addr: str, subject: str) 
     return None
 
 
-def is_important_message(rules: List[Dict[str, Any]], from_addr: str, subject: str) -> bool:
+def is_important_message(
+    rules: List[Dict[str, Any]], from_addr: str, subject: str
+) -> bool:
     return any(
-        (not r.get("if_from_contains") or any(x.lower() in from_addr.lower() for x in r["if_from_contains"]))
-        and
-        (not r.get("if_subject_contains") or any(x.lower() in subject.lower() for x in r["if_subject_contains"]))
+        (
+            not r.get("if_from_contains")
+            or any(x.lower() in from_addr.lower() for x in r["if_from_contains"])
+        )
+        and (
+            not r.get("if_subject_contains")
+            or any(x.lower() in subject.lower() for x in r["if_subject_contains"])
+        )
         for r in rules
     )
 
@@ -257,21 +283,21 @@ def is_important_message(rules: List[Dict[str, Any]], from_addr: str, subject: s
 # ── Ollama / Gemma4 ─────────────────────────────────────────────────────────────
 
 _CATEGORY_DEFS = {
-    "paperless":  "Rechnung/Beleg/Steuer/offizielles Dokument/Zahlungsnachweis",
-    "apple":      "Apple/iCloud/Apple-ID/App Store",
-    "finanzen":   "Bank/PayPal/Kreditkarte/Krypto/Lease-a-Bike",
-    "vertraege":  "Abo/Mobilfunk/Strom/Internet/Versicherung/Mitgliedschaft",
-    "einkauf":    "Online-Bestellung/Paket/DHL/Amazon/Shop",
-    "reisen":     "Flug/Bahn/Hotel/Mietwagen/Booking/Opodo",
-    "rettung":    "Rettungsdienst/Sanitätsdienst/Rettinar/EMS-Fortbildung/DRK/Johanniter",
-    "arbeit":     "Job/Büro/FernUni/berufliche Kommunikation/WDR/Projekt",
-    "politik":    "Partei/Grüne/OV/KV/LAG/Kreisverband/politische Einladung",
-    "behoerden":  "Amt/Gemeinde/Finanzamt/staatliche Behörde/Geburtsurkunde",
-    "wohnen":     "WEG/Eigentümerversammlung/Hausverwaltung/Immobilien/Notar",
-    "tech":       "Server/GitHub/Nextcloud/IT-Alert/Monitoring/Deployment",
-    "community":  "Verein/jüdische Community/Synagoge/kulturelle Events/Gottesdienst",
+    "paperless": "Rechnung/Beleg/Steuer/offizielles Dokument/Zahlungsnachweis",
+    "apple": "Apple/iCloud/Apple-ID/App Store",
+    "finanzen": "Bank/PayPal/Kreditkarte/Krypto/Lease-a-Bike",
+    "vertraege": "Abo/Mobilfunk/Strom/Internet/Versicherung/Mitgliedschaft",
+    "einkauf": "Online-Bestellung/Paket/DHL/Amazon/Shop",
+    "reisen": "Flug/Bahn/Hotel/Mietwagen/Booking/Opodo",
+    "rettung": "Rettungsdienst/Sanitätsdienst/Rettinar/EMS-Fortbildung/DRK/Johanniter",
+    "arbeit": "Job/Büro/FernUni/berufliche Kommunikation/WDR/Projekt",
+    "politik": "Partei/Grüne/OV/KV/LAG/Kreisverband/politische Einladung",
+    "behoerden": "Amt/Gemeinde/Finanzamt/staatliche Behörde/Geburtsurkunde",
+    "wohnen": "WEG/Eigentümerversammlung/Hausverwaltung/Immobilien/Notar",
+    "tech": "Server/GitHub/Nextcloud/IT-Alert/Monitoring/Deployment",
+    "community": "Verein/jüdische Community/Synagoge/kulturelle Events/Gottesdienst",
     "newsletter": "Marketing/Werbung/Massen-Newsletter/Updates/Promotions",
-    "privat":     "persönlicher Rest/Freunde/Familie/Sonstiges",
+    "privat": "persönlicher Rest/Freunde/Familie/Sonstiges",
 }
 
 
@@ -310,7 +336,6 @@ Antworte exakt im JSON-Format: {{"category": "KATEGORIE", "keywords": ["begriff1
         "num_predict": 60,
         "num_ctx": 4096,
     },
-
     "gemma4:e4b": {
         # gemma4:e4b Best Practices:
         # - Ausführliche Kontext-Beschreibungen führen zu besseren Ergebnissen
@@ -341,7 +366,6 @@ Gib das Ergebnis im JSON-Format zurück: {{"category": "KATEGORIE", "keywords": 
         "num_predict": 80,
         "num_ctx": 8192,
     },
-
     "phi3:mini": {
         # phi3:mini Best Practices:
         # - Sehr kurze, prägnante Promots
@@ -367,7 +391,6 @@ JSON: {{"category": "KATEGORIE", "keywords": ["wort1","wort2"]}}""",
         "num_predict": 40,
         "num_ctx": 4096,
     },
-
     "mistral": {
         # mistral Best Practices:
         # - Français system prompt für besseres Verständnis
@@ -396,7 +419,6 @@ Réponds en JSON: {{"category": "CATÉGORIE", "keywords": ["mot1","mot2","mot3"]
         "num_predict": 70,
         "num_ctx": 8192,
     },
-
     "gemma2": {
         # gemma2 Best Practices:
         # - Deutsche Anweisungen
@@ -507,7 +529,7 @@ def classify_with_ollama(
         category_list_simple=category_list_simple,
         sender=sender,
         subject=subject,
-        body=body[:1500]  # Body auf 1500 Zeichen limitieren für Performance
+        body=body[:1500],  # Body auf 1500 Zeichen limitieren für Performance
     )
 
     # JSON Schema für strukturierte Ausgabe
@@ -535,14 +557,14 @@ def classify_with_ollama(
         "format": schema,
         "messages": [
             {"role": "system", "content": model_config["system"]},
-            {"role": "user", "content": user_prompt}
+            {"role": "user", "content": user_prompt},
         ],
         "options": {
             "temperature": temperature,
             "num_predict": num_predict,
             "num_ctx": num_ctx,
             "top_p": top_p,
-            "repeat_penalty": repeat_penalty
+            "repeat_penalty": repeat_penalty,
         },
     }
     req = urllib.request.Request(
@@ -567,7 +589,7 @@ def classify_with_ollama(
 
     # Handle plain string response ("newsletter" instead of {"category":"newsletter"})
     if not content.startswith("{"):
-        plain = content.strip().strip('"\'').lower()
+        plain = content.strip().strip("\"'").lower()
         if plain in categories:
             return plain, []
         m = re.search(r"\{[\s\S]*\}", content)
@@ -600,6 +622,7 @@ def classify_with_ollama(
 
 # ── IMAP helpers ────────────────────────────────────────────────────────────────
 
+
 def log(msg: str) -> None:
     ts = dt.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     print(f"[{ts}] {msg}", flush=True)
@@ -617,12 +640,18 @@ def ensure_folder(conn: imaplib.IMAP4_SSL, folder: str) -> None:
 
 def _extract_bytes(fetched: Any) -> Optional[bytes]:
     for item in fetched:
-        if isinstance(item, tuple) and len(item) > 1 and isinstance(item[1], (bytes, bytearray)):
+        if (
+            isinstance(item, tuple)
+            and len(item) > 1
+            and isinstance(item[1], (bytes, bytearray))
+        ):
             return bytes(item[1])
     return None
 
 
-def batch_fetch_headers(conn: imaplib.IMAP4_SSL, msg_ids: List[bytes]) -> List[Tuple[bytes, bytes]]:
+def batch_fetch_headers(
+    conn: imaplib.IMAP4_SSL, msg_ids: List[bytes]
+) -> List[Tuple[bytes, bytes]]:
     """Fetch headers for ALL messages in one IMAP command (big performance win).
     Returns list of (seq_id_bytes, header_bytes)."""
     if not msg_ids:
@@ -645,6 +674,7 @@ def batch_fetch_headers(conn: imaplib.IMAP4_SSL, msg_ids: List[bytes]) -> List[T
 
 # ── Core processor ──────────────────────────────────────────────────────────────
 
+
 def process_account(
     cfg: Dict[str, Any],
     global_cfg: Dict[str, Any],
@@ -664,7 +694,9 @@ def process_account(
     host = cfg["imap_host"]
     port = int(cfg.get("imap_port", 993))
     imap_encryption = str(cfg.get("imap_encryption", "ssl")).lower()
-    imap_timeout_sec = int(cfg.get("imap_timeout_sec", global_cfg.get("imap_timeout_sec", 25)))
+    imap_timeout_sec = int(
+        cfg.get("imap_timeout_sec", global_cfg.get("imap_timeout_sec", 25))
+    )
     username = cfg["username"]
     source_folder = source_folder_override or cfg.get("source_folder", "INBOX")
     target_folders = cfg["target_folders"]
@@ -675,7 +707,9 @@ def process_account(
     rules = global_rules + account_rules
 
     important_rules = cfg.get("important_rules", global_cfg.get("important_rules", []))
-    important_actions = cfg.get("important_actions", {"flagged": True, "keyword": "$Important"})
+    important_actions = cfg.get(
+        "important_actions", {"flagged": True, "keyword": "$Important"}
+    )
 
     pw = cfg.get("password") or os.getenv(cfg.get("password_env", ""))
     if not pw:
@@ -699,8 +733,12 @@ def process_account(
         conn = imaplib.IMAP4(host, port, timeout=imap_timeout_sec)
         conn.starttls(ssl_context=ssl.create_default_context())
     else:
-        conn = imaplib.IMAP4_SSL(host, port, timeout=imap_timeout_sec,
-                                  ssl_context=ssl.create_default_context())
+        conn = imaplib.IMAP4_SSL(
+            host,
+            port,
+            timeout=imap_timeout_sec,
+            ssl_context=ssl.create_default_context(),
+        )
     try:
         conn.login(username, pw)
         typ, _ = conn.select(source_folder)
@@ -710,7 +748,9 @@ def process_account(
         if all_messages:
             typ, data = conn.search(None, "ALL")
         else:
-            since = (dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days_back)).strftime("%d-%b-%Y")
+            since = (
+                dt.datetime.now(dt.timezone.utc) - dt.timedelta(days=days_back)
+            ).strftime("%d-%b-%Y")
             typ, data = conn.search(None, "SINCE", since)
         if typ != "OK":
             raise RuntimeError("IMAP search failed")
@@ -718,7 +758,14 @@ def process_account(
         msg_ids = list(reversed(data[0].split())) if data and data[0] else []
         if not msg_ids:
             log(f"[{name}/{source_folder}] no messages")
-            return {"moved": 0, "skipped": 0, "errors": 0, "by_rule": 0, "by_llm": 0, "by_cache": 0}
+            return {
+                "moved": 0,
+                "skipped": 0,
+                "errors": 0,
+                "by_rule": 0,
+                "by_llm": 0,
+                "by_cache": 0,
+            }
 
         msg_ids = msg_ids[:max_per_account]
         log(f"[{name}/{source_folder}] {len(msg_ids)} message(s) to process")
@@ -745,9 +792,18 @@ def process_account(
 
             # ⏰ 30-Minuten-Regel für Paperless-ngx (ALLE Mails, auch Regeln!)
             if delay_minutes and should_delay(msg_date, delay_minutes):
-                age_minutes = int((dt.datetime.now(dt.timezone.utc) - msg_date).total_seconds() / 60) if msg_date else 0
+                age_minutes = (
+                    int(
+                        (dt.datetime.now(dt.timezone.utc) - msg_date).total_seconds()
+                        / 60
+                    )
+                    if msg_date
+                    else 0
+                )
                 delay_remaining = delay_minutes - age_minutes
-                log(f"[{name}] ⏰ SKIP {delay_remaining}min für Paperless: {subject[:60]}")
+                log(
+                    f"[{name}] ⏰ SKIP {delay_remaining}min für Paperless: {subject[:60]}"
+                )
                 skipped += 1
                 continue
 
@@ -763,14 +819,19 @@ def process_account(
             if rule_target:
                 category = rule_target
                 by_rule += 1
-                log(f"[{name}] ✓ REGEL {delay_minutes}min+ → {category}: {subject[:60]}")
+                log(
+                    f"[{name}] ✓ REGEL {delay_minutes}min+ → {category}: {subject[:60]}"
+                )
 
             elif list_unsub and "newsletter" in target_folders:
                 category = "newsletter"
                 by_rule += 1
                 log(f"[{name}] list-unsub → newsletter: {subject[:80]}")
 
-            elif sender_cache is not None and (addr := extract_email_addr(from_addr)) in sender_cache:
+            elif (
+                sender_cache is not None
+                and (addr := extract_email_addr(from_addr)) in sender_cache
+            ):
                 category = sender_cache[addr]
                 by_cache += 1
                 log(f"[{name}] cache → {category}: {subject[:80]}")
@@ -784,33 +845,42 @@ def process_account(
                     continue
                 raw_full = _extract_bytes(full_fetched)
                 if not raw_full:
-                    log(f"[{name}] WARN no body bytes for {msg_id!r}: {str(full_fetched)[:80]}")
+                    log(
+                        f"[{name}] WARN no body bytes for {msg_id!r}: {str(full_fetched)[:80]}"
+                    )
                     errors += 1
                     continue
                 body = extract_text(email.message_from_bytes(raw_full), max_body_chars)
                 keywords = []
                 try:
                     category, keywords = classify_with_ollama(
-                        ollama_url, model, categories,
-                        from_addr, subject, body,
-                        timeout=ollama_timeout_sec, think_mode=ollama_think,
-                        num_predict=ollama_num_predict, num_ctx=ollama_num_ctx,
+                        ollama_url,
+                        model,
+                        categories,
+                        from_addr,
+                        subject,
+                        body,
+                        timeout=ollama_timeout_sec,
+                        think_mode=ollama_think,
+                        num_predict=ollama_num_predict,
+                        num_ctx=ollama_num_ctx,
                     )
                     by_llm += 1
                     kw_str = ", ".join(keywords) if keywords else ""
-                    log(f"[{name}] llm  → {category}: {subject[:80]}"
-                        + (f"  [{kw_str}]" if kw_str else ""))
-                    # Learn this sender for future runs
+                    log(
+                        f"[{name}] llm  → {category}: {subject[:80]}"
+                        + (f"  [{kw_str}]" if kw_str else "")
+                    )
                     if sender_cache is not None and cache_lock and cache_path:
                         addr = extract_email_addr(from_addr)
                         sender_cache[addr] = category
-                        save_sender_cache(cache_path, sender_cache, cache_lock)
                 except Exception as e:
                     log(f"[{name}] ollama failed → {default_category}: {e}")
                     category = default_category
 
-            target_folder = target_folders.get(category,
-                            target_folders.get(default_category, source_folder))
+            target_folder = target_folders.get(
+                category, target_folders.get(default_category, source_folder)
+            )
             if target_folder == source_folder:
                 log(f"[{name}] keep ({category}): {subject[:80]}")
                 skipped += 1
@@ -820,7 +890,9 @@ def process_account(
             extensions_cfg = global_cfg.get("extensions", {})
             if extensions_cfg.get("enabled", False):
                 try:
-                    run_extensions(category, from_addr, subject, body, extensions_cfg, global_cfg)
+                    run_extensions(
+                        category, from_addr, subject, body, extensions_cfg, global_cfg
+                    )
                 except Exception as e:
                     log(f"[{name}] WARN extensions failed: {e}")
 
@@ -857,7 +929,9 @@ def process_account(
                     full_msg["X-Keywords"] = ", ".join(keywords)
                 full_msg["X-Category"] = category
                 buf = io.BytesIO()
-                email.generator.BytesGenerator(buf, mangle_from_=False).flatten(full_msg)
+                email.generator.BytesGenerator(buf, mangle_from_=False).flatten(
+                    full_msg
+                )
                 idate = imaplib.Time2Internaldate(
                     msg_date.timestamp() if msg_date else time.time()
                 )
@@ -880,19 +954,38 @@ def process_account(
             if index_db is not None:
                 try:
                     date_str = msg_date.isoformat() if msg_date else None
-                    _index_email(index_db, name, target_folder, from_addr, subject,
-                                 date_str, category, keywords, body[:200])
+                    _index_email(
+                        index_db,
+                        name,
+                        target_folder,
+                        from_addr,
+                        subject,
+                        date_str,
+                        category,
+                        keywords,
+                        body[:200],
+                    )
                 except Exception as _ie:
                     log(f"[{name}] WARN index failed: {_ie}")
 
         if not dry_run:
             conn.expunge()
 
-        stats = {"moved": moved, "skipped": skipped, "errors": errors,
-                 "by_rule": by_rule, "by_llm": by_llm, "by_cache": by_cache}
-        log(f"[{name}/{source_folder}] done — "
+        stats = {
+            "moved": moved,
+            "skipped": skipped,
+            "errors": errors,
+            "by_rule": by_rule,
+            "by_llm": by_llm,
+            "by_cache": by_cache,
+        }
+        if sender_cache is not None and cache_lock and cache_path:
+            save_sender_cache(cache_path, sender_cache, cache_lock)
+        log(
+            f"[{name}/{source_folder}] done — "
             f"moved={moved} (rule={by_rule} cache={by_cache} llm={by_llm}) "
-            f"skipped={skipped} errors={errors}")
+            f"skipped={skipped} errors={errors}"
+        )
         return stats
     finally:
         try:
@@ -904,45 +997,79 @@ def process_account(
 
 # ── Parallel runner ─────────────────────────────────────────────────────────────
 
+
 def _run_task(task: Dict[str, Any]) -> Dict[str, int]:
     try:
-        return process_account(
-            task["cfg"], task["global_cfg"],
-            task["dry_run"], task["max_per_account"], task["days_back"],
-            all_messages=task["all_messages"], no_delay=task["no_delay"],
-            source_folder_override=task.get("source_folder_override"),
-            sender_cache=task.get("sender_cache"),
-            cache_lock=task.get("cache_lock"),
-            cache_path=task.get("cache_path"),
-            index_db=task.get("index_db"),
-        ) or {}
+        return (
+            process_account(
+                task["cfg"],
+                task["global_cfg"],
+                task["dry_run"],
+                task["max_per_account"],
+                task["days_back"],
+                all_messages=task["all_messages"],
+                no_delay=task["no_delay"],
+                source_folder_override=task.get("source_folder_override"),
+                sender_cache=task.get("sender_cache"),
+                cache_lock=task.get("cache_lock"),
+                cache_path=task.get("cache_path"),
+                index_db=task.get("index_db"),
+            )
+            or {}
+        )
     except Exception as e:
         label = task["cfg"].get("name", "?")
         src = task.get("source_folder_override", "")
         print(f"[{label}/{src}] ERROR: {e}", file=sys.stderr)
         print(traceback.format_exc(), file=sys.stderr)
-        return {"moved": 0, "skipped": 0, "errors": 1, "by_rule": 0, "by_llm": 0, "by_cache": 0}
+        return {
+            "moved": 0,
+            "skipped": 0,
+            "errors": 1,
+            "by_rule": 0,
+            "by_llm": 0,
+            "by_cache": 0,
+        }
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────────
 
+
 def main() -> int:
     ap = argparse.ArgumentParser(description="AI IMAP mail sorter — Gemma4 via Ollama")
     ap.add_argument("--config", default="config.json")
-    ap.add_argument("--dry-run", action="store_true", help="Show what would be moved, don't move")
+    ap.add_argument(
+        "--dry-run", action="store_true", help="Show what would be moved, don't move"
+    )
     ap.add_argument("--max-per-account", type=int, default=50)
-    ap.add_argument("--days-back", type=int, default=7, help="Only process mail from last N days")
-    ap.add_argument("--all", dest="all_messages", action="store_true",
-                    help="Process ALL messages regardless of date")
-    ap.add_argument("--no-delay", action="store_true",
-                    help="Skip the 30-min Paperless delay (use with --all for historical sort)")
-    ap.add_argument("--account", default=None, help="Only this account (substring match)")
-    ap.add_argument("--resort-folders", action="store_true",
-                    help="Also re-sort already-categorised folders (fixes old mis-sorted mail)")
-    ap.add_argument("--parallel", action="store_true",
-                    help="Process accounts in parallel (faster)")
-    ap.add_argument("--no-cache", action="store_true",
-                    help="Disable sender cache (always call LLM)")
+    ap.add_argument(
+        "--days-back", type=int, default=7, help="Only process mail from last N days"
+    )
+    ap.add_argument(
+        "--all",
+        dest="all_messages",
+        action="store_true",
+        help="Process ALL messages regardless of date",
+    )
+    ap.add_argument(
+        "--no-delay",
+        action="store_true",
+        help="Skip the 30-min Paperless delay (use with --all for historical sort)",
+    )
+    ap.add_argument(
+        "--account", default=None, help="Only this account (substring match)"
+    )
+    ap.add_argument(
+        "--resort-folders",
+        action="store_true",
+        help="Also re-sort already-categorised folders (fixes old mis-sorted mail)",
+    )
+    ap.add_argument(
+        "--parallel", action="store_true", help="Process accounts in parallel (faster)"
+    )
+    ap.add_argument(
+        "--no-cache", action="store_true", help="Disable sender cache (always call LLM)"
+    )
     args = ap.parse_args()
 
     config_path = args.config
@@ -950,9 +1077,13 @@ def main() -> int:
     global_cfg = cfg["global"]
 
     # Sender cache: sits next to config.json
-    cache_path = os.path.join(os.path.dirname(os.path.abspath(config_path)), "learned_senders.json")
+    cache_path = os.path.join(
+        os.path.dirname(os.path.abspath(config_path)), "learned_senders.json"
+    )
     cache_lock = threading.Lock()
-    sender_cache: Optional[Dict[str, str]] = None if args.no_cache else load_sender_cache(cache_path)
+    sender_cache: Optional[Dict[str, str]] = (
+        None if args.no_cache else load_sender_cache(cache_path)
+    )
     if sender_cache is not None:
         log(f"Sender cache loaded: {len(sender_cache)} known senders")
 
@@ -963,7 +1094,9 @@ def main() -> int:
 
     accounts = cfg.get("accounts", [])
     if args.account:
-        accounts = [a for a in accounts if args.account.lower() in a.get("name", "").lower()]
+        accounts = [
+            a for a in accounts if args.account.lower() in a.get("name", "").lower()
+        ]
         if not accounts:
             print(f"ERROR: no account matching {args.account!r}", file=sys.stderr)
             return 1
@@ -971,24 +1104,44 @@ def main() -> int:
     tasks: List[Dict[str, Any]] = []
     for acc in accounts:
         base = dict(
-            cfg=acc, global_cfg=global_cfg,
-            dry_run=args.dry_run, max_per_account=args.max_per_account,
-            days_back=args.days_back, all_messages=args.all_messages,
-            no_delay=args.no_delay, source_folder_override=None,
-            sender_cache=sender_cache, cache_lock=cache_lock, cache_path=cache_path,
+            cfg=acc,
+            global_cfg=global_cfg,
+            dry_run=args.dry_run,
+            max_per_account=args.max_per_account,
+            days_back=args.days_back,
+            all_messages=args.all_messages,
+            no_delay=args.no_delay,
+            source_folder_override=None,
+            sender_cache=sender_cache,
+            cache_lock=cache_lock,
+            cache_path=cache_path,
             index_db=index_db,
         )
         tasks.append(base)
         if args.resort_folders:
             for folder in sorted(set(acc.get("target_folders", {}).values())):
-                tasks.append({**base, "all_messages": True, "no_delay": True,
-                               "source_folder_override": folder})
+                tasks.append(
+                    {
+                        **base,
+                        "all_messages": True,
+                        "no_delay": True,
+                        "source_folder_override": folder,
+                    }
+                )
 
-    total: Dict[str, int] = {"moved": 0, "skipped": 0, "errors": 0,
-                              "by_rule": 0, "by_llm": 0, "by_cache": 0}
+    total: Dict[str, int] = {
+        "moved": 0,
+        "skipped": 0,
+        "errors": 0,
+        "by_rule": 0,
+        "by_llm": 0,
+        "by_cache": 0,
+    }
 
     if args.parallel and len(tasks) > 1:
-        with concurrent.futures.ThreadPoolExecutor(max_workers=min(4, len(tasks))) as pool:
+        with concurrent.futures.ThreadPoolExecutor(
+            max_workers=min(4, len(tasks))
+        ) as pool:
             for stats in pool.map(_run_task, tasks):
                 for k in total:
                     total[k] += stats.get(k, 0)

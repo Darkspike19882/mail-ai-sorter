@@ -43,3 +43,5 @@ learned_senders.json
 *.backup
 *_backup.*
 *_old.*
+sorter_daemon.pid
+state.json

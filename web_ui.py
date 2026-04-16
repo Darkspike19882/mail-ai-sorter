@@ -12,6 +12,7 @@ import sys
 import threading
 import time
 import base64
+import concurrent.futures
 import email as email_lib
 import email.header
 import email.utils
@@ -32,7 +33,6 @@ INDEX_DB = SORTER_DIR / "mail_index.db"
 
 
 def load_config():
-    """Lädt die Konfiguration"""
     try:
         with open(CONFIG_FILE, "r", encoding="utf-8") as f:
             return json.load(f)
@@ -40,9 +40,44 @@ def load_config():
         return {"error": str(e)}
 
 
-def save_config(config):
-    """Speichert die Konfiguration"""
+def _load_secrets():
+    secrets = {}
     try:
+        if SECRETS_FILE.exists():
+            with open(SECRETS_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, _, val = line.partition("=")
+                        secrets[key.strip()] = val.strip()
+    except Exception:
+        pass
+    return secrets
+
+
+def _save_secrets(secrets: dict):
+    lines = ["# Mail AI Sorter - Secrets\n"]
+    for k, v in secrets.items():
+        lines.append(f"{k}={v}\n")
+    with open(SECRETS_FILE, "w", encoding="utf-8") as f:
+        f.writelines(lines)
+
+
+def save_config(config):
+    try:
+        secrets = _load_secrets()
+        tg = config.get("telegram", {})
+        if tg.get("bot_token"):
+            secrets["TELEGRAM_BOT_TOKEN"] = tg.pop("bot_token")
+        for acc in config.get("accounts", []):
+            pw = acc.pop("password", None)
+            env_key = acc.get("password_env", "")
+            if pw and not env_key:
+                env_key = acc["name"].upper().replace(" ", "_") + "_PASSWORD"
+                acc["password_env"] = env_key
+            if pw and env_key:
+                secrets[env_key] = pw
+        _save_secrets(secrets)
         with open(CONFIG_FILE, "w", encoding="utf-8") as f:
             json.dump(config, f, indent=2, ensure_ascii=False)
         return True
@@ -85,42 +120,52 @@ def get_stats():
         return {"error": str(e)}
 
 
-def get_detailed_stats():
-    """Holt detaillierte Statistiken für die Stats-Seite"""
+def get_detailed_stats(days="30"):
     try:
         import sqlite3
 
         conn = sqlite3.connect(INDEX_DB)
         cursor = conn.cursor()
 
+        where_date = ""
+        if days and days != "all":
+            try:
+                d = int(days)
+                where_date = f" AND date_iso >= date('now', '-{d} days')"
+            except ValueError:
+                pass
+
         total = cursor.execute("SELECT COUNT(*) FROM emails").fetchone()[0]
 
-        categories = cursor.execute("""
+        categories = cursor.execute(f"""
             SELECT category, COUNT(*) as count
             FROM emails
+            WHERE 1=1{where_date}
             GROUP BY category
             ORDER BY count DESC
         """).fetchall()
 
-        accounts = cursor.execute("""
+        accounts = cursor.execute(f"""
             SELECT account, COUNT(*) as count
             FROM emails
+            WHERE 1=1{where_date}
             GROUP BY account
             ORDER BY count DESC
         """).fetchall()
 
-        top_senders = cursor.execute("""
+        top_senders = cursor.execute(f"""
             SELECT from_addr, COUNT(*) as count
             FROM emails
+            WHERE 1=1{where_date}
             GROUP BY from_addr
             ORDER BY count DESC
             LIMIT 20
         """).fetchall()
 
-        daily_volume = cursor.execute("""
+        daily_volume = cursor.execute(f"""
             SELECT SUBSTR(date_iso, 1, 10) as day, COUNT(*) as count
             FROM emails
-            WHERE date_iso IS NOT NULL
+            WHERE date_iso IS NOT NULL{where_date}
             GROUP BY day
             ORDER BY day DESC
             LIMIT 30
@@ -135,32 +180,34 @@ def get_detailed_stats():
             LIMIT 12
         """).fetchall()
 
-        category_by_account = cursor.execute("""
+        category_by_account = cursor.execute(f"""
             SELECT account, category, COUNT(*) as count
             FROM emails
+            WHERE 1=1{where_date}
             GROUP BY account, category
             ORDER BY account, count DESC
         """).fetchall()
 
-        sender_by_category = cursor.execute("""
+        sender_by_category = cursor.execute(f"""
             SELECT category, from_addr, COUNT(*) as count
             FROM emails
+            WHERE 1=1{where_date}
             GROUP BY category, from_addr
             ORDER BY category, count DESC
         """).fetchall()
 
-        weekday_dist = cursor.execute("""
+        weekday_dist = cursor.execute(f"""
             SELECT CAST(STRFTIME('%w', date_iso) AS INTEGER) as dow, COUNT(*) as count
             FROM emails
-            WHERE date_iso IS NOT NULL
+            WHERE date_iso IS NOT NULL{where_date}
             GROUP BY dow
             ORDER BY dow
         """).fetchall()
 
-        hour_dist = cursor.execute("""
+        hour_dist = cursor.execute(f"""
             SELECT CAST(STRFTIME('%H', date_iso) AS INTEGER) as hour, COUNT(*) as count
             FROM emails
-            WHERE date_iso IS NOT NULL
+            WHERE date_iso IS NOT NULL{where_date}
             GROUP BY hour
             ORDER BY hour
         """).fetchall()
@@ -325,8 +372,8 @@ def api_ollama_check():
 
 @app.route("/api/stats/detailed")
 def api_stats_detailed():
-    """Detaillierte Statistiken API"""
-    return jsonify(get_detailed_stats())
+    days = request.args.get("days", "30")
+    return jsonify(get_detailed_stats(days))
 
 
 STATE_FILE = SORTER_DIR / "state.json"
@@ -408,11 +455,13 @@ def api_sorter_start():
 
     daemon_script = str(SORTER_DIR / "sorter_daemon.py")
     try:
+        devnull_out = open(os.devnull, "w")
+        devnull_err = open(os.devnull, "w")
         subprocess.Popen(
             [sys.executable, daemon_script],
             cwd=str(SORTER_DIR),
-            stdout=open(os.devnull, "w"),
-            stderr=open(os.devnull, "w"),
+            stdout=devnull_out,
+            stderr=devnull_err,
             start_new_session=True,
         )
         time.sleep(1)
@@ -511,9 +560,20 @@ def api_run():
 
 @app.route("/api/logs")
 def api_logs():
-    """Logs API"""
     logs = get_logs()
     return jsonify(logs)
+
+
+@app.route("/api/logs/clear", methods=["POST"])
+def api_logs_clear():
+    try:
+        log_file = SORTER_DIR / "mail_sorter.log"
+        if log_file.exists():
+            with open(log_file, "w", encoding="utf-8") as f:
+                f.write("")
+        return jsonify({"success": True})
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)})
 
 
 @app.route("/api/search")
@@ -749,6 +809,63 @@ def api_inbox():
         return jsonify({"error": str(e), "emails": [], "total": 0})
 
 
+def _fetch_account_inbox(acc, per_page, page):
+    emails = []
+    try:
+        conn = _imap_connect(acc)
+        typ, _ = conn.select("INBOX", readonly=True)
+        if typ != "OK":
+            conn.logout()
+            return emails
+
+        typ, data = conn.search(None, "ALL")
+        if typ != "OK" or not data or not data[0]:
+            conn.logout()
+            return emails
+
+        all_ids = data[0].split()
+        page_ids = list(reversed(all_ids))[: per_page * page]
+        if not page_ids:
+            conn.logout()
+            return emails
+
+        id_str = b",".join(page_ids)
+        typ, fetched = conn.fetch(
+            id_str,
+            "(UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO LIST-UNSUBSCRIBE)])",
+        )
+        if typ == "OK" and fetched:
+            for item in fetched:
+                if not isinstance(item, tuple) or len(item) < 2:
+                    continue
+                header_bytes = (
+                    item[1] if isinstance(item[1], bytes) else item[1].encode()
+                )
+                uid = _parse_uid([item])
+                envelope = _extract_envelope(header_bytes)
+                flags_str = (
+                    item[0].decode(errors="replace")
+                    if isinstance(item[0], bytes)
+                    else str(item[0])
+                )
+                is_seen = "\\Seen" in flags_str
+                is_flagged = "\\Flagged" in flags_str
+                emails.append(
+                    {
+                        "uid": uid,
+                        "seen": is_seen,
+                        "flagged": is_flagged,
+                        "folder": "INBOX",
+                        "account": acc["name"],
+                        **envelope,
+                    }
+                )
+        conn.logout()
+    except Exception:
+        pass
+    return emails
+
+
 @app.route("/api/unified-inbox")
 def api_unified_inbox():
     page = int(request.args.get("page", 1))
@@ -756,61 +873,20 @@ def api_unified_inbox():
     cfg = load_config()
     all_emails = []
 
-    for acc in cfg.get("accounts", []):
-        try:
-            conn = _imap_connect(acc)
-            typ, _ = conn.select("INBOX", readonly=True)
-            if typ != "OK":
-                conn.logout()
-                continue
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(_fetch_account_inbox, acc, per_page, page): acc
+            for acc in cfg.get("accounts", [])
+        }
+        for future in concurrent.futures.as_completed(futures):
+            all_emails.extend(future.result())
 
-            typ, data = conn.search(None, "ALL")
-            if typ != "OK" or not data or not data[0]:
-                conn.logout()
-                continue
-
-            all_ids = data[0].split()
-            page_ids = list(reversed(all_ids))[: per_page * page]
-            if not page_ids:
-                conn.logout()
-                continue
-
-            id_str = b",".join(page_ids)
-            typ, fetched = conn.fetch(
-                id_str,
-                "(UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO LIST-UNSUBSCRIBE)])",
-            )
-            if typ == "OK" and fetched:
-                for item in fetched:
-                    if not isinstance(item, tuple) or len(item) < 2:
-                        continue
-                    header_bytes = (
-                        item[1] if isinstance(item[1], bytes) else item[1].encode()
-                    )
-                    uid = _parse_uid([item])
-                    envelope = _extract_envelope(header_bytes)
-                    flags_str = (
-                        item[0].decode(errors="replace")
-                        if isinstance(item[0], bytes)
-                        else str(item[0])
-                    )
-                    is_seen = "\\Seen" in flags_str
-                    is_flagged = "\\Flagged" in flags_str
-                    all_emails.append(
-                        {
-                            "uid": uid,
-                            "seen": is_seen,
-                            "flagged": is_flagged,
-                            "folder": "INBOX",
-                            "account": acc["name"],
-                            **envelope,
-                        }
-                    )
-            conn.logout()
-        except Exception:
-            continue
-
-    all_emails.sort(key=lambda e: e.get("date", ""), reverse=True)
+    all_emails.sort(
+        key=lambda e: email_lib.utils.parsedate_to_datetime(e.get("date", ""))
+        if email_lib.utils.parsedate(e.get("date", ""))
+        else datetime.min,
+        reverse=True,
+    )
     total = len(all_emails)
     start = (page - 1) * per_page
     paged = all_emails[start : start + per_page]
@@ -1185,24 +1261,11 @@ def api_llm_email_summary(account_name, folder, uid):
     try:
         conn = _imap_connect(acc)
         conn.select(folder, readonly=True)
-        typ, data = conn.uid("fetch", uid, "(BODY.PEEK[TEXT])")
-        conn.logout()
-        body_text = ""
-        if typ == "OK" and data:
-            for item in data:
-                if isinstance(item, tuple) and len(item) >= 2:
-                    body_text = (
-                        item[1].decode("utf-8", errors="replace")
-                        if isinstance(item[1], bytes)
-                        else str(item[1])
-                    )
-        typ2, data2 = _imap_connect(acc).uid(
-            "fetch", uid, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])"
-        )
+        typ, data = conn.uid("fetch", uid, "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT)])")
         subject = ""
         from_addr = ""
-        if typ2 == "OK" and data2:
-            for item in data2:
+        if typ == "OK" and data:
+            for item in data:
                 if isinstance(item, tuple) and len(item) >= 2:
                     hdr = (
                         item[1].decode("utf-8", errors="replace")
@@ -1214,6 +1277,17 @@ def api_llm_email_summary(account_name, folder, uid):
                             subject = line.split(":", 1)[1].strip()
                         elif line.lower().startswith("from:"):
                             from_addr = line.split(":", 1)[1].strip()
+        typ2, data2 = conn.uid("fetch", uid, "(BODY.PEEK[TEXT])")
+        conn.logout()
+        body_text = ""
+        if typ2 == "OK" and data2:
+            for item in data2:
+                if isinstance(item, tuple) and len(item) >= 2:
+                    body_text = (
+                        item[1].decode("utf-8", errors="replace")
+                        if isinstance(item[1], bytes)
+                        else str(item[1])
+                    )
         llm = _get_llm()
         result = llm.summarize_email(subject, from_addr, body_text[:3000], "auto")
         if result:
@@ -1234,7 +1308,9 @@ def api_telegram_config():
         if "telegram" not in cfg:
             cfg["telegram"] = {}
         if "bot_token" in data:
-            cfg["telegram"]["bot_token"] = data["bot_token"]
+            secrets = _load_secrets()
+            secrets["TELEGRAM_BOT_TOKEN"] = data["bot_token"]
+            _save_secrets(secrets)
         if "chat_id" in data:
             cfg["telegram"]["chat_id"] = data["chat_id"]
         if "notify_mode" in data:
@@ -1243,79 +1319,23 @@ def api_telegram_config():
             cfg["telegram"]["notify_categories"] = data["notify_categories"]
         save_config(cfg)
         return jsonify({"success": True})
-    return jsonify(cfg.get("telegram", {}))
+    secrets = _load_secrets()
+    result = dict(cfg.get("telegram", {}))
+    result["bot_token"] = secrets.get("TELEGRAM_BOT_TOKEN", "")
+    return jsonify(result)
 
 
 @app.route("/api/telegram/test", methods=["POST"])
 def api_telegram_test():
-    cfg = load_config()
-    token = cfg.get("telegram", {}).get("bot_token", "")
+    secrets = _load_secrets()
+    token = secrets.get("TELEGRAM_BOT_TOKEN", "")
     if not token:
         return jsonify({"success": False, "error": "Kein Bot-Token konfiguriert"})
     try:
         import urllib.request
 
-        r = urllib.request.urlopen(
-            f"https://api.telegram.org/bot{token}/getMe", timeout=10
-        )
-        data = json.loads(r.read().decode())
-        if data.get("ok"):
-            bot_info = data.get("result", {})
-            return jsonify(
-                {
-                    "success": True,
-                    "bot_name": bot_info.get("first_name", ""),
-                    "bot_username": bot_info.get("username", ""),
-                }
-            )
-        return jsonify({"success": False, "error": "Ungültiger Token"})
-    except Exception as e:
-        return jsonify({"success": False, "error": str(e)})
-
-
-@app.route("/api/telegram/generate-code", methods=["POST"])
-def api_telegram_generate_code():
-    import random
-
-    code = str(random.randint(100000, 999999))
-    cfg = load_config()
-    if "telegram" not in cfg:
-        cfg["telegram"] = {}
-    cfg["telegram"]["verify_code"] = code
-    cfg["telegram"]["verify_code_created"] = datetime.now().isoformat()
-    cfg["telegram"].pop("chat_id", None)
-    save_config(cfg)
-    from telegram_bot import start_verification_poller
-
-    start_verification_poller()
-    return jsonify({"success": True, "code": code})
-
-
-@app.route("/api/telegram/verify", methods=["POST"])
-def api_telegram_verify():
-    data = request.json or {}
-    user_code = str(data.get("code", ""))
-    cfg = load_config()
-    stored_code = cfg.get("telegram", {}).get("verify_code", "")
-    if not stored_code or user_code != stored_code:
-        return jsonify({"success": False, "error": "Falscher Code"})
-    chat_id = cfg.get("telegram", {}).get("pending_chat_id")
-    if not chat_id:
-        return jsonify(
-            {
-                "success": False,
-                "error": "Noch keine Chat-ID empfangen. Sende /start an den Bot.",
-            }
-        )
-    cfg["telegram"]["chat_id"] = chat_id
-    cfg["telegram"].pop("verify_code", None)
-    cfg["telegram"].pop("pending_chat_id", None)
-    cfg["telegram"].pop("verify_code_created", None)
-    save_config(cfg)
-    try:
-        import urllib.request
-
-        token = cfg["telegram"]["bot_token"]
+        secrets = _load_secrets()
+        token = secrets.get("TELEGRAM_BOT_TOKEN", "")
         msg = "✅ Verifizierung erfolgreich! Du erhältst jetzt Benachrichtigungen für wichtige Emails."
         urllib.request.urlopen(
             f"https://api.telegram.org/bot{token}/sendMessage?chat_id={chat_id}&text={msg}",
@@ -1329,14 +1349,19 @@ def api_telegram_verify():
 @app.route("/api/telegram/send-test", methods=["POST"])
 def api_telegram_send_test():
     cfg = load_config()
-    token = cfg.get("telegram", {}).get("bot_token", "")
+    secrets = _load_secrets()
+    token = secrets.get("TELEGRAM_BOT_TOKEN", "")
     chat_id = cfg.get("telegram", {}).get("chat_id", "")
     if not token or not chat_id:
         return jsonify({"success": False, "error": "Bot-Token oder Chat-ID fehlt"})
     try:
         import urllib.request
 
-        msg = "🔔 Test-Benachrichtigung vom Mail AI Sorter!\n\nAlles funktioniert korrekt."
+        post_data = request.json or {}
+        msg = post_data.get(
+            "message",
+            "🔔 Test-Benachrichtigung vom Mail AI Sorter!\n\nAlles funktioniert korrekt.",
+        )
         payload = json.dumps(
             {"chat_id": chat_id, "text": msg, "parse_mode": "HTML"}
         ).encode()

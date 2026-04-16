@@ -463,7 +463,7 @@ function statsPage() {
         async refreshStats() {
             this.isLoading = true;
             try {
-                const resp = await fetch('/api/stats/detailed');
+                const resp = await fetch('/api/stats/detailed?days=' + this.timeRange);
                 this.stats = await resp.json();
                 Object.values(this.charts).forEach(c => c.destroy());
                 this.$nextTick(() => this.initAllCharts());

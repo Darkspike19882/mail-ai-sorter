@@ -16,6 +16,7 @@ from typing import Optional
 
 BASE_DIR = Path(__file__).parent
 CONFIG_FILE = BASE_DIR / "config.json"
+SECRETS_FILE = BASE_DIR / "secrets.env"
 
 _poller_thread: Optional[threading.Thread] = None
 _poller_running = False
@@ -27,6 +28,25 @@ def _load_config():
             return json.load(f)
     except Exception:
         return {}
+
+
+def _load_secrets():
+    secrets = {}
+    try:
+        if SECRETS_FILE.exists():
+            with open(SECRETS_FILE, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if line and not line.startswith("#") and "=" in line:
+                        key, _, val = line.partition("=")
+                        secrets[key.strip()] = val.strip()
+    except Exception:
+        pass
+    return secrets
+
+
+def _get_bot_token():
+    return _load_secrets().get("TELEGRAM_BOT_TOKEN", "")
 
 
 def _save_config(cfg):
@@ -82,7 +102,7 @@ def send_email_notification(
 ):
     cfg = _load_config()
     tg = cfg.get("telegram", {})
-    token = tg.get("bot_token", "")
+    token = _get_bot_token()
     chat_id = tg.get("chat_id", "")
     if not token or not chat_id:
         return False
@@ -106,7 +126,7 @@ def send_email_notification(
 def send_daily_digest(digest_text: str):
     cfg = _load_config()
     tg = cfg.get("telegram", {})
-    token = tg.get("bot_token", "")
+    token = _get_bot_token()
     chat_id = tg.get("chat_id", "")
     if not token or not chat_id:
         return False
@@ -122,7 +142,7 @@ def _escape(text: str) -> str:
 def _verification_poller():
     global _poller_running
     cfg = _load_config()
-    token = cfg.get("telegram", {}).get("bot_token", "")
+    token = _get_bot_token()
     if not token:
         return
 

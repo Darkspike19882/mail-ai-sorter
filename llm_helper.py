@@ -49,10 +49,24 @@ CREATE UNIQUE INDEX IF NOT EXISTS idx_email_sum_uid ON email_summaries(account, 
 """
 
 
+_db_conn = None
+_db_initialized = False
+
+
 def _get_db() -> sqlite3.Connection:
-    conn = sqlite3.connect(str(MEMORY_DB), timeout=10)
-    conn.executescript(SCHEMA)
-    conn.commit()
+    global _db_conn, _db_initialized
+    if _db_conn is not None:
+        try:
+            _db_conn.execute("SELECT 1")
+            return _db_conn
+        except Exception:
+            _db_conn = None
+    conn = sqlite3.connect(str(MEMORY_DB), timeout=10, check_same_thread=False)
+    if not _db_initialized:
+        conn.executescript(SCHEMA)
+        conn.commit()
+        _db_initialized = True
+    _db_conn = conn
     return conn
 
 
