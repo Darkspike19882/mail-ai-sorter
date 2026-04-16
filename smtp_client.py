@@ -6,6 +6,7 @@ Saves sent mails to IMAP Sent folder.
 """
 
 import email as email_lib
+import email.encoders
 import email.generator
 import email.mime.application
 import email.mime.base

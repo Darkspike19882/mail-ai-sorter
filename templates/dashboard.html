@@ -336,11 +336,12 @@
         </div>
     </div>
 
-    <!-- AI Email Digest -->
+    <!-- RAG Email-Assistent -->
     <div class="chart-container mb-8">
         <h3 class="text-lg font-bold text-slate-900 dark:text-white mb-4 flex items-center gap-2 border-b-2 border-slate-200 dark:border-slate-700 pb-3">
             <i data-lucide="brain" class="w-5 h-5 text-primary-600"></i>
-            KI Email-Assistent
+            KI Email-Assistent (RAG)
+            <span x-show="ragStatus.total_emails" class="text-xs text-slate-400 font-normal ml-2" x-text="ragStatus.total_emails + ' Emails indiziert'"></span>
         </h3>
         <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
             <div>
@@ -353,15 +354,34 @@
                 </div>
             </div>
             <div>
-                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Frage den KI-Assistenten</label>
+                <label class="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Frag deine Emails</label>
                 <div class="flex gap-2 mb-3">
-                    <input type="text" x-model="chatMessage" @keyup.enter="sendChat()" placeholder="z.B. Wie viele wichtige Emails habe ich?"
+                    <input type="text" x-model="ragQuery" @keyup.enter="sendRagQuery()" placeholder="z.B. Wann war die letzte Amazon-Bestellung?"
                            class="flex-1 px-3 py-2 rounded-lg border-2 border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-700 text-slate-900 dark:text-white text-sm">
-                    <button @click="sendChat()" :disabled="chatLoading" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
-                        <span x-text="chatLoading ? '...' : 'Senden'"></span>
+                    <button @click="sendRagQuery()" :disabled="ragLoading" class="px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg text-sm font-medium">
+                        <span x-text="ragLoading ? '...' : 'Fragen'"></span>
                     </button>
                 </div>
-                <div x-show="chatReply" class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800 text-sm text-slate-700 dark:text-slate-200" x-text="chatReply"></div>
+                <div class="space-y-1 mb-2">
+                    <template x-for="s in ['Wann war die letzte Amazon-Bestellung?', 'Wie viele Rechnungen diesen Monat?', 'Gibt es wichtige unbeantwortete Emails?']">
+                        <button @click="ragQuery = s; sendRagQuery()" class="block text-xs text-slate-400 hover:text-primary-500 transition-colors" x-text="'→ ' + s"></button>
+                    </template>
+                </div>
+                <div x-show="ragAnswer" class="p-3 bg-purple-50 dark:bg-purple-900/20 rounded-lg border-2 border-purple-200 dark:border-purple-800 text-sm text-slate-700 dark:text-slate-200">
+                    <div class="whitespace-pre-wrap mb-3" x-text="ragAnswer"></div>
+                    <template x-if="ragSources && ragSources.length > 0">
+                        <div class="space-y-1 pt-2 border-t border-purple-200 dark:border-purple-700">
+                            <div class="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1" x-text="'Quellen (' + ragSources.length + ' Emails):'"></div>
+                            <template x-for="(src, idx) in ragSources" :key="idx">
+                                <div class="text-xs flex items-center gap-1 text-slate-600 dark:text-slate-300">
+                                    <span class="text-slate-400" x-text="idx + 1 + '.'"></span>
+                                    <span class="truncate" x-text="src.subject || '(Kein Betreff)'"></span>
+                                    <span class="text-slate-400 ml-auto flex-shrink-0" x-text="src.date"></span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
     </div>
@@ -428,6 +448,7 @@ function dashboard() {
                 this.config = await r.json();
             } catch(e) {}
             this.fetchSorterStatus();
+            this.fetchRagStatus();
             this.$nextTick(() => {
                 this.initCharts();
                 lucide.createIcons();
@@ -648,9 +669,11 @@ function dashboard() {
 
         digestText: '',
         digestLoading: false,
-        chatMessage: '',
-        chatReply: '',
-        chatLoading: false,
+        ragQuery: '',
+        ragAnswer: '',
+        ragSources: [],
+        ragLoading: false,
+        ragStatus: {},
 
         async fetchDigest() {
             this.digestLoading = true;
@@ -662,23 +685,30 @@ function dashboard() {
             this.digestLoading = false;
         },
 
-        async sendChat() {
-            if (!this.chatMessage.trim()) return;
-            this.chatLoading = true;
-            this.chatReply = '';
+        async sendRagQuery() {
+            if (!this.ragQuery.trim()) return;
+            this.ragLoading = true;
+            this.ragAnswer = '';
+            this.ragSources = [];
             try {
-                const r = await fetch('/api/llm/chat', {
+                const r = await fetch('/api/rag/query', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
-                    body: JSON.stringify({session_id: 'dashboard', message: this.chatMessage})
+                    body: JSON.stringify({query: this.ragQuery})
                 });
                 const d = await r.json();
-                this.chatReply = d.reply || d.error || 'Keine Antwort';
-                this.chatMessage = '';
-            } catch(e) { this.chatReply = 'Fehler: ' + e; }
-            this.chatLoading = false;
-        }
-    };
-}
+                this.ragAnswer = d.answer || d.error || 'Keine Antwort';
+                this.ragSources = d.sources || [];
+                this.ragQuery = '';
+            } catch(e) { this.ragAnswer = 'Fehler: ' + e; }
+            this.ragLoading = false;
+        },
+
+        async fetchRagStatus() {
+            try {
+                const r = await fetch('/api/rag/status');
+                this.ragStatus = await r.json();
+            } catch(e) { this.ragStatus = {}; }
+        },
 </script>
 {% endblock %}

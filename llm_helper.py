@@ -2,74 +2,18 @@
 """
 LLM Helper for Mail AI Sorter.
 Wraps Ollama API with conversation memory and structured outputs.
+Uses shared memory.py for persistence.
 """
 
 import json
 import os
-import sqlite3
-import threading
 import urllib.request
 import urllib.error
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
-BASE_DIR = Path(__file__).parent
-MEMORY_DB = BASE_DIR / "llm_memory.db"
-
-SCHEMA = """
-CREATE TABLE IF NOT EXISTS conversations (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    session_id TEXT NOT NULL,
-    role TEXT NOT NULL,
-    content TEXT NOT NULL,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE INDEX IF NOT EXISTS idx_conv_session ON conversations(session_id);
-
-CREATE TABLE IF NOT EXISTS user_facts (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    key TEXT UNIQUE NOT NULL,
-    value TEXT NOT NULL,
-    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-
-CREATE TABLE IF NOT EXISTS email_summaries (
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
-    msg_uid TEXT,
-    account TEXT,
-    folder TEXT,
-    subject TEXT,
-    from_addr TEXT,
-    category TEXT,
-    summary TEXT,
-    importance TEXT,
-    created_at TEXT NOT NULL DEFAULT (datetime('now'))
-);
-CREATE UNIQUE INDEX IF NOT EXISTS idx_email_sum_uid ON email_summaries(account, folder, msg_uid);
-"""
-
-
-_db_local = threading.local()
-_db_initialized = False
-
-
-def _get_db() -> sqlite3.Connection:
-    global _db_initialized
-    conn = getattr(_db_local, "conn", None)
-    if conn is not None:
-        try:
-            conn.execute("SELECT 1")
-            return conn
-        except Exception:
-            pass
-    conn = sqlite3.connect(str(MEMORY_DB), timeout=10)
-    if not _db_initialized:
-        conn.executescript(SCHEMA)
-        conn.commit()
-        _db_initialized = True
-    _db_local.conn = conn
-    return conn
+import memory
 
 
 class LLMHelper:
@@ -79,14 +23,14 @@ class LLMHelper:
         self.ollama_url = ollama_url.rstrip("/")
         self.model = model
         self.timeout = 60
-        self.db = _get_db()
+        self.db = memory.get_db()
 
     def chat(
         self,
         messages: List[Dict[str, str]],
         system: Optional[str] = None,
         json_format: bool = False,
-        json_schema: Optional[dict] = None,
+        json_schema: Optional[Dict[str, Any]] = None,
         temperature: float = 0.7,
         max_tokens: int = 500,
     ) -> Optional[str]:
@@ -122,29 +66,18 @@ class LLMHelper:
             return None
 
     def save_message(self, session_id: str, role: str, content: str):
-        self.db.execute(
-            "INSERT INTO conversations (session_id, role, content) VALUES (?, ?, ?)",
-            (session_id, role, content),
-        )
-        self.db.commit()
+        memory.save_message(session_id, role, content)
 
     def get_history(self, session_id: str, limit: int = 20) -> List[Dict[str, str]]:
-        rows = self.db.execute(
-            "SELECT role, content FROM conversations WHERE session_id = ? ORDER BY id DESC LIMIT ?",
-            (session_id, limit),
-        ).fetchall()
-        return [{"role": r[0], "content": r[1]} for r in reversed(rows)]
+        rows = memory.get_history(session_id, limit)
+        return [{"role": r["role"], "content": r["content"]} for r in rows]
 
     def save_fact(self, key: str, value: str):
-        self.db.execute(
-            "INSERT INTO user_facts (key, value, updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')",
-            (key, value),
-        )
-        self.db.commit()
+        memory.save_fact(key, value)
 
     def get_facts(self) -> Dict[str, str]:
-        rows = self.db.execute("SELECT key, value FROM user_facts").fetchall()
-        return {r[0]: r[1] for r in rows}
+        facts = memory.get_facts()
+        return {f["fact"]: f.get("category", "") for f in facts}
 
     def summarize_email(
         self, subject: str, from_addr: str, body: str, category: str

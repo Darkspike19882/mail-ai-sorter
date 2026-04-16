@@ -928,6 +928,33 @@ def api_unified_inbox():
     page = _safe_int(request.args.get("page", 1))
     per_page = _safe_int(request.args.get("per_page", 50), 50)
     cfg = load_config()
+    all_emails = []
+
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(_fetch_account_inbox, acc, per_page, page): acc
+            for acc in cfg.get("accounts", [])
+        }
+        for future in concurrent.futures.as_completed(futures):
+            all_emails.extend(future.result())
+
+    all_emails.sort(
+        key=lambda e: email_lib.utils.parsedate_to_datetime(e.get("date", ""))
+        if email_lib.utils.parsedate(e.get("date", ""))
+        else datetime.min,
+        reverse=True,
+    )
+    total = len(all_emails)
+    start = (page - 1) * per_page
+    paged = all_emails[start : start + per_page]
+
+    return jsonify(
+        {"emails": paged, "total": total, "page": page, "per_page": per_page}
+    )
+
+
+@app.route("/api/email/<account_name>/<folder>/<uid>")
+def api_email_detail(account_name, folder, uid):
     acc = _get_account(account_name)
     if not acc:
         return jsonify({"error": "Account nicht gefunden"})
@@ -937,12 +964,10 @@ def api_unified_inbox():
         conn = _imap_connect(acc)
         typ, _ = conn.select(folder, readonly=True)
         if typ != "OK":
-            conn.logout()
             return jsonify({"error": f"Ordner {folder} nicht gefunden"})
 
         typ, data = conn.uid("fetch", uid, "(FLAGS BODY.PEEK[])")
         if typ != "OK" or not data:
-            conn.logout()
             return jsonify({"error": "Email nicht gefunden"})
 
         raw_bytes = None
@@ -957,7 +982,6 @@ def api_unified_inbox():
                 raw_bytes = item[1] if isinstance(item[1], bytes) else item[1].encode()
 
         if not raw_bytes:
-            conn.logout()
             return jsonify({"error": "Email-Inhalt leer"})
 
         msg = email_lib.message_from_bytes(raw_bytes)
@@ -1027,7 +1051,8 @@ def api_unified_inbox():
                     if r.strip().startswith("<")
                 ]
                 if ref_ids:
-                    search_criteria = f'(OR HEADER Message-ID "<{ref_ids[-1]}>" HEADER References "{ref_ids[-1]}")'
+                    safe_ref = ref_ids[-1].replace('"', '\\"').replace('\\', '\\\\')
+                    search_criteria = f'(OR HEADER Message-ID "<{safe_ref}>" HEADER References "<{safe_ref}>")'
                     typ_s, data_s = conn.search("UTF-8", search_criteria)
                     if typ_s == "OK" and data_s and data_s[0]:
                         thread_ids = data_s[0].split()
@@ -1053,6 +1078,91 @@ def api_unified_inbox():
             except Exception:
                 pass
 
+        result = {
+            "uid": uid,
+            "folder": folder,
+            "account": account_name,
+            "seen": True,
+            "flagged": is_flagged,
+            **envelope,
+            "body_text": body_text,
+            "body_html": body_html,
+            "attachments": [
+                {
+                    "filename": a["filename"],
+                    "size": a["size"],
+                    "content_type": a["content_type"],
+                }
+                for a in attachments
+            ],
+        }
+        if thread_emails:
+            result["thread"] = thread_emails
+        return jsonify(result)
+    except Exception as e:
+        return jsonify({"error": str(e)})
+    finally:
+        if conn:
+            try:
+                conn.logout()
+            except Exception:
+                pass
+
+        thread_emails = []
+        refs_header = envelope.get("references", "") or envelope.get("in_reply_to", "")
+        if refs_header:
+            try:
+                ref_ids = [
+                    r.strip().strip("<>")
+                    for r in refs_header.split()
+                    if r.strip().startswith("<")
+                ]
+                if ref_ids:
+                    safe_ref = ref_ids[-1].replace('"', '\\"').replace("\\", "\\\\")
+                    search_criteria = f'(OR HEADER Message-ID "<{safe_ref}>" HEADER References "<{safe_ref}>")'
+                    typ_s, data_s = conn.search("UTF-8", search_criteria)
+                    if typ_s == "OK" and data_s and data_s[0]:
+                        thread_ids = data_s[0].split()
+                        if len(thread_ids) > 1:
+                            id_str_t = b",".join(thread_ids[:10])
+                            typ_f, fetched_t = conn.fetch(
+                                id_str_t,
+                                "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])",
+                            )
+                            if typ_f == "OK" and fetched_t:
+                                for item_t in fetched_t:
+                                    if not isinstance(item_t, tuple) or len(item_t) < 2:
+                                        continue
+                                    hdr = (
+                                        item_t[1]
+                                        if isinstance(item_t[1], bytes)
+                                        else item_t[1].encode()
+                                    )
+                                    env_t = _extract_envelope(hdr)
+                                    mid = env_t.get("message_id", "")
+                                    if mid != envelope.get("message_id", ""):
+                                        thread_emails.append(env_t)
+            except Exception:
+                pass
+
+        result = {
+            "uid": uid,
+            "folder": folder,
+            "account": account_name,
+            "seen": True,
+            "flagged": is_flagged,
+            **envelope,
+            "body_text": body_text,
+            "body_html": body_html,
+            "attachments": [
+                {
+                    "filename": a["filename"],
+                    "size": a["size"],
+                    "content_type": a["content_type"],
+                }
+                for a in attachments
+            ],
+        }
         if thread_emails:
             result["thread"] = thread_emails
         return jsonify(result)
@@ -1313,6 +1423,101 @@ def api_llm_chat():
         llm.save_message(session_id, "assistant", reply)
         return jsonify({"success": True, "reply": reply})
     return jsonify({"success": False, "error": "LLM nicht erreichbar"})
+
+
+# ─── RAG APIs ─────────────────────────────────────────────────────────────
+
+
+@app.route("/api/rag/query", methods=["POST"])
+def api_rag_query():
+    data = request.json or {}
+    query = data.get("query", "")
+    if not query:
+        return jsonify({"success": False, "error": "Keine Frage"})
+    cfg = load_config()
+    ollama_url = cfg.get("global", {}).get("ollama_url", "http://127.0.0.1:11434")
+    model = cfg.get("global", {}).get("model", "llama3.1:8b")
+    from rag_engine import RAGEngine
+
+    rag = RAGEngine(ollama_url=ollama_url, model=model)
+    return jsonify(rag.query(query, limit=data.get("limit", 10)))
+
+
+@app.route("/api/rag/status")
+def api_rag_status():
+    cfg = load_config()
+    ollama_url = cfg.get("global", {}).get("ollama_url", "http://127.0.0.1:11434")
+    model = cfg.get("global", {}).get("model", "llama3.1:8b")
+    from rag_engine import RAGEngine
+
+    rag = RAGEngine(ollama_url=ollama_url, model=model)
+    return jsonify(rag.get_status())
+
+
+@app.route("/api/rag/reindex", methods=["POST"])
+def api_rag_reindex():
+    from rag_engine import RAGEngine
+    rag = RAGEngine()
+    return jsonify(rag.reindex())
+
+
+# ─── Memory APIs ──────────────────────────────────────────────────────────
+
+
+@app.route("/api/memory")
+def api_memory():
+    import memory
+    return jsonify(memory.get_db_size())
+
+
+@app.route("/api/memory/sessions")
+def api_memory_sessions():
+    import memory
+    return jsonify(memory.list_sessions())
+
+
+@app.route("/api/memory/facts")
+def api_memory_facts():
+    import memory
+    cat = request.args.get("category")
+    facts = memory.get_facts(category=cat)
+    return jsonify(facts)
+
+
+@app.route("/api/memory/facts", methods=["POST"])
+def api_memory_save_fact():
+    import memory
+    data = request.json or {}
+    fact = data.get("fact", "")
+    if not fact:
+        return jsonify({"success": False, "error": "Kein Fakt"})
+    memory.save_fact(fact, data.get("category", "general"), data.get("confidence", 0.5))
+    return jsonify({"success": True})
+
+
+@app.route("/api/memory/summaries")
+def api_memory_summaries():
+    import memory
+    days = int(request.args.get("days", 1))
+    limit = int(request.args.get("limit", 50))
+    cat = request.args.get("category")
+    summaries = memory.get_recent_summaries(days=days, limit=limit, category=cat)
+    return jsonify(summaries)
+
+
+@app.route("/api/memory/rag-history")
+def api_memory_rag_history():
+    import memory
+    limit = int(request.args.get("limit", 20))
+    return jsonify(memory.get_rag_history(limit))
+
+
+@app.route("/api/memory/cleanup", methods=["POST"])
+def api_memory_cleanup():
+    import memory
+    data = request.json or {}
+    days = int(data.get("days", 90))
+    return jsonify(memory.cleanup_old_data(days))
 
 
 @app.route("/api/llm/email-summary/<account_name>/<folder>/<uid>")
