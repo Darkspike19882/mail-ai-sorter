@@ -291,6 +291,83 @@
                                     </div>
                                 </div>
                             </template>
+
+                            <div class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                                <template x-if="replyGenerating || replyAdapting">
+                                    <div class="h-1 bg-sky-600 animate-pulse"></div>
+                                </template>
+                                <template x-if="replyError">
+                                    <div class="px-4 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-950/30 border-b border-red-200 flex items-center justify-between">
+                                        <span x-text="replyError"></span>
+                                        <button @click="replyError = ''" class="text-red-500 text-xs">Schließen</button>
+                                    </div>
+                                </template>
+                                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-2">
+                                    <div class="relative" x-data="{ open: false }">
+                                        <button @click="open = !open; if(open) loadTemplates()" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">
+                                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Vorlage
+                                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
+                                        </button>
+                                        <div x-show="open" @click.away="open = false" class="absolute bottom-full mb-1 left-0 z-30 w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl" style="display:none">
+                                            <div class="p-2 border-b border-slate-100 dark:border-slate-700">
+                                                <input x-model="templateSearchQuery" type="text" placeholder="Vorlage suchen..." class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800">
+                                            </div>
+                                            <div class="max-h-64 overflow-y-auto p-1">
+                                                <template x-if="filteredTemplates.length === 0">
+                                                    <div class="p-3 text-sm text-slate-400 text-center">Keine Vorlagen vorhanden</div>
+                                                </template>
+                                                <template x-for="tmpl in filteredTemplates" :key="tmpl.id">
+                                                    <button @click="insertTemplate(tmpl); open = false" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
+                                                        <div class="text-sm font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></div>
+                                                        <div class="text-xs text-slate-500 truncate" x-text="tmpl.body.substring(0, 60)"></div>
+                                                    </button>
+                                                </template>
+                                            </div>
+                                            <div class="p-2 border-t border-slate-100 dark:border-slate-700 flex gap-2">
+                                                <button @click="openTemplateManager(); open = false" class="text-xs text-sky-600 hover:underline">Vorlagen verwalten</button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <select x-model="replyTone" class="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs bg-white dark:bg-slate-800">
+                                        <option value="freundlich">Freundlich</option>
+                                        <option value="formal">Formal</option>
+                                        <option value="kurz">Kurz</option>
+                                        <option value="bestimmt">Bestimmt</option>
+                                    </select>
+                                    <button @click="generateReplyDraft()" :disabled="replyGenerating" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs flex items-center gap-1 disabled:opacity-50">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                        <span x-text="replyGenerating ? 'Generiere...' : 'KI-Entwurf'"></span>
+                                    </button>
+                                    <button @click="adaptReplyWithAI()" :disabled="replyAdapting || !replyDraft.trim()" class="px-3 py-1.5 rounded-lg border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 text-xs flex items-center gap-1 disabled:opacity-50">
+                                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                        <span x-text="replyAdapting ? 'Passe an...' : 'KI anpassen'"></span>
+                                    </button>
+                                </div>
+                                <div class="px-4 py-3">
+                                    <textarea x-model="replyDraft" @input="debounceSaveDraft()" rows="4" placeholder="Antwort schreiben... (Strg+Enter zum Senden)" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-y min-h-[80px] max-h-[400px]"></textarea>
+                                </div>
+                                <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
+                                    <div class="flex items-center gap-3 text-xs text-slate-500">
+                                        <span>An: <span class="text-slate-700 dark:text-slate-300" x-text="replyTo"></span></span>
+                                        <span>Betreff: <span class="text-slate-700 dark:text-slate-300" x-text="replySubject"></span></span>
+                                    </div>
+                                    <div class="flex items-center gap-2">
+                                        <label class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
+                                            <i data-lucide="paperclip" class="w-3.5 h-3.5 inline"></i> Anhang
+                                            <input type="file" multiple @change="handleReplyAttachments($event)" class="hidden">
+                                        </label>
+                                        <template x-if="replyAttachments.length">
+                                            <div class="flex gap-1">
+                                                <template x-for="(att, idx) in replyAttachments" :key="att.filename + ':' + idx">
+                                                    <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs text-slate-600 dark:text-slate-300" x-text="att.filename + ' ×'" @click="replyAttachments.splice(idx, 1)" style="cursor:pointer"></span>
+                                                </template>
+                                            </div>
+                                        </template>
+                                        <button @click="discardReplyDraft()" x-show="replyDraft.trim()" class="px-3 py-1.5 text-xs text-red-600 hover:text-red-700">Entwurf verwerfen</button>
+                                        <button @click="sendInlineReply()" :disabled="replySending || !replyDraft.trim()" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed" x-text="replySending ? 'Sende...' : 'Senden'"></button>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
 
                         <aside class="border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-700 p-4 space-y-4 overflow-y-auto">
@@ -307,28 +384,6 @@
                                 </template>
                             </div>
 
-                            <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <div class="font-semibold text-slate-900 dark:text-white">Quick Reply</div>
-                                        <div class="text-xs text-slate-500">Entwurf direkt aus der Email</div>
-                                    </div>
-                                    <select x-model="quickReplyTone" class="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800">
-                                        <option value="freundlich">Freundlich</option>
-                                        <option value="formal">Formal</option>
-                                        <option value="kurz">Kurz</option>
-                                        <option value="bestimmt">Bestimmt</option>
-                                    </select>
-                                </div>
-                                <button @click="generateQuickReply()" class="w-full px-3 py-2 rounded-lg bg-slate-900 dark:bg-slate-100 text-white dark:text-slate-900 text-sm">Entwurf erzeugen</button>
-                                <template x-if="quickReply.reply">
-                                    <div class="space-y-2">
-                                        <input x-model="quickReply.subject" type="text" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800">
-                                        <textarea x-model="quickReply.reply" rows="10" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800"></textarea>
-                                        <button @click="useQuickReply()" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">In Antwort übernehmen</button>
-                                    </div>
-                                </template>
-                            </div>
                         </aside>
                     </div>
                 </div>
@@ -430,6 +485,55 @@
         </div>
     </div>
 
+    <div x-show="showTemplateManager" class="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50" @click="closeTemplateManager()"></div>
+        <div class="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 p-4">
+                <h3 class="font-semibold text-slate-900 dark:text-white">Vorlagen verwalten</h3>
+                <button @click="closeTemplateManager()" class="text-slate-500">Schließen</button>
+            </div>
+            <div class="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3">
+                <div class="grid grid-cols-[1fr_120px] gap-2">
+                    <input x-model="templateForm.name" type="text" placeholder="Name der Vorlage" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
+                    <select x-model="templateForm.category" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
+                        <option value="Allgemein">Allgemein</option>
+                        <option value="Dringend">Dringend</option>
+                        <option value="Termin">Termin</option>
+                        <option value="Danke">Danke</option>
+                    </select>
+                </div>
+                <textarea x-model="templateForm.body" rows="4" placeholder="Vorlagen-Text..." class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"></textarea>
+                <div class="flex gap-2">
+                    <button @click="saveTemplate()" class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm" x-text="editingTemplate ? 'Aktualisieren' : 'Speichern'"></button>
+                    <button x-show="editingTemplate" @click="editingTemplate = null; templateForm = {name:'', body:'', category:'Allgemein'}" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Abbrechen</button>
+                </div>
+            </div>
+            <div class="flex-1 overflow-y-auto p-4 space-y-2">
+                <template x-if="templates.length === 0">
+                    <div class="text-center py-8">
+                        <div class="text-base font-medium text-slate-700 dark:text-slate-200">Noch keine Vorlagen</div>
+                        <div class="text-sm text-slate-400 mt-1">Vorlagen helfen dir, wiederkehrende Antworten schnell einzufügen.</div>
+                    </div>
+                </template>
+                <template x-for="tmpl in templates" :key="tmpl.id">
+                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 flex items-start justify-between gap-3">
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-sm font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></span>
+                                <span class="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-[11px] text-slate-500" x-text="tmpl.category"></span>
+                            </div>
+                            <div class="text-xs text-slate-500 mt-1 line-clamp-2" x-text="tmpl.body.substring(0, 100)"></div>
+                        </div>
+                        <div class="flex items-center gap-1">
+                            <button @click="editTemplate(tmpl)" class="px-2 py-1 text-xs text-slate-500 hover:text-sky-600">Bearbeiten</button>
+                            <button @click="deleteTemplate(tmpl.id)" class="px-2 py-1 text-xs text-red-500 hover:text-red-700">Löschen</button>
+                        </div>
+                    </div>
+                </template>
+            </div>
+        </div>
+    </div>
+
     <div x-show="showCompose" class="fixed inset-0 z-50 flex items-center justify-center p-4">
         <div class="absolute inset-0 bg-black/50" @click="showCompose = false"></div>
         <div class="relative w-full max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
@@ -504,12 +608,29 @@ function inboxApp() {
         bulkTag: '',
         bulkMoveFolder: '',
         newTag: '',
-        quickReplyTone: 'freundlich',
-        quickReply: { subject: '', reply: '' },
         activePriorityFilter: 'all',
         inboxError: '',
         composeError: '',
         sendingCompose: false,
+        replyDraft: '',
+        replySubject: '',
+        replyTo: '',
+        replyCc: '',
+        replyTone: 'freundlich',
+        replyGenerating: false,
+        replyAdapting: false,
+        replySending: false,
+        replyError: '',
+        replyAttachments: [],
+        replyInReplyTo: '',
+        replyReferences: '',
+        savedDrafts: {},
+        showTemplateManager: false,
+        templateForm: { name: '', body: '', category: 'Allgemein' },
+        editingTemplate: null,
+        templateSearchQuery: '',
+        templates: [],
+        draftSaveTimer: null,
         priorityOptions: [
             { value: 'all', label: 'Alle' },
             { value: 'dringend', label: 'Dringend' },
@@ -573,6 +694,7 @@ function inboxApp() {
         },
 
         async initInbox() {
+            try { this.savedDrafts = JSON.parse(localStorage.getItem('mail-ai-sorter.drafts.v1') || '{}'); } catch(_) { this.savedDrafts = {}; }
             const cfg = await this.fetchJson('/api/config');
             this.accounts = (cfg.accounts || []).map(acc => ({ name: acc.name, folders: [], expanded: true, unreadTotal: 0 }));
             this.compose.account = this.accounts[0]?.name || '';
@@ -598,6 +720,10 @@ function inboxApp() {
                 } else if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
                     e.preventDefault();
                     this.openAiPanel();
+                } else if (e.key === 'r') {
+                    e.preventDefault();
+                    const ta = document.querySelector('.detail-pane textarea');
+                    if (ta) ta.focus();
                 } else if (e.key === 'Escape') {
                     if (this.showAiPanel) this.closeAiPanel();
                     else if (this.searchActive) this.clearSearch();
@@ -874,8 +1000,8 @@ function inboxApp() {
             }
             try {
                 this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`);
-                this.quickReply = { subject: '', reply: '' };
                 this.newTag = '';
+                await this.initInlineReply();
                 this.persistState();
                 this.$nextTick(() => lucide.createIcons());
             } catch (error) {
@@ -1066,36 +1192,6 @@ function inboxApp() {
             showNotification('Analyse aktualisiert');
         },
 
-        async generateQuickReply() {
-            if (!this.selectedMail) return;
-            let data;
-            try {
-                data = await this.fetchJson('/api/llm/quick-reply', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        subject: this.selectedMail.subject || '',
-                        from_addr: this.selectedMail.from || '',
-                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
-                        tone: this.quickReplyTone,
-                        language: 'de',
-                    }),
-                });
-            } catch (error) {
-                showNotification(error.message || 'Quick Reply fehlgeschlagen', 'error');
-                return;
-            }
-            this.quickReply = { subject: data.subject || '', reply: data.reply || '' };
-            this.persistState();
-        },
-
-        useQuickReply() {
-            if (!this.selectedMail || !this.quickReply.reply) return;
-            this.openReply(this.selectedMail);
-            this.compose.subject = this.quickReply.subject || this.compose.subject;
-            this.compose.body = this.quickReply.reply;
-        },
-
         async unsubscribeSelectedMail() {
             if (!this.selectedMail) return;
             let data;
@@ -1121,19 +1217,11 @@ function inboxApp() {
         },
 
         openReply(mail) {
-            this.composeMode = 'reply';
-            this.composeError = '';
-            this.compose = {
-                account: mail.account,
-                to: extractEmail(mail.from || ''),
-                cc: '',
-                subject: prefixSubject(mail.subject || '', 'Re'),
-                body: '',
-                in_reply_to: mail.message_id || '',
-                references: ((mail.references ? mail.references + ' ' : '') + (mail.message_id || '')).trim(),
-                attachments: [],
-            };
-            this.showCompose = true;
+            this.initInlineReply();
+            this.$nextTick(() => {
+                const ta = document.querySelector('.detail-pane textarea');
+                if (ta) ta.focus();
+            });
         },
 
         async handleComposeAttachments(event) {
@@ -1356,6 +1444,279 @@ function inboxApp() {
         sanitizeHtml(html) {
             if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(html);
             return html;
+        },
+
+        async initInlineReply() {
+            if (!this.selectedMail) return;
+            const key = this.mailKey(this.selectedMail);
+            const saved = this.loadDraftFromLocal(key);
+            if (saved) {
+                this.replyDraft = saved.body || '';
+                this.replySubject = saved.subject || prefixSubject(this.selectedMail.subject || '', 'Re');
+                this.replyTo = saved.to || extractEmail(this.selectedMail.from || '');
+                this.replyCc = saved.cc || '';
+                this.replyTone = saved.tone || 'freundlich';
+            } else {
+                this.replyDraft = '';
+                this.replySubject = prefixSubject(this.selectedMail.subject || '', 'Re');
+                this.replyTo = extractEmail(this.selectedMail.from || '');
+                this.replyCc = '';
+                this.replyTone = 'freundlich';
+            }
+            this.replyInReplyTo = this.selectedMail.message_id || '';
+            this.replyReferences = ((this.selectedMail.references ? this.selectedMail.references + ' ' : '') + (this.selectedMail.message_id || '')).trim();
+            this.replyAttachments = [];
+            this.replyError = '';
+            this.replyGenerating = false;
+            this.replyAdapting = false;
+            this.replySending = false;
+        },
+
+        debounceSaveDraft() {
+            clearTimeout(this.draftSaveTimer);
+            this.draftSaveTimer = setTimeout(() => this.saveDraftToLocal(), 1000);
+        },
+
+        saveDraftToLocal() {
+            if (!this.selectedMail) return;
+            const key = this.mailKey(this.selectedMail);
+            if (!this.replyDraft.trim()) {
+                delete this.savedDrafts[key];
+            } else {
+                this.savedDrafts[key] = {
+                    body: this.replyDraft,
+                    subject: this.replySubject,
+                    to: this.replyTo,
+                    cc: this.replyCc,
+                    tone: this.replyTone,
+                    ts: new Date().toISOString(),
+                };
+            }
+            try {
+                localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts));
+            } catch (_) {}
+        },
+
+        loadDraftFromLocal(key) {
+            return this.savedDrafts[key] || null;
+        },
+
+        clearDraftForMail(key) {
+            delete this.savedDrafts[key];
+            try {
+                localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts));
+            } catch (_) {}
+        },
+
+        discardReplyDraft() {
+            this.replyDraft = '';
+            if (this.selectedMail) this.clearDraftForMail(this.mailKey(this.selectedMail));
+        },
+
+        async sendInlineReply() {
+            if (!this.replyDraft.trim() || !this.selectedMail) return;
+            this.replySending = true;
+            this.replyError = '';
+            try {
+                await this.fetchJson('/api/send', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        account: this.selectedMail.account,
+                        to: [this.replyTo],
+                        cc: this.replyCc ? this.replyCc.split(',').map(s => s.trim()).filter(Boolean) : [],
+                        subject: this.replySubject,
+                        body_text: this.replyDraft,
+                        in_reply_to: this.replyInReplyTo || null,
+                        references: this.replyReferences || null,
+                        attachments: this.replyAttachments,
+                    }),
+                });
+                this.clearDraftForMail(this.mailKey(this.selectedMail));
+                this.replyDraft = '';
+                this.replyAttachments = [];
+                showNotification('Email gesendet');
+            } catch (error) {
+                this.replyError = error.message || 'Senden fehlgeschlagen';
+            } finally {
+                this.replySending = false;
+            }
+        },
+
+        async generateReplyDraft() {
+            if (!this.selectedMail) return;
+            this.replyGenerating = true;
+            this.replyError = '';
+            try {
+                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({
+                    from: item.from || '?',
+                    subject: item.subject || '?',
+                    body: (item.body_text || '').substring(0, 500),
+                }));
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+                const response = await fetch('/api/llm/quick-reply', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: this.selectedMail.subject || '',
+                        from_addr: this.selectedMail.from || '',
+                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
+                        tone: this.replyTone,
+                        language: 'de',
+                        thread_context: threadContext,
+                    }),
+                    signal: controller.signal,
+                });
+                clearTimeout(timeout);
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                this.replyDraft = data.reply || '';
+                if (data.subject) this.replySubject = data.subject;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    this.replyError = 'KI-Antwort dauert zu lange. Ollama reagiert möglicherweise nicht.';
+                } else {
+                    this.replyError = 'KI-Entwurf fehlgeschlagen: ' + (error.message || 'Unbekannter Fehler');
+                }
+            } finally {
+                this.replyGenerating = false;
+            }
+        },
+
+        async adaptReplyWithAI() {
+            if (!this.replyDraft.trim() || !this.selectedMail) return;
+            this.replyAdapting = true;
+            this.replyError = '';
+            try {
+                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({
+                    from: item.from || '?',
+                    subject: item.subject || '?',
+                    body: (item.body_text || '').substring(0, 500),
+                }));
+                const controller = new AbortController();
+                const timeout = setTimeout(() => controller.abort(), 30000);
+                const response = await fetch('/api/llm/adapt-template', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        template_body: this.replyDraft,
+                        subject: this.selectedMail.subject || '',
+                        from_addr: this.selectedMail.from || '',
+                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
+                        tone: this.replyTone,
+                        language: 'de',
+                        thread_context: threadContext,
+                    }),
+                    signal: controller.signal,
+                });
+                clearTimeout(timeout);
+                const data = await response.json();
+                if (data.error) throw new Error(data.error);
+                if (data.reply) this.replyDraft = data.reply;
+            } catch (error) {
+                if (error.name === 'AbortError') {
+                    this.replyError = 'KI-Anpassung dauert zu lange.';
+                } else {
+                    this.replyError = 'KI-Anpassung fehlgeschlagen: ' + (error.message || 'Unbekannter Fehler');
+                }
+            } finally {
+                this.replyAdapting = false;
+            }
+        },
+
+        async loadTemplates() {
+            try {
+                const data = await this.fetchJson('/api/templates');
+                this.templates = data.templates || [];
+            } catch (_) {
+                this.templates = [];
+            }
+        },
+
+        get filteredTemplates() {
+            if (!this.templateSearchQuery.trim()) return this.templates;
+            const q = this.templateSearchQuery.toLowerCase();
+            return this.templates.filter(t =>
+                t.name.toLowerCase().includes(q) || t.body.toLowerCase().includes(q)
+            );
+        },
+
+        insertTemplate(tmpl) {
+            if (!this.replyDraft.trim()) {
+                this.replyDraft = tmpl.body;
+            } else {
+                this.replyDraft += '\n\n' + tmpl.body;
+            }
+        },
+
+        handleReplyAttachments(event) {
+            const files = Array.from(event.target.files || []);
+            for (const file of files) {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    this.replyAttachments.push({
+                        filename: file.name,
+                        size: file.size,
+                        data_b64: String(reader.result).split(',')[1] || '',
+                    });
+                    this.replyAttachments = [...this.replyAttachments];
+                };
+                reader.readAsDataURL(file);
+            }
+            event.target.value = '';
+        },
+
+        openTemplateManager() {
+            this.showTemplateManager = true;
+            this.editingTemplate = null;
+            this.templateForm = { name: '', body: '', category: 'Allgemein' };
+            this.loadTemplates();
+            this.$nextTick(() => lucide.createIcons());
+        },
+
+        closeTemplateManager() {
+            this.showTemplateManager = false;
+        },
+
+        async saveTemplate() {
+            const form = this.templateForm;
+            if (!form.name.trim() || !form.body.trim()) return;
+            try {
+                if (this.editingTemplate) {
+                    await this.fetchJson(`/api/templates/${this.editingTemplate.id}`, {
+                        method: 'PUT',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(form),
+                    });
+                } else {
+                    await this.fetchJson('/api/templates', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(form),
+                    });
+                }
+                await this.loadTemplates();
+                this.editingTemplate = null;
+                this.templateForm = { name: '', body: '', category: 'Allgemein' };
+            } catch (error) {
+                showNotification(error.message || 'Vorlage konnte nicht gespeichert werden', 'error');
+            }
+        },
+
+        editTemplate(tmpl) {
+            this.editingTemplate = tmpl;
+            this.templateForm = { name: tmpl.name, body: tmpl.body, category: tmpl.category || 'Allgemein' };
+        },
+
+        async deleteTemplate(id) {
+            if (!confirm('Vorlage wirklich löschen?')) return;
+            try {
+                await this.fetchJson(`/api/templates/${id}`, { method: 'DELETE' });
+                await this.loadTemplates();
+            } catch (error) {
+                showNotification(error.message || 'Löschen fehlgeschlagen', 'error');
+            }
         },
     };
 }

@@ -89,6 +89,17 @@ CREATE TABLE IF NOT EXISTS email_tags (
 CREATE UNIQUE INDEX IF NOT EXISTS idx_tags_unique ON email_tags(msg_uid, account, folder, tag);
 CREATE INDEX IF NOT EXISTS idx_tags_tag ON email_tags(tag);
 CREATE INDEX IF NOT EXISTS idx_tags_account ON email_tags(account, folder, msg_uid);
+
+CREATE TABLE IF NOT EXISTS reply_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    body TEXT NOT NULL,
+    category TEXT DEFAULT 'Allgemein',
+    sort_order INTEGER DEFAULT 0,
+    created_at TEXT DEFAULT (datetime('now')),
+    updated_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_templates_category ON reply_templates(category);
 """
 
 
@@ -716,3 +727,60 @@ def delete_tag(tag: str) -> int:
     )
     conn.commit()
     return cursor.rowcount
+
+
+def get_templates(category: Optional[str] = None) -> List[Dict[str, Any]]:
+    conn = get_db()
+    if category:
+        rows = conn.execute(
+            "SELECT * FROM reply_templates WHERE category = ? ORDER BY sort_order, name",
+            (category,),
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT * FROM reply_templates ORDER BY category, sort_order, name"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_template(template_id: int) -> Optional[Dict[str, Any]]:
+    conn = get_db()
+    row = conn.execute(
+        "SELECT * FROM reply_templates WHERE id = ?", (template_id,)
+    ).fetchone()
+    return dict(row) if row else None
+
+
+def create_template(
+    name: str, body: str, category: str = "Allgemein"
+) -> Dict[str, Any]:
+    conn = get_db()
+    cursor = conn.execute(
+        "INSERT INTO reply_templates (name, body, category) VALUES (?, ?, ?)",
+        (name, body, category),
+    )
+    conn.commit()
+    return {"id": cursor.lastrowid, "name": name, "body": body, "category": category}
+
+
+def update_template(template_id: int, **kwargs) -> Optional[Dict[str, Any]]:
+    allowed = {"name", "body", "category", "sort_order"}
+    updates = {k: v for k, v in kwargs.items() if k in allowed and v is not None}
+    if not updates:
+        return get_template(template_id)
+    updates["updated_at"] = datetime.now().isoformat()
+    set_clause = ", ".join(f"{k} = ?" for k in updates)
+    conn = get_db()
+    conn.execute(
+        f"UPDATE reply_templates SET {set_clause} WHERE id = ?",
+        (*updates.values(), template_id),
+    )
+    conn.commit()
+    return get_template(template_id)
+
+
+def delete_template(template_id: int) -> bool:
+    conn = get_db()
+    cursor = conn.execute("DELETE FROM reply_templates WHERE id = ?", (template_id,))
+    conn.commit()
+    return cursor.rowcount > 0

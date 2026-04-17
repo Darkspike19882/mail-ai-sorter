@@ -12,7 +12,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 
 - [x] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
 - [x] **Phase 2: Search & Grounded Retrieval** - Users can find mail and ask grounded questions over the local corpus.
-- [ ] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
+- [x] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
 - [ ] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
 - [ ] **Phase 5: Local-First Trust & Deployment** - Users can run the full product without required cloud dependencies and with a DSGVO-conscious operating model.
 
@@ -56,7 +56,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   2. User can generate a reply draft from the current email or thread context.
   3. User can insert predefined snippets/templates for recurring email cases.
   4. User can combine templates with AI adaptation so the final draft fits the current case while running against a local LLM.
-**Plans**: TBD
+**Plans**: 3 plans (executed inline)
 **UI hint**: yes
 
 ### Phase 4: Delayed Sorting & Reviewability
@@ -87,7 +87,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 |-------|----------------|--------|-----------|
 | 1. Unified Inbox & Thread Reading | 3/3 | Completed | 2026-04-17 |
 | 2. Search & Grounded Retrieval | 3/3 | Completed | 2026-04-17 |
-| 3. Fast Reply Workflow | 0/TBD | Not started | - |
+| 3. Fast Reply Workflow | 3/3 | Completed | 2026-04-17 |
 | 4. Delayed Sorting & Reviewability | 0/TBD | Not started | - |
 | 5. Local-First Trust & Deployment | 0/TBD | Not started | - |
 

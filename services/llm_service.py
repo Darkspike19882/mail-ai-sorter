@@ -3,7 +3,7 @@
 Shared LLM orchestration for Mail AI Sorter.
 """
 
-from typing import Any, Dict, Optional
+from typing import Any, Dict, List, Optional
 
 import memory
 from config_service import load_config
@@ -79,8 +79,36 @@ def draft_reply(
     body: str,
     tone: str = "freundlich",
     language: str = "de",
+    thread_context: Optional[str] = None,
 ) -> Optional[Dict[str, str]]:
-    return get_llm().draft_reply(subject, from_addr, body, tone=tone, language=language)
+    return get_llm().draft_reply(
+        subject,
+        from_addr,
+        body,
+        tone=tone,
+        language=language,
+        thread_context=thread_context,
+    )
+
+
+def adapt_template(
+    template_body: str,
+    subject: str,
+    from_addr: str,
+    body: str,
+    tone: str = "freundlich",
+    language: str = "de",
+    thread_context: Optional[str] = None,
+) -> Optional[str]:
+    return get_llm().adapt_template(
+        template_body,
+        subject,
+        from_addr,
+        body,
+        tone=tone,
+        language=language,
+        thread_context=thread_context,
+    )
 
 
 def build_digest(days: int = 1, limit: int = 30) -> Dict[str, Any]:

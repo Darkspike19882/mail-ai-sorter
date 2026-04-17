@@ -174,14 +174,16 @@ class LLMHelper:
         body: str,
         tone: str = "freundlich",
         language: str = "de",
+        thread_context: Optional[str] = None,
     ) -> Optional[Dict[str, str]]:
         system = (
             "Du bist ein Email-Assistent. Erstelle kurze, versandbereite Antwortentwürfe. "
             "Antworte IMMER als JSON mit den Feldern: subject, reply."
         )
-        prompt = (
-            f"Sprache: {language}\n"
-            f"Ton: {tone}\n"
+        prompt = f"Sprache: {language}\nTon: {tone}\n"
+        if thread_context:
+            prompt += f"Thread-Verlauf:\n{thread_context}\n\n"
+        prompt += (
             f"Original-Betreff: {subject}\n"
             f"Absender: {from_addr}\n"
             f"Original-Inhalt: {body[:4000]}\n\n"
@@ -204,6 +206,48 @@ class LLMHelper:
             "subject": data.get("subject") or subject,
             "reply": data.get("reply", "").strip(),
         }
+
+    def adapt_template(
+        self,
+        template_body: str,
+        subject: str,
+        from_addr: str,
+        body: str,
+        tone: str = "freundlich",
+        language: str = "de",
+        thread_context: Optional[str] = None,
+    ) -> Optional[str]:
+        system = (
+            "Du bist ein Email-Assistent. Passe die folgende Vorlage an den Kontext der aktuellen Email an. "
+            "Behalte den Grundton und die Struktur der Vorlage bei, aber passe Details, Namen, Daten und Bezüge an die konkrete Email an. "
+            "Wenn die Vorlage nicht zur Email passt, erzeuge eine passende Antwort im gleichen Stil. "
+            "Antworte IMMER als JSON mit dem Feld: reply."
+        )
+        prompt = (
+            f"Sprache: {language}\n"
+            f"Ton: {tone}\n"
+            f"Vorlage: {template_body}\n"
+            f"Original-Betreff: {subject}\n"
+            f"Absender: {from_addr}\n"
+            f"Original-Inhalt: {body[:4000]}\n"
+        )
+        if thread_context:
+            prompt += f"Thread-Verlauf:\n{thread_context}\n"
+        prompt += "\nPasse die Vorlage an diese Email an."
+        result = self.chat(
+            [{"role": "user", "content": prompt}],
+            system=system,
+            json_format=True,
+            temperature=0.4,
+            max_tokens=400,
+        )
+        if not result:
+            return None
+        try:
+            data = json.loads(result)
+            return data.get("reply", "").strip()
+        except json.JSONDecodeError:
+            return result.strip()
 
     def should_notify(
         self, subject: str, from_addr: str, category: str, importance: str

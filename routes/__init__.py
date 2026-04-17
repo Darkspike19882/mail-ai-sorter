@@ -7,6 +7,7 @@ from .page_routes import page_bp
 from .rag_routes import rag_bp
 from .sorter_routes import sorter_bp
 from .telegram_routes import telegram_bp
+from .template_routes import template_bp
 
 
 def register_blueprints(app):
@@ -20,3 +21,4 @@ def register_blueprints(app):
     app.register_blueprint(rag_bp)
     app.register_blueprint(sorter_bp)
     app.register_blueprint(telegram_bp)
+    app.register_blueprint(template_bp)

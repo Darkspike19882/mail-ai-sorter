@@ -47,16 +47,55 @@ def api_llm_analyze_email():
 @llm_bp.route("/api/llm/quick-reply", methods=["POST"])
 def api_llm_quick_reply():
     data = request.json or {}
+    thread_items = data.get("thread_context") or []
+    thread_context = None
+    if thread_items:
+        parts = []
+        for item in thread_items[-3:]:
+            parts.append(
+                f"  Von: {item.get('from', '?')} | Betreff: {item.get('subject', '?')}\n  {item.get('body', '')[:500]}"
+            )
+        thread_context = "\n".join(parts)
     result = llm_service.draft_reply(
         subject=data.get("subject", ""),
         from_addr=data.get("from_addr", ""),
         body=data.get("body", ""),
         tone=data.get("tone", "freundlich"),
         language=data.get("language", "de"),
+        thread_context=thread_context,
     )
     if not result:
         return _json_error("LLM nicht erreichbar", 503)
     return jsonify({"success": True, **result})
+
+
+@llm_bp.route("/api/llm/adapt-template", methods=["POST"])
+def api_llm_adapt_template():
+    data = request.json or {}
+    template_body = data.get("template_body", "")
+    if not template_body:
+        return _json_error("Vorlagen-Text fehlt", 400)
+    thread_items = data.get("thread_context") or []
+    thread_context = None
+    if thread_items:
+        parts = []
+        for item in thread_items[-3:]:
+            parts.append(
+                f"  Von: {item.get('from', '?')} | Betreff: {item.get('subject', '?')}\n  {item.get('body', '')[:500]}"
+            )
+        thread_context = "\n".join(parts)
+    result = llm_service.adapt_template(
+        template_body=template_body,
+        subject=data.get("subject", ""),
+        from_addr=data.get("from_addr", ""),
+        body=data.get("body", ""),
+        tone=data.get("tone", "freundlich"),
+        language=data.get("language", "de"),
+        thread_context=thread_context,
+    )
+    if result is None:
+        return _json_error("LLM nicht erreichbar", 503)
+    return jsonify({"success": True, "reply": result})
 
 
 @llm_bp.route("/api/llm/digest")
