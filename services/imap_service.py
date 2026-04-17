@@ -12,13 +12,15 @@ import ssl
 from typing import Any, Dict, List, Optional, Tuple
 
 from services import inbox_service
+from config_service import inject_account_secret
 
 
 def connect(account: Dict[str, Any]):
+    account = inject_account_secret(account)
     host = account.get("imap_host", "")
     port = int(account.get("imap_port", 993))
     username = account.get("username", "")
-    password = account.get("password") or os.getenv(account.get("password_env", ""), "")
+    password = account.get("password", "")
     encryption = str(account.get("imap_encryption", "ssl")).lower()
     timeout = int(account.get("imap_timeout_sec", 25))
     if not host:

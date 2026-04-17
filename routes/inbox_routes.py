@@ -5,7 +5,7 @@ from pathlib import Path
 from flask import Blueprint, jsonify, request
 
 import memory
-from config_service import get_account, load_config
+from config_service import get_account, inject_account_secret, load_config
 from services import imap_service, inbox_service
 
 
@@ -211,7 +211,9 @@ def api_unified_inbox():
     cfg = load_config()
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
-            executor.submit(_fetch_account_inbox, acc, per_page, page): acc
+            executor.submit(
+                _fetch_account_inbox, inject_account_secret(acc), per_page, page
+            ): acc
             for acc in cfg.get("accounts", [])
         }
         account_results = []
