@@ -75,34 +75,53 @@ def api_delete_tag(msg_uid, account_name, folder):
 def api_search():
     query = request.args.get("q", "")
     category = request.args.get("category", "")
+    account = request.args.get("account", "")
+    folder = request.args.get("folder", "")
+    since = request.args.get("since", "")
+    before = request.args.get("before", "")
     try:
         import sqlite3
 
         conn = sqlite3.connect(str(INDEX_DB))
-        cursor = conn.cursor()
         if query:
             sql = """
                 SELECT e.id, e.msg_uid, e.account, e.folder, e.from_addr, e.subject,
-                       e.date_iso, e.category, e.keywords
+                       e.date_iso, e.category, e.keywords,
+                       snippet(emails_fts, 3, '[', ']', '...', 12) AS match_snippet
                 FROM emails_fts
                 JOIN emails e ON e.id = emails_fts.rowid
                 WHERE emails_fts MATCH ?
-                ORDER BY e.date_iso DESC
-                LIMIT 20
             """
             params = [query]
         else:
             sql = """
                 SELECT id, msg_uid, account, folder, from_addr, subject,
-                       date_iso, category, keywords
+                       date_iso, category, keywords, snippet AS match_snippet
                 FROM emails
                 WHERE 1=1
             """
             params = []
-            if category:
-                sql += " AND category = ?"
-                params.append(category)
-            sql += " ORDER BY date_iso DESC LIMIT 20"
+
+        if category:
+            sql += " AND e.category = ?" if query else " AND category = ?"
+            params.append(category)
+        if account:
+            sql += " AND e.account = ?" if query else " AND account = ?"
+            params.append(account)
+        if folder:
+            sql += " AND e.folder = ?" if query else " AND folder = ?"
+            params.append(folder)
+        if since:
+            sql += " AND e.date_iso >= ?" if query else " AND date_iso >= ?"
+            params.append(since)
+        if before:
+            sql += " AND e.date_iso < ?" if query else " AND date_iso < ?"
+            params.append(before)
+
+        sql += " ORDER BY e.date_iso DESC" if query else " ORDER BY date_iso DESC"
+        sql += " LIMIT 50"
+
+        cursor = conn.cursor()
         cursor.execute(sql, params)
         results = cursor.fetchall()
         columns = [
@@ -115,6 +134,7 @@ def api_search():
             "date_iso",
             "category",
             "keywords",
+            "match_snippet",
         ]
         emails = inbox_service.decorate_emails(
             [

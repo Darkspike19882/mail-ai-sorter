@@ -29,25 +29,45 @@ class RAGEngine:
         conn.row_factory = sqlite3.Row
         return conn
 
-    def search_emails(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
+    def search_emails(
+        self,
+        query: str,
+        limit: int = 10,
+        account: Optional[str] = None,
+        folder: Optional[str] = None,
+        since: Optional[str] = None,
+        before: Optional[str] = None,
+    ) -> List[Dict[str, Any]]:
         if not query or not query.strip():
             return []
         conn = self._get_index_db()
         try:
             safe_query = query.replace('"', '""')
-            rows = conn.execute(
-                f"""
+            sql = """
                 SELECT e.id, e.account, e.folder, e.msg_uid, e.from_addr, e.subject,
                        e.date_iso, e.category, e.snippet, e.keywords,
                        snippet(emails_fts, 3, '[', ']', '...', 15) AS match_snippet
                 FROM emails_fts
                 JOIN emails e ON e.id = emails_fts.rowid
                 WHERE emails_fts MATCH ?
-                ORDER BY e.date_iso DESC
-                LIMIT ?
-            """,
-                (safe_query, limit),
-            ).fetchall()
+            """
+            params: List[Any] = [safe_query]
+            if account:
+                sql += " AND e.account = ?"
+                params.append(account)
+            if folder:
+                sql += " AND e.folder = ?"
+                params.append(folder)
+            if since:
+                sql += " AND e.date_iso >= ?"
+                params.append(since)
+            if before:
+                sql += " AND e.date_iso < ?"
+                params.append(before)
+            sql += " ORDER BY e.date_iso DESC LIMIT ?"
+            params.append(limit)
+
+            rows = conn.execute(sql, params).fetchall()
 
             results = []
             for r in rows:
@@ -92,8 +112,23 @@ class RAGEngine:
 
         return "\n".join(parts)
 
-    def query(self, user_query: str, limit: int = 10) -> Dict[str, Any]:
-        emails = self.search_emails(user_query, limit=limit)
+    def query(
+        self,
+        user_query: str,
+        limit: int = 10,
+        account: Optional[str] = None,
+        folder: Optional[str] = None,
+        since: Optional[str] = None,
+        before: Optional[str] = None,
+    ) -> Dict[str, Any]:
+        emails = self.search_emails(
+            user_query,
+            limit=limit,
+            account=account,
+            folder=folder,
+            since=since,
+            before=before,
+        )
         context = self.build_context(emails)
 
         if not context:
@@ -172,6 +207,14 @@ class RAGEngine:
         except Exception as e:
             return None
 
+    def _check_ollama_reachable(self) -> bool:
+        try:
+            req = urllib.request.Request(f"{self.ollama_url}/api/tags")
+            with urllib.request.urlopen(req, timeout=2) as resp:
+                return resp.status == 200
+        except Exception:
+            return False
+
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_index_db()
         try:
@@ -187,6 +230,7 @@ class RAGEngine:
             ).fetchall()
 
             query_count = memory.get_rag_query_count()
+            ollama_reachable = self._check_ollama_reachable()
 
             return {
                 "total_emails": total,
@@ -198,6 +242,7 @@ class RAGEngine:
                 "rag_queries": query_count,
                 "model": self.model,
                 "ollama_url": self.ollama_url,
+                "ollama_reachable": ollama_reachable,
             }
         finally:
             conn.close()

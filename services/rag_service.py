@@ -3,7 +3,7 @@
 Shared RAG service wrapper.
 """
 
-from typing import Any, Dict
+from typing import Any, Dict, Optional
 
 from config_service import load_config
 from rag_engine import RAGEngine
@@ -16,8 +16,22 @@ def get_engine() -> RAGEngine:
     return RAGEngine(ollama_url=ollama_url, model=model)
 
 
-def query(user_query: str, limit: int = 10) -> Dict[str, Any]:
-    return get_engine().query(user_query, limit=limit)
+def query(
+    user_query: str,
+    limit: int = 10,
+    account: Optional[str] = None,
+    folder: Optional[str] = None,
+    since: Optional[str] = None,
+    before: Optional[str] = None,
+) -> Dict[str, Any]:
+    return get_engine().query(
+        user_query,
+        limit=limit,
+        account=account,
+        folder=folder,
+        since=since,
+        before=before,
+    )
 
 
 def get_status() -> Dict[str, Any]:

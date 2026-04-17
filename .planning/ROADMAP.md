@@ -11,7 +11,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
-- [ ] **Phase 2: Search & Grounded Retrieval** - Users can quickly find mail and ask grounded questions over the local corpus.
+- [x] **Phase 2: Search & Grounded Retrieval** - Users can find mail and ask grounded questions over the local corpus.
 - [ ] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
 - [ ] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
 - [ ] **Phase 5: Local-First Trust & Deployment** - Users can run the full product without required cloud dependencies and with a DSGVO-conscious operating model.
@@ -42,9 +42,9 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   3. User can find emails using context from attached or extracted document content when that content is available locally.
   4. User can ask AI-assisted questions over the local mail corpus and see grounded results tied back to source emails.
 **Plans**: 3 plans
-- [ ] 02-01-PLAN.md — Backend search enhancements (extend search API + FTS filters + Ollama health check)
-- [ ] 02-02-PLAN.md — AI Q&A backend + frontend panel (RAG history endpoint + AI panel drawer)
-- [ ] 02-03-PLAN.md — Frontend search enhancements (filter chips + match snippets + keyboard shortcuts)
+- [x] 02-01-PLAN — Backend search enhancements (extend search API + FTS filters + Ollama health check)
+- [x] 02-02-PLAN — AI Q&A backend + frontend panel (RAG history endpoint + AI panel drawer)
+- [x] 02-03-PLAN — Frontend search enhancements (filter chips + match snippets + keyboard shortcuts)
 **UI hint**: yes
 
 ### Phase 3: Fast Reply Workflow
@@ -86,7 +86,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
 | 1. Unified Inbox & Thread Reading | 3/3 | Completed | 2026-04-17 |
-| 2. Search & Grounded Retrieval | 0/3 | Planning complete | - |
+| 2. Search & Grounded Retrieval | 3/3 | Completed | 2026-04-17 |
 | 3. Fast Reply Workflow | 0/TBD | Not started | - |
 | 4. Delayed Sorting & Reviewability | 0/TBD | Not started | - |
 | 5. Local-First Trust & Deployment | 0/TBD | Not started | - |

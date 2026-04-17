@@ -10,6 +10,7 @@ Befehle:
   python3 index.py stats
   python3 index.py rebuild --config config.json   (re-indiziert alles)
 """
+
 import argparse
 import datetime as dt
 import json
@@ -85,6 +86,7 @@ def get_db(path: str = DB_PATH) -> sqlite3.Connection:
 
 # ── Write ───────────────────────────────────────────────────────────────────────
 
+
 def index_email(
     conn: sqlite3.Connection,
     account: str,
@@ -114,12 +116,23 @@ def index_email(
             snippet    = excluded.snippet,
             indexed_at = datetime('now')
         """,
-        (account, folder, msg_uid, from_addr, subject, date_iso, category, kw_str, snippet),
+        (
+            account,
+            folder,
+            msg_uid,
+            from_addr,
+            subject,
+            date_iso,
+            category,
+            kw_str,
+            snippet,
+        ),
     )
     conn.commit()
 
 
 # ── Search ──────────────────────────────────────────────────────────────────────
+
 
 def search(
     conn: sqlite3.Connection,
@@ -127,12 +140,14 @@ def search(
     category: Optional[str] = None,
     from_filter: Optional[str] = None,
     since: Optional[str] = None,
+    before: Optional[str] = None,
+    account: Optional[str] = None,
+    folder: Optional[str] = None,
     limit: int = 30,
 ) -> List[sqlite3.Row]:
     """Full-text + filter search. Returns matching rows, newest first."""
 
     if query:
-        # FTS5 search
         sql = """
             SELECT e.id, e.account, e.folder, e.from_addr, e.subject,
                    e.date_iso, e.category, e.keywords,
@@ -160,6 +175,15 @@ def search(
     if since:
         sql += " AND e.date_iso >= ?" if query else " AND date_iso >= ?"
         params.append(since)
+    if before:
+        sql += " AND e.date_iso < ?" if query else " AND date_iso < ?"
+        params.append(before)
+    if account:
+        sql += " AND e.account = ?" if query else " AND account = ?"
+        params.append(account)
+    if folder:
+        sql += " AND e.folder = ?" if query else " AND folder = ?"
+        params.append(folder)
 
     sql += " ORDER BY e.date_iso DESC" if query else " ORDER BY date_iso DESC"
     sql += f" LIMIT {limit}"
@@ -169,11 +193,12 @@ def search(
 
 # ── Stats ───────────────────────────────────────────────────────────────────────
 
+
 def stats(conn: sqlite3.Connection) -> None:
     total = conn.execute("SELECT COUNT(*) FROM emails").fetchone()[0]
-    print(f"\n{'═'*55}")
+    print(f"\n{'═' * 55}")
     print(f"  Mail-Index: {total:,} indizierte Mails")
-    print(f"{'═'*55}")
+    print(f"{'═' * 55}")
 
     print("\n  Nach Kategorie:")
     rows = conn.execute(
@@ -192,21 +217,22 @@ def stats(conn: sqlite3.Connection) -> None:
     oldest = conn.execute("SELECT MIN(date_iso) FROM emails").fetchone()[0]
     newest = conn.execute("SELECT MAX(date_iso) FROM emails").fetchone()[0]
     print(f"\n  Zeitraum: {oldest or '?'} → {newest or '?'}")
-    print(f"{'═'*55}\n")
+    print(f"{'═' * 55}\n")
 
 
 # ── CLI ─────────────────────────────────────────────────────────────────────────
 
+
 def _fmt_row(r: sqlite3.Row, i: int) -> str:
     date = (r["date_iso"] or "")[:10]
-    cat  = (r["category"] or "").ljust(11)
-    frm  = (r["from_addr"] or "")[:30].ljust(30)
+    cat = (r["category"] or "").ljust(11)
+    frm = (r["from_addr"] or "")[:30].ljust(30)
     subj = (r["subject"] or "")[:55]
     try:
         snip = (r["match_snippet"] or "").replace("\n", " ")[:80]
     except (IndexError, KeyError):
         snip = ""
-    kw   = (r["keywords"] or "")[:40]
+    kw = (r["keywords"] or "")[:40]
 
     lines = [
         f"  {i:>3}. [{date}] {cat} | {frm}",
@@ -230,6 +256,9 @@ def main() -> int:
     sp.add_argument("--category", "-c", help="Nur diese Kategorie")
     sp.add_argument("--from", dest="from_filter", help="Absender enthält...")
     sp.add_argument("--since", help="Nur ab Datum (YYYY-MM-DD)")
+    sp.add_argument("--before", help="Nur vor Datum (YYYY-MM-DD)")
+    sp.add_argument("--account", help="Nur dieses Konto")
+    sp.add_argument("--folder", help="Nur diesen Ordner")
     sp.add_argument("--limit", type=int, default=30)
     sp.add_argument("--db", default=DB_PATH)
 
@@ -260,6 +289,9 @@ def main() -> int:
             category=args.category,
             from_filter=args.from_filter,
             since=args.since,
+            before=getattr(args, "before", None),
+            account=getattr(args, "account", None),
+            folder=getattr(args, "folder", None),
             limit=args.limit,
         )
         if not rows:
@@ -290,11 +322,11 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
     global_cfg = cfg["global"]
 
     for acc in cfg.get("accounts", []):
-        name     = acc["name"]
-        host     = acc["imap_host"]
-        port     = int(acc.get("imap_port", 993))
+        name = acc["name"]
+        host = acc["imap_host"]
+        port = int(acc.get("imap_port", 993))
         username = acc["username"]
-        pw       = acc.get("password") or os.getenv(acc.get("password_env", ""))
+        pw = acc.get("password") or os.getenv(acc.get("password_env", ""))
         if not pw:
             print(f"[{name}] SKIP: Passwort fehlt", file=sys.stderr)
             continue
@@ -304,7 +336,9 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
 
         print(f"[{name}] verbinde {host}:{port} …")
         try:
-            conn_imap = imaplib.IMAP4_SSL(host, port, ssl_context=ssl.create_default_context())
+            conn_imap = imaplib.IMAP4_SSL(
+                host, port, ssl_context=ssl.create_default_context()
+            )
             conn_imap.login(username, pw)
         except Exception as e:
             print(f"[{name}] Login fehlgeschlagen: {e}", file=sys.stderr)
@@ -312,7 +346,9 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
 
         total_indexed = 0
         for folder in folders:
-            category = next((k for k, v in target_folders.items() if v == folder), folder.lower())
+            category = next(
+                (k for k, v in target_folders.items() if v == folder), folder.lower()
+            )
             typ, _ = conn_imap.select(folder)
             if typ != "OK":
                 continue
@@ -330,14 +366,15 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
                 continue
 
             import re as _re
+
             for item in headers:
                 if not isinstance(item, tuple) or len(item) < 2:
                     continue
                 if not isinstance(item[1], bytes):
                     continue
                 uid_m = _re.search(rb"UID\s+(\d+)", item[0])
-                uid   = uid_m.group(1).decode() if uid_m else None
-                msg   = email_lib.message_from_bytes(item[1])
+                uid = uid_m.group(1).decode() if uid_m else None
+                msg = email_lib.message_from_bytes(item[1])
 
                 def _dh(v: object) -> str:
                     if not v:
@@ -347,15 +384,17 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
                     for chunk, enc in parts:
                         if isinstance(chunk, bytes):
                             try:
-                                out.append(chunk.decode(enc or "utf-8", errors="replace"))
+                                out.append(
+                                    chunk.decode(enc or "utf-8", errors="replace")
+                                )
                             except (LookupError, TypeError):
                                 out.append(chunk.decode("utf-8", errors="replace"))
                         else:
                             out.append(str(chunk))
                     return "".join(out)
 
-                subject  = _dh(msg.get("Subject"))
-                from_a   = _dh(msg.get("From"))
+                subject = _dh(msg.get("Subject"))
+                from_a = _dh(msg.get("From"))
                 date_raw = msg.get("Date", "")
                 try:
                     d = email_lib.utils.parsedate_to_datetime(date_raw)
@@ -363,8 +402,9 @@ def _rebuild(conn: sqlite3.Connection, config_path: str, db_path: str) -> None:
                 except Exception:
                     date_iso = None
 
-                index_email(conn, name, folder, from_a, subject,
-                            date_iso, category, [], "", uid)
+                index_email(
+                    conn, name, folder, from_a, subject, date_iso, category, [], "", uid
+                )
                 total_indexed += 1
 
             print(f"  {folder}: {len(msg_ids)} Mails indiziert")
