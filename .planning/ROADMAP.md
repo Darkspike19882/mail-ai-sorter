@@ -10,7 +10,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 - Integer phases (1, 2, 3): Planned milestone work
 - Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
-- [ ] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
+- [x] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
 - [ ] **Phase 2: Search & Grounded Retrieval** - Users can quickly find mail and ask grounded questions over the local corpus.
 - [ ] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
 - [ ] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
@@ -26,7 +26,10 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   1. User can open one unified inbox that shows mail from multiple configured accounts.
   2. User can open a conversation in a thread-centered view instead of reading messages in isolation.
   3. User can move quickly between the message list and thread detail without losing context.
-**Plans**: TBD
+**Plans**:
+  1. Plan 1 - Harden Unified Inbox Data Flow
+  2. Plan 2 - Make Reading Truly Thread-Centered
+  3. Plan 3 - Preserve Navigation Context And Verify Phase 1
 **UI hint**: yes
 
 ### Phase 2: Search & Grounded Retrieval
@@ -38,7 +41,10 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   2. User can narrow search results by account and folder when looking for a specific message set.
   3. User can find emails using context from attached or extracted document content when that content is available locally.
   4. User can ask AI-assisted questions over the local mail corpus and see grounded results tied back to source emails.
-**Plans**: TBD
+**Plans**: 3 plans
+- [ ] 02-01-PLAN.md — Backend search enhancements (extend search API + FTS filters + Ollama health check)
+- [ ] 02-02-PLAN.md — AI Q&A backend + frontend panel (RAG history endpoint + AI panel drawer)
+- [ ] 02-03-PLAN.md — Frontend search enhancements (filter chips + match snippets + keyboard shortcuts)
 **UI hint**: yes
 
 ### Phase 3: Fast Reply Workflow
@@ -79,12 +85,12 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 
 | Phase | Plans Complete | Status | Completed |
 |-------|----------------|--------|-----------|
-| 1. Unified Inbox & Thread Reading | 0/TBD | Not started | - |
-| 2. Search & Grounded Retrieval | 0/TBD | Not started | - |
+| 1. Unified Inbox & Thread Reading | 3/3 | Completed | 2026-04-17 |
+| 2. Search & Grounded Retrieval | 0/3 | Planning complete | - |
 | 3. Fast Reply Workflow | 0/TBD | Not started | - |
 | 4. Delayed Sorting & Reviewability | 0/TBD | Not started | - |
 | 5. Local-First Trust & Deployment | 0/TBD | Not started | - |
 
 ---
 *Granularity: standard (defaulted because no explicit granularity key exists in config.json)*
-*Last updated: 2026-04-17 during roadmap creation*
+*Last updated: 2026-04-17 during phase 1 planning*

@@ -1,7 +1,5 @@
 import base64
 import concurrent.futures
-import email as email_lib
-from datetime import datetime
 from pathlib import Path
 
 from flask import Blueprint, jsonify, request
@@ -28,10 +26,22 @@ def _safe_int(val, default=1):
 
 def _fetch_account_inbox(acc, per_page, page):
     try:
-        emails, _ = imap_service.list_folder_emails(acc, "INBOX", 1, per_page * page)
-        return inbox_service.decorate_emails(emails)
-    except Exception:
-        return []
+        emails, total = imap_service.list_folder_emails(
+            acc, "INBOX", 1, per_page * page
+        )
+        return {
+            "account": acc.get("name", ""),
+            "emails": inbox_service.decorate_emails(emails),
+            "total": total,
+            "error": None,
+        }
+    except Exception as exc:
+        return {
+            "account": acc.get("name", ""),
+            "emails": [],
+            "total": 0,
+            "error": str(exc),
+        }
 
 
 @inbox_bp.route("/api/tags")
@@ -106,11 +116,33 @@ def api_search():
             "category",
             "keywords",
         ]
-        emails = [dict(zip(columns, row)) for row in results]
+        emails = inbox_service.decorate_emails(
+            [
+                inbox_service.normalize_mail_item(dict(zip(columns, row)))
+                for row in results
+            ]
+        )
         conn.close()
-        return jsonify({"emails": emails})
+        return jsonify(
+            {
+                "emails": emails,
+                "total": len(emails),
+                "page": 1,
+                "per_page": len(emails),
+                "failures": [],
+            }
+        )
     except Exception as e:
-        return jsonify({"error": str(e), "emails": []})
+        return jsonify(
+            {
+                "error": str(e),
+                "emails": [],
+                "total": 0,
+                "page": 1,
+                "per_page": 0,
+                "failures": [],
+            }
+        )
 
 
 @inbox_bp.route("/api/folders")
@@ -133,15 +165,23 @@ def api_inbox():
     per_page = _safe_int(request.args.get("per_page", 50), 50)
     acc = get_account(account_name)
     if not acc:
-        return _json_error("Account nicht gefunden", 404, emails=[], total=0)
+        return _json_error(
+            "Account nicht gefunden", 404, emails=[], total=0, failures=[]
+        )
     try:
         emails, total = imap_service.list_folder_emails(acc, folder, page, per_page)
         emails = inbox_service.decorate_emails(emails)
         return jsonify(
-            {"emails": emails, "total": total, "page": page, "per_page": per_page}
+            {
+                "emails": emails,
+                "total": total,
+                "page": page,
+                "per_page": per_page,
+                "failures": [],
+            }
         )
     except Exception as e:
-        return _json_error(str(e), 502, emails=[], total=0)
+        return _json_error(str(e), 502, emails=[], total=0, failures=[])
 
 
 @inbox_bp.route("/api/unified-inbox")
@@ -149,25 +189,16 @@ def api_unified_inbox():
     page = _safe_int(request.args.get("page", 1))
     per_page = _safe_int(request.args.get("per_page", 50), 50)
     cfg = load_config()
-    all_emails = []
     with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
         futures = {
             executor.submit(_fetch_account_inbox, acc, per_page, page): acc
             for acc in cfg.get("accounts", [])
         }
+        account_results = []
         for future in concurrent.futures.as_completed(futures):
-            all_emails.extend(future.result())
-    all_emails.sort(
-        key=lambda e: email_lib.utils.parsedate_to_datetime(e.get("date", ""))
-        if email_lib.utils.parsedate(e.get("date", ""))
-        else datetime.min,
-        reverse=True,
-    )
-    total = len(all_emails)
-    start = (page - 1) * per_page
-    paged = all_emails[start : start + per_page]
+            account_results.append(future.result())
     return jsonify(
-        {"emails": paged, "total": total, "page": page, "per_page": per_page}
+        inbox_service.merge_unified_inbox_results(account_results, page, per_page)
     )
 
 

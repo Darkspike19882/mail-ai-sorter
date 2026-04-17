@@ -37,6 +37,13 @@
         </div>
     </template>
 
+    <template x-if="degradedAccounts.length">
+        <div class="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 space-y-2">
+            <div class="font-medium">Die Unified Inbox ist nur teilweise geladen.</div>
+            <div x-text="degradedAccounts.map(item => item.account).filter(Boolean).join(', ')"></div>
+        </div>
+    </template>
+
     <template x-if="searchActive">
         <div class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 px-4 py-3 text-sm text-sky-700 dark:text-sky-200 flex flex-wrap items-center justify-between gap-3">
             <span x-text="`Suche aktiv: "${searchQuery}" (${mails.length} Treffer)`"></span>
@@ -110,6 +117,7 @@
                 <div class="flex items-center gap-2 text-xs text-slate-500">
                     <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectVisible($event.target.checked)">
                     <span x-text="visibleMails.length + ' / ' + totalMails + ' Emails'"></span>
+                    <span x-show="degradedAccounts.length" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">teilweise geladen</span>
                 </div>
             </div>
 
@@ -185,6 +193,8 @@
                         </div>
 
                         <div class="flex flex-wrap items-center gap-2 text-xs">
+                            <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" x-text="selectedMail.account"></span>
+                            <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" x-text="selectedMail.folder"></span>
                             <template x-if="selectedMail.analysis && selectedMail.analysis.importance">
                                 <span class="px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200" x-text="'Priorität: ' + selectedMail.analysis.importance"></span>
                             </template>
@@ -209,14 +219,23 @@
 
                         <template x-if="selectedMail.thread && selectedMail.thread.length">
                             <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 space-y-2">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Thread</div>
-                                <div class="space-y-1 text-sm text-slate-600 dark:text-slate-300">
+                                <div class="flex items-center justify-between gap-3">
+                                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Thread</div>
+                                    <div class="text-xs text-slate-400" x-text="selectedMail.thread.length + ' Nachrichten'"></div>
+                                </div>
+                                <div class="space-y-2 text-sm text-slate-600 dark:text-slate-300 max-h-56 overflow-y-auto pr-1">
                                     <template x-for="item in selectedMail.thread" :key="item.message_id || item.subject || item.date">
-                                        <div class="truncate">
-                                            <span class="font-medium" x-text="item.subject || '(Kein Betreff)'"></span>
-                                            <span class="text-slate-400">•</span>
-                                            <span x-text="item.from || '?' "></span>
-                                        </div>
+                                        <button
+                                            @click="openThreadItem(item)"
+                                            class="w-full text-left rounded-xl border px-3 py-2 transition-colors"
+                                            :class="item.is_selected ? 'border-primary-300 bg-primary-50 dark:border-primary-800 dark:bg-primary-950/40' : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600'">
+                                            <div class="flex items-center justify-between gap-3">
+                                                <div class="min-w-0 font-medium truncate" x-text="item.subject || '(Kein Betreff)'"></div>
+                                                <div class="text-[11px] text-slate-400 whitespace-nowrap" x-text="formatDateFull(item.date)"></div>
+                                            </div>
+                                            <div class="mt-1 text-xs text-slate-500 truncate" x-text="item.from || '?' "></div>
+                                            <div class="mt-1 text-[11px] text-slate-400" x-text="item.is_selected ? 'Aktuell geoeffnet' : 'Im Thread oeffnen'"></div>
+                                        </button>
                                     </template>
                                 </div>
                             </div>
@@ -348,6 +367,7 @@ function inboxApp() {
         accounts: [],
         mails: [],
         totalMails: 0,
+        degradedAccounts: [],
         loading: false,
         foldersLoading: false,
         page: 1,
@@ -379,6 +399,7 @@ function inboxApp() {
         showCompose: false,
         composeMode: 'new',
         compose: { account: '', to: '', cc: '', subject: '', body: '', in_reply_to: '', references: '', attachments: [] },
+        storageKey: 'mail-ai-sorter.inbox-state.v1',
 
         async fetchJson(url, options = {}) {
             const response = await fetch(url, options);
@@ -429,8 +450,96 @@ function inboxApp() {
             this.accounts = (cfg.accounts || []).map(acc => ({ name: acc.name, folders: [], expanded: true, unreadTotal: 0 }));
             this.compose.account = this.accounts[0]?.name || '';
             await this.refreshFolders();
-            await this.selectUnified();
+            this.restoreState();
+            if (this.searchActive) await this.runSearch();
+            else await this.loadMails();
+            await this.restoreSelectedMail();
             this.$nextTick(() => lucide.createIcons());
+        },
+
+        serializeState() {
+            const selected = this.selectedMail || this.findSelectedMail();
+            return {
+                isUnified: this.isUnified,
+                currentAccount: this.currentAccount,
+                currentFolder: this.currentFolder,
+                page: this.page,
+                searchQuery: this.searchQuery,
+                activePriorityFilter: this.activePriorityFilter,
+                selectedMail: selected ? {
+                    account: selected.account,
+                    folder: selected.folder,
+                    uid: selected.uid,
+                } : null,
+            };
+        },
+
+        syncUrl() {
+            const params = new URLSearchParams();
+            params.set('view', this.isUnified ? 'unified' : 'folder');
+            if (!this.isUnified && this.currentAccount) params.set('account', this.currentAccount);
+            if (!this.isUnified && this.currentFolder) params.set('folder', this.currentFolder);
+            if (this.searchQuery) params.set('q', this.searchQuery);
+            if (this.page > 1) params.set('page', String(this.page));
+            if (this.activePriorityFilter !== 'all') params.set('priority', this.activePriorityFilter);
+            const selected = this.selectedMail || this.findSelectedMail();
+            if (selected?.account) params.set('selected_account', selected.account);
+            if (selected?.folder) params.set('selected_folder', selected.folder);
+            if (selected?.uid) params.set('selected_uid', selected.uid);
+            const query = params.toString();
+            const nextUrl = query ? `${window.location.pathname}?${query}` : window.location.pathname;
+            window.history.replaceState({}, '', nextUrl);
+        },
+
+        persistState() {
+            const state = this.serializeState();
+            localStorage.setItem(this.storageKey, JSON.stringify(state));
+            this.syncUrl();
+        },
+
+        restoreState() {
+            let stored = {};
+            try {
+                stored = JSON.parse(localStorage.getItem(this.storageKey) || '{}') || {};
+            } catch (_) {
+                stored = {};
+            }
+            const params = new URLSearchParams(window.location.search);
+            const view = params.get('view') || (stored.isUnified === false ? 'folder' : 'unified');
+            this.isUnified = view !== 'folder';
+            this.currentAccount = params.get('account') || stored.currentAccount || '';
+            this.currentFolder = params.get('folder') || stored.currentFolder || (this.isUnified ? '' : 'INBOX');
+            this.page = Math.max(1, Number(params.get('page') || stored.page || 1));
+            this.searchQuery = params.get('q') || stored.searchQuery || '';
+            this.activePriorityFilter = params.get('priority') || stored.activePriorityFilter || 'all';
+            const selectedAccount = params.get('selected_account') || stored.selectedMail?.account || '';
+            const selectedFolder = params.get('selected_folder') || stored.selectedMail?.folder || '';
+            const selectedUid = params.get('selected_uid') || stored.selectedMail?.uid || '';
+            this.selectedMail = null;
+            this.selectedMailKey = selectedAccount && selectedFolder && selectedUid ? `${selectedAccount}:${selectedFolder}:${selectedUid}` : '';
+            if (!this.isUnified && !this.currentFolder) this.currentFolder = 'INBOX';
+            if (this.isUnified) {
+                this.currentAccount = '';
+                this.currentFolder = '';
+            }
+        },
+
+        findSelectedMail() {
+            return this.mails.find(mail => this.mailKey(mail) === this.selectedMailKey) || null;
+        },
+
+        async restoreSelectedMail() {
+            const mail = this.findSelectedMail();
+            if (!mail) {
+                if (!this.mails.some(item => this.mailKey(item) === this.selectedMailKey)) {
+                    this.selectedMail = null;
+                    this.selectedMailKey = '';
+                    this.persistState();
+                }
+                return;
+            }
+            if (this.selectedMail && this.mailKey(this.selectedMail) === this.selectedMailKey) return;
+            await this.selectMail(mail, { preserveState: true });
         },
 
         mailKey(mail) {
@@ -535,7 +644,7 @@ function inboxApp() {
             this.currentAccount = '';
             this.currentFolder = '';
             this.page = 1;
-            this.clearSearch();
+            this.clearSearch(false);
             this.selectedMail = null;
             this.selectedMailKey = '';
             await this.loadMails();
@@ -546,7 +655,7 @@ function inboxApp() {
             this.currentAccount = account;
             this.currentFolder = folder;
             this.page = 1;
-            this.clearSearch();
+            this.clearSearch(false);
             this.selectedMail = null;
             this.selectedMailKey = '';
             await this.loadMails();
@@ -555,6 +664,7 @@ function inboxApp() {
         async loadMails(append = false) {
             this.loading = true;
             this.inboxError = '';
+            this.degradedAccounts = [];
             try {
                 const url = this.isUnified
                     ? `/api/unified-inbox?page=${this.page}&per_page=${this.perPage}`
@@ -568,9 +678,13 @@ function inboxApp() {
                     this.mails = incoming;
                 }
                 this.totalMails = data.total || 0;
+                this.degradedAccounts = data.failures || [];
+                await this.restoreSelectedMail();
+                this.persistState();
             } catch (error) {
                 this.mails = [];
                 this.totalMails = 0;
+                this.degradedAccounts = [];
                 this.inboxError = error.message || 'Inbox konnte nicht geladen werden';
                 showNotification(error.message || 'Inbox konnte nicht geladen werden', 'error');
             } finally {
@@ -585,15 +699,19 @@ function inboxApp() {
             await this.loadMails(true);
         },
 
-        clearSearch() {
-            if (!this.searchQuery) return;
+        clearSearch(reload = true) {
+            if (!this.searchQuery && reload) {
+                this.persistState();
+                return;
+            }
             this.searchQuery = '';
             clearTimeout(this.searchTimer);
             this.page = 1;
-            this.loadMails();
+            if (reload) this.loadMails();
+            else this.persistState();
         },
 
-        async selectMail(mail) {
+        async selectMail(mail, options = {}) {
             this.selectedMailKey = this.mailKey(mail);
             if (!mail.seen) {
                 mail.seen = true;
@@ -607,11 +725,24 @@ function inboxApp() {
                 this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`);
                 this.quickReply = { subject: '', reply: '' };
                 this.newTag = '';
+                this.persistState();
                 this.$nextTick(() => lucide.createIcons());
             } catch (error) {
                 this.selectedMail = null;
+                if (!options.preserveState) this.persistState();
                 showNotification(error.message || 'Email konnte nicht geladen werden', 'error');
             }
+        },
+
+        async openThreadItem(item) {
+            if (!item?.uid || item.is_selected) return;
+            const listItem = this.mails.find(mail => this.mailKey(mail) === this.mailKey(item));
+            if (listItem) {
+                await this.selectMail(listItem);
+                return;
+            }
+            this.selectedMailKey = this.mailKey(item);
+            await this.selectMail(item);
         },
 
         async toggleFlag(mail) {
@@ -663,33 +794,38 @@ function inboxApp() {
                 this.selectedMail = null;
                 this.selectedMailKey = '';
             }
+            this.persistState();
             showNotification('Email gelöscht');
+        },
+
+        async runSearch() {
+            if (!this.searchQuery) {
+                this.degradedAccounts = [];
+                await this.loadMails();
+                return;
+            }
+            this.loading = true;
+            this.inboxError = '';
+            this.degradedAccounts = [];
+            try {
+                const data = await this.fetchJson('/api/search?q=' + encodeURIComponent(this.searchQuery));
+                this.page = 1;
+                this.mails = data.emails || [];
+                this.totalMails = data.total || this.mails.length;
+                await this.restoreSelectedMail();
+                this.persistState();
+            } catch (error) {
+                this.inboxError = error.message || 'Suche fehlgeschlagen';
+                showNotification(error.message || 'Suche fehlgeschlagen', 'error');
+            } finally {
+                this.loading = false;
+            }
         },
 
         debounceSearch() {
             clearTimeout(this.searchTimer);
             this.searchTimer = setTimeout(async () => {
-                if (!this.searchQuery) {
-                    await this.loadMails();
-                    return;
-                }
-                try {
-                    const data = await this.fetchJson('/api/search?q=' + encodeURIComponent(this.searchQuery));
-                    this.page = 1;
-                    this.mails = (data.emails || []).filter(mail => mail.msg_uid).map(mail => ({
-                        uid: String(mail.msg_uid || ''),
-                        account: mail.account,
-                        folder: mail.folder,
-                        from: mail.from_addr,
-                        subject: mail.subject,
-                        date: mail.date_iso,
-                        seen: true,
-                        flagged: false,
-                    }));
-                    this.totalMails = this.mails.length;
-                } catch (error) {
-                    showNotification(error.message || 'Suche fehlgeschlagen', 'error');
-                }
+                await this.runSearch();
             }, 250);
         },
 
@@ -727,6 +863,7 @@ function inboxApp() {
             if (this.selectedMail && ['tag', 'untag'].includes(action)) {
                 await this.selectMail(this.selectedMail);
             }
+            this.persistState();
         },
 
         async addTagForMail(tag) {
@@ -744,12 +881,14 @@ function inboxApp() {
             this.selectedMail.tags = this.selectedMail.tags || [];
             if (!this.selectedMail.tags.includes(tag)) this.selectedMail.tags.push(tag);
             this.newTag = '';
+            this.persistState();
         },
 
         async removeTagForMail(tag) {
             if (!this.selectedMail) return;
             await this.fetchJson(`/api/tags/${this.selectedMail.uid}/${this.selectedMail.account}/${this.selectedMail.folder}?tag=${encodeURIComponent(tag)}`, { method: 'DELETE' });
             this.selectedMail.tags = (this.selectedMail.tags || []).filter(item => item !== tag);
+            this.persistState();
         },
 
         async generateAnalysis() {
@@ -807,6 +946,7 @@ function inboxApp() {
                 return;
             }
             this.quickReply = { subject: data.subject || '', reply: data.reply || '' };
+            this.persistState();
         },
 
         useQuickReply() {

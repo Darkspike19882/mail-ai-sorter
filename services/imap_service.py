@@ -9,8 +9,9 @@ import imaplib
 import os
 import re
 import ssl
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Tuple
+
+from services import inbox_service
 
 
 def connect(account: Dict[str, Any]):
@@ -83,6 +84,144 @@ def parse_list_unsubscribe(header_value: str) -> List[str]:
         if value:
             options.append(value)
     return options
+
+
+def normalize_message_id(value: Any) -> str:
+    text = str(value or "").strip()
+    if not text:
+        return ""
+    return text.strip("<>").strip()
+
+
+def extract_reference_ids(value: Any) -> List[str]:
+    if not value:
+        return []
+    ids = []
+    for match in re.findall(r"<([^>]+)>", str(value)):
+        normalized = normalize_message_id(match)
+        if normalized and normalized not in ids:
+            ids.append(normalized)
+    return ids
+
+
+def search_header_ids(conn, header_name: str, message_id: str) -> List[bytes]:
+    if not message_id:
+        return []
+    try:
+        typ, data = conn.search("UTF-8", f'HEADER {header_name} "<{message_id}>"')
+    except Exception:
+        return []
+    if typ != "OK" or not data or not data[0]:
+        return []
+    return data[0].split()
+
+
+def fetch_thread_headers(
+    conn,
+    sequence_ids: List[bytes],
+    account_name: str,
+    folder: str,
+    selected_uid: str,
+) -> List[Dict[str, Any]]:
+    if not sequence_ids:
+        return []
+    id_str = b",".join(sequence_ids)
+    typ, fetched = conn.fetch(
+        id_str,
+        "(UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES)])",
+    )
+    if typ != "OK" or not fetched:
+        return []
+
+    thread_items = []
+    for item in fetched:
+        if not isinstance(item, tuple) or len(item) < 2:
+            continue
+        header_bytes = item[1] if isinstance(item[1], bytes) else item[1].encode()
+        flags_str = (
+            item[0].decode(errors="replace")
+            if isinstance(item[0], bytes)
+            else str(item[0])
+        )
+        uid = parse_uid([item])
+        if not uid:
+            continue
+        thread_items.append(
+            inbox_service.normalize_mail_item(
+                {
+                    "uid": uid,
+                    "account": account_name,
+                    "folder": folder,
+                    "seen": "\\Seen" in flags_str,
+                    "flagged": "\\Flagged" in flags_str,
+                    "is_selected": uid == str(selected_uid),
+                    **extract_envelope(header_bytes),
+                }
+            )
+        )
+    return inbox_service.sort_mail_items(thread_items)
+
+
+def build_thread_timeline(
+    conn,
+    account_name: str,
+    folder: str,
+    uid: str,
+    envelope: Dict[str, Any],
+    flags_str: str,
+) -> List[Dict[str, Any]]:
+    current_message_id = normalize_message_id(envelope.get("message_id"))
+    related_ids = extract_reference_ids(envelope.get("references"))
+    in_reply_to = normalize_message_id(envelope.get("in_reply_to"))
+    if in_reply_to and in_reply_to not in related_ids:
+        related_ids.append(in_reply_to)
+    if current_message_id and current_message_id not in related_ids:
+        related_ids.append(current_message_id)
+
+    if not related_ids:
+        return [
+            inbox_service.normalize_mail_item(
+                {
+                    "uid": uid,
+                    "account": account_name,
+                    "folder": folder,
+                    "seen": "\\Seen" in flags_str,
+                    "flagged": "\\Flagged" in flags_str,
+                    "is_selected": True,
+                    **envelope,
+                }
+            )
+        ]
+
+    sequence_ids = []
+    seen_sequence_ids = set()
+    for message_id in related_ids:
+        for header_name in ("Message-ID", "References", "In-Reply-To"):
+            for sequence_id in search_header_ids(conn, header_name, message_id):
+                if sequence_id in seen_sequence_ids:
+                    continue
+                seen_sequence_ids.add(sequence_id)
+                sequence_ids.append(sequence_id)
+
+    thread_items = fetch_thread_headers(
+        conn, sequence_ids[:25], account_name, folder, uid
+    )
+    current_key = str(uid)
+    if not any(item.get("uid") == current_key for item in thread_items):
+        thread_items.append(
+            inbox_service.normalize_mail_item(
+                {
+                    "uid": uid,
+                    "account": account_name,
+                    "folder": folder,
+                    "seen": "\\Seen" in flags_str,
+                    "flagged": "\\Flagged" in flags_str,
+                    "is_selected": True,
+                    **envelope,
+                }
+            )
+        )
+    return inbox_service.sort_mail_items(thread_items)
 
 
 def list_folders(account: Dict[str, Any]) -> Dict[str, Any]:
@@ -226,12 +365,7 @@ def list_unified_inbox(
             emails.extend(account_emails)
         except Exception:
             pass
-    emails.sort(
-        key=lambda item: email_lib.utils.parsedate_to_datetime(item.get("date", ""))
-        if email_lib.utils.parsedate(item.get("date", ""))
-        else datetime.min,
-        reverse=True,
-    )
+    emails = inbox_service.sort_mail_items(emails)
     total = len(emails)
     start = (page - 1) * per_page
     return emails[start : start + per_page], total
@@ -307,43 +441,29 @@ def get_email_detail(account: Dict[str, Any], folder: str, uid: str) -> Dict[str
                 else:
                     body_text = content
 
-        thread = []
-        refs_header = envelope.get("references", "") or envelope.get("in_reply_to", "")
-        if refs_header:
-            try:
-                ref_ids = [
-                    value.strip().strip("<>")
-                    for value in refs_header.split()
-                    if value.strip().startswith("<")
-                ]
-                if ref_ids:
-                    safe_ref = ref_ids[-1].replace('"', '\\"').replace("\\", "\\\\")
-                    search_criteria = f'(OR HEADER Message-ID "<{safe_ref}>" HEADER References "<{safe_ref}>")'
-                    typ_s, data_s = conn.search("UTF-8", search_criteria)
-                    if typ_s == "OK" and data_s and data_s[0]:
-                        thread_ids = data_s[0].split()
-                        if len(thread_ids) > 1:
-                            id_str = b",".join(thread_ids[:10])
-                            typ_f, fetched_t = conn.fetch(
-                                id_str,
-                                "(BODY.PEEK[HEADER.FIELDS (FROM SUBJECT DATE MESSAGE-ID)])",
-                            )
-                            if typ_f == "OK" and fetched_t:
-                                for item in fetched_t:
-                                    if not isinstance(item, tuple) or len(item) < 2:
-                                        continue
-                                    header = (
-                                        item[1]
-                                        if isinstance(item[1], bytes)
-                                        else item[1].encode()
-                                    )
-                                    env = extract_envelope(header)
-                                    if env.get("message_id") != envelope.get(
-                                        "message_id"
-                                    ):
-                                        thread.append(env)
-            except Exception:
-                pass
+        try:
+            thread = build_thread_timeline(
+                conn,
+                account["name"],
+                folder,
+                uid,
+                envelope,
+                flags_str,
+            )
+        except Exception:
+            thread = [
+                inbox_service.normalize_mail_item(
+                    {
+                        "uid": uid,
+                        "account": account["name"],
+                        "folder": folder,
+                        "seen": "\\Seen" in flags_str,
+                        "flagged": "\\Flagged" in flags_str,
+                        "is_selected": True,
+                        **envelope,
+                    }
+                )
+            ]
 
         return {
             "uid": uid,
