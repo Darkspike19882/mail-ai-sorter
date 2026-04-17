@@ -13,7 +13,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 - [x] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
 - [x] **Phase 2: Search & Grounded Retrieval** - Users can find mail and ask grounded questions over the local corpus.
 - [x] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
-- [ ] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
+- [x] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
 - [ ] **Phase 5: Local-First Trust & Deployment** - Users can run the full product without required cloud dependencies and with a DSGVO-conscious operating model.
 
 ## Phase Details
@@ -68,7 +68,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   2. Automation only proceeds when the message is eligible in the Paperless-aware workflow.
   3. User can have emails distributed into target folders automatically once they become eligible.
   4. User can review what sorting actions were taken or proposed and understand why they happened.
-**Plans**: TBD
+**Plans**: executed inline (existing sorter + sort_actions DB + review UI)
 **UI hint**: yes
 
 ### Phase 5: Local-First Trust & Deployment
@@ -88,7 +88,7 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 | 1. Unified Inbox & Thread Reading | 3/3 | Completed | 2026-04-17 |
 | 2. Search & Grounded Retrieval | 3/3 | Completed | 2026-04-17 |
 | 3. Fast Reply Workflow | 3/3 | Completed | 2026-04-17 |
-| 4. Delayed Sorting & Reviewability | 0/TBD | Not started | - |
+| 4. Delayed Sorting & Reviewability | 1/1 | Completed | 2026-04-17 |
 | 5. Local-First Trust & Deployment | 0/TBD | Not started | - |
 
 ---

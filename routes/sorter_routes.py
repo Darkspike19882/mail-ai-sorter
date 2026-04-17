@@ -1,5 +1,6 @@
 from flask import Blueprint, jsonify, request
 
+import memory
 from services import sorter_service
 
 sorter_bp = Blueprint("sorter_routes", __name__)
@@ -54,3 +55,31 @@ def api_logs():
 @sorter_bp.route("/api/logs/clear", methods=["POST"])
 def api_logs_clear():
     return jsonify(sorter_service.clear_logs())
+
+
+@sorter_bp.route("/api/sort-actions")
+def api_sort_actions():
+    limit = min(int(request.args.get("limit", 50)), 200)
+    account = request.args.get("account", "")
+    since = request.args.get("since", "")
+    return jsonify(
+        {
+            "success": True,
+            "actions": memory.get_sort_actions(
+                limit=limit,
+                account=account or None,
+                since=since or None,
+            ),
+        }
+    )
+
+
+@sorter_bp.route("/api/sort-actions/stats")
+def api_sort_actions_stats():
+    since = request.args.get("since", "")
+    return jsonify(
+        {
+            "success": True,
+            "stats": memory.get_sort_action_stats(since=since or None),
+        }
+    )

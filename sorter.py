@@ -805,6 +805,21 @@ def process_account(
                     f"[{name}] ⏰ SKIP {delay_remaining}min für Paperless: {subject[:60]}"
                 )
                 skipped += 1
+                try:
+                    import memory as _mem
+
+                    _mem.save_sort_action(
+                        account=name,
+                        folder=source_folder,
+                        from_addr=from_addr,
+                        subject=subject,
+                        category="delayed",
+                        method="delay",
+                        reason=f"Noch {delay_remaining}min zu jung für Verarbeitung",
+                        delayed=True,
+                    )
+                except Exception:
+                    pass
                 continue
 
             # ── Decision: List-Unsubscribe → Rule → Cache → LLM ────────────
@@ -816,9 +831,13 @@ def process_account(
             list_unsub = header_msg.get("List-Unsubscribe") or header_msg.get("List-Id")
 
             rule_target = first_match_rule(rules, from_addr, subject)
+            method_label = "llm"
+            reason_text = ""
             if rule_target:
                 category = rule_target
                 by_rule += 1
+                method_label = "rule"
+                reason_text = f"Regel-Treffer für Absender/Betreff"
                 log(
                     f"[{name}] ✓ REGEL {delay_minutes}min+ → {category}: {subject[:60]}"
                 )
@@ -826,6 +845,8 @@ def process_account(
             elif list_unsub and "newsletter" in target_folders:
                 category = "newsletter"
                 by_rule += 1
+                method_label = "list-unsub"
+                reason_text = "List-Unsubscribe Header erkannt"
                 log(f"[{name}] list-unsub → newsletter: {subject[:80]}")
 
             elif (
@@ -834,6 +855,8 @@ def process_account(
             ):
                 category = sender_cache[addr]
                 by_cache += 1
+                method_label = "cache"
+                reason_text = f"Absender {addr} aus Cache"
                 log(f"[{name}] cache → {category}: {subject[:80]}")
 
             else:
@@ -866,6 +889,8 @@ def process_account(
                         num_ctx=ollama_num_ctx,
                     )
                     by_llm += 1
+                    method_label = "llm"
+                    reason_text = f"LLM-Klassifizierung als '{category}'"
                     kw_str = ", ".join(keywords) if keywords else ""
                     log(
                         f"[{name}] llm  → {category}: {subject[:80]}"
@@ -950,6 +975,25 @@ def process_account(
             conn.store(msg_id, "+FLAGS", "\\Deleted")
             log(f"[{name}] moved → {target_folder}: {subject[:80]}")
             moved += 1
+
+            try:
+                import memory as _mem
+
+                _mem.save_sort_action(
+                    account=name,
+                    folder=source_folder,
+                    msg_uid=msg_id.decode()
+                    if isinstance(msg_id, bytes)
+                    else str(msg_id),
+                    from_addr=from_addr,
+                    subject=subject,
+                    category=category,
+                    target_folder=target_folder,
+                    method=method_label,
+                    reason=reason_text,
+                )
+            except Exception:
+                pass
 
             if index_db is not None:
                 try:

@@ -100,6 +100,25 @@ CREATE TABLE IF NOT EXISTS reply_templates (
     updated_at TEXT DEFAULT (datetime('now'))
 );
 CREATE INDEX IF NOT EXISTS idx_templates_category ON reply_templates(category);
+
+CREATE TABLE IF NOT EXISTS sort_actions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    account TEXT NOT NULL,
+    folder TEXT NOT NULL,
+    msg_uid TEXT,
+    from_addr TEXT,
+    subject TEXT,
+    category TEXT,
+    target_folder TEXT,
+    method TEXT DEFAULT 'llm',
+    reason TEXT,
+    delayed INTEGER DEFAULT 0,
+    run_id TEXT,
+    created_at TEXT DEFAULT (datetime('now'))
+);
+CREATE INDEX IF NOT EXISTS idx_sort_actions_account ON sort_actions(account);
+CREATE INDEX IF NOT EXISTS idx_sort_actions_created ON sort_actions(created_at);
+CREATE INDEX IF NOT EXISTS idx_sort_actions_run ON sort_actions(run_id);
 """
 
 
@@ -784,3 +803,93 @@ def delete_template(template_id: int) -> bool:
     cursor = conn.execute("DELETE FROM reply_templates WHERE id = ?", (template_id,))
     conn.commit()
     return cursor.rowcount > 0
+
+
+def save_sort_action(
+    account: str,
+    folder: str,
+    msg_uid: str = "",
+    from_addr: str = "",
+    subject: str = "",
+    category: str = "",
+    target_folder: str = "",
+    method: str = "llm",
+    reason: str = "",
+    delayed: bool = False,
+    run_id: str = "",
+) -> int:
+    conn = get_db()
+    cursor = conn.execute(
+        "INSERT INTO sort_actions (account, folder, msg_uid, from_addr, subject, category, target_folder, method, reason, delayed, run_id) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (
+            account,
+            folder,
+            msg_uid,
+            from_addr,
+            subject,
+            category,
+            target_folder,
+            method,
+            reason,
+            int(delayed),
+            run_id,
+        ),
+    )
+    conn.commit()
+    return cursor.lastrowid
+
+
+def get_sort_actions(
+    limit: int = 50,
+    account: Optional[str] = None,
+    run_id: Optional[str] = None,
+    since: Optional[str] = None,
+) -> List[Dict[str, Any]]:
+    conn = get_db()
+    clauses = []
+    params: list = []
+    if account:
+        clauses.append("account = ?")
+        params.append(account)
+    if run_id:
+        clauses.append("run_id = ?")
+        params.append(run_id)
+    if since:
+        clauses.append("created_at >= ?")
+        params.append(since)
+    where = (" WHERE " + " AND ".join(clauses)) if clauses else ""
+    params.append(limit)
+    rows = conn.execute(
+        f"SELECT * FROM sort_actions{where} ORDER BY created_at DESC LIMIT ?",
+        params,
+    ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def get_sort_action_stats(since: Optional[str] = None) -> Dict[str, Any]:
+    conn = get_db()
+    where = " WHERE created_at >= ?" if since else ""
+    params: list = [since] if since else []
+    total = conn.execute(
+        f"SELECT COUNT(*) FROM sort_actions{where}", params
+    ).fetchone()[0]
+    by_method = conn.execute(
+        f"SELECT method, COUNT(*) as cnt FROM sort_actions{where} GROUP BY method ORDER BY cnt DESC",
+        params,
+    ).fetchall()
+    by_category = conn.execute(
+        f"SELECT category, COUNT(*) as cnt FROM sort_actions{where} GROUP BY category ORDER BY cnt DESC LIMIT 10",
+        params,
+    ).fetchall()
+    delayed_count = conn.execute(
+        f"SELECT COUNT(*) FROM sort_actions WHERE delayed = 1{' AND created_at >= ?' if since else ''}",
+        params,
+    ).fetchone()[0]
+    return {
+        "total": total,
+        "delayed": delayed_count,
+        "by_method": [{"method": r["method"], "count": r["cnt"]} for r in by_method],
+        "by_category": [
+            {"category": r["category"], "count": r["cnt"]} for r in by_category
+        ],
+    }
