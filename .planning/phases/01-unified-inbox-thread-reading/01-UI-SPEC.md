@@ -17,7 +17,7 @@ created: 2026-04-17
 
 | Property | Value |
 |----------|-------|
-| Tool | shadcn (assumed recommended, not yet initialized) |
+| Tool | shadcn (assumed recommended, not yet initialized; implement with existing HTML/Tailwind patterns until setup exists) |
 | Preset | not applicable |
 | Component library | radix (planned via shadcn) |
 | Icon library | lucide |
@@ -39,7 +39,17 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level spacing |
 
-Exceptions: 44px minimum hit area for icon-only actions; 12px vertical row padding allowed for dense inbox list rows
+Exceptions: none
+
+Accessibility size rule: icon-only actions must keep a minimum 44px interactive hit area, but this is an accessibility target size requirement, not a spacing token.
+
+---
+
+## Visual Hierarchy
+
+- Main focal point: the thread reading pane
+- Visual scan order: account/folder rail → message list → selected thread header → message body → secondary analysis/actions rail
+- Icon-only actions must include a visible tooltip on hover/focus and an `aria-label`
 
 ---
 
