@@ -7,11 +7,13 @@ Controlled via state.json (created by web UI).
 import json
 import os
 import signal
-import subprocess
 import sys
 import time
 from datetime import datetime
 from pathlib import Path
+
+from config_service import load_config, load_secrets
+from services import llm_service, sorter_service
 
 BASE_DIR = Path(__file__).parent
 STATE_FILE = BASE_DIR / "state.json"
@@ -19,107 +21,32 @@ LOG_FILE = BASE_DIR / "mail_sorter.log"
 PID_FILE = BASE_DIR / "sorter_daemon.pid"
 CONFIG_FILE = BASE_DIR / "config.json"
 
-DEFAULT_STATE = {
-    "running": False,
-    "paused": False,
-    "quiet_hours_enabled": False,
-    "quiet_hours_start": "22:00",
-    "quiet_hours_end": "07:00",
-    "poll_interval_minutes": 5,
-    "last_run": None,
-    "last_run_status": None,
-    "total_runs": 0,
-    "pid": None,
-}
-
 
 def load_state():
-    try:
-        with open(STATE_FILE, "r", encoding="utf-8") as f:
-            state = json.load(f)
-            for k, v in DEFAULT_STATE.items():
-                state.setdefault(k, v)
-            return state
-    except Exception:
-        return dict(DEFAULT_STATE)
+    return sorter_service.load_state()
 
 
 def save_state(state):
-    tmp = str(STATE_FILE) + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(state, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, str(STATE_FILE))
+    sorter_service.save_state(state)
 
 
 def is_quiet_hours(state):
-    if not state.get("quiet_hours_enabled"):
-        return False
-    start = state.get("quiet_hours_start", "22:00")
-    end = state.get("quiet_hours_end", "07:00")
-    now = datetime.now().strftime("%H:%M")
-    if start <= end:
-        return start <= now < end
-    else:
-        return now >= start or now < end
+    return sorter_service.is_quiet_hours(state)
 
 
 def run_sorter(state):
-    cmd = [
-        sys.executable,
-        str(BASE_DIR / "sorter.py"),
-        "--config",
-        str(BASE_DIR / "config.json"),
-        "--max-per-account",
-        "50",
-    ]
-    try:
-        result = subprocess.run(
-            cmd, capture_output=True, text=True, timeout=600, cwd=str(BASE_DIR)
-        )
-        state["last_run"] = datetime.now().isoformat()
-        state["last_run_status"] = "success" if result.returncode == 0 else "error"
-        state["total_runs"] = state.get("total_runs", 0) + 1
-
-        with open(LOG_FILE, "a", encoding="utf-8") as f:
-            f.write(f"\n{'=' * 60}\n")
-            f.write(
-                f"Run {state['total_runs']} at {state['last_run']} — {state['last_run_status']}\n"
-            )
-            f.write(f"{'=' * 60}\n")
-            if result.stdout:
-                f.write(result.stdout)
-            if result.stderr:
-                f.write(f"\nSTDERR:\n{result.stderr}\n")
-
-        if state["last_run_status"] == "success":
-            _send_digest_if_due(state)
-
-    except subprocess.TimeoutExpired:
-        state["last_run"] = datetime.now().isoformat()
-        state["last_run_status"] = "timeout"
-    except Exception as e:
-        state["last_run"] = datetime.now().isoformat()
-        state["last_run_status"] = f"error: {e}"
-
+    state = sorter_service.run_scheduled_sorter(state)
+    if state.get("last_run_status") == "success":
+        _send_digest_if_due(state)
     save_state(state)
 
 
 def _send_digest_if_due(state):
     try:
-        import json as _json
-
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            cfg = _json.load(f)
+        cfg = load_config()
         tg = cfg.get("telegram", {})
         mode = tg.get("notify_mode", "off")
-        sf = BASE_DIR / "secrets.env"
-        secrets = {}
-        if sf.exists():
-            for line in sf.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k2, _, v2 = line.partition("=")
-                    secrets[k2.strip()] = v2.strip()
+        secrets = load_secrets()
         token = secrets.get("TELEGRAM_BOT_TOKEN", "")
         chat_id = tg.get("chat_id", "")
         if mode == "off" or not chat_id or not token:
@@ -130,31 +57,11 @@ def _send_digest_if_due(state):
         if last_digest == now_str:
             return
 
-        sys.path.insert(0, str(BASE_DIR))
-        from llm_helper import LLMHelper
-
-        ollama_url = cfg.get("global", {}).get("ollama_url", "http://127.0.0.1:11434")
-        model = cfg.get("global", {}).get("model", "llama3.1:8b")
-        llm = LLMHelper(ollama_url=ollama_url, model=model)
-
-        rows = llm.db.execute(
-            "SELECT subject, from_addr, category, importance, summary FROM email_summaries WHERE created_at >= date('now', '-1 day') ORDER BY created_at DESC LIMIT 30"
-        ).fetchall()
-
-        if not rows:
+        digest_result = llm_service.build_digest(days=1, limit=30)
+        if not digest_result.get("success") or not digest_result.get("count"):
             return
 
-        emails = [
-            {
-                "subject": r[0],
-                "from_addr": r[1],
-                "category": r[2],
-                "importance": r[3],
-                "summary": r[4],
-            }
-            for r in rows
-        ]
-        digest = llm.smart_digest(emails)
+        digest = digest_result.get("digest")
         if digest:
             from telegram_bot import send_daily_digest
 

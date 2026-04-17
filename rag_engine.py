@@ -5,17 +5,16 @@ Retrieval-Augmented Generation: search emails with FTS5, feed context to Ollama,
 """
 
 import json
-import os
 import sqlite3
 import urllib.request
 import urllib.error
-from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
 
+import memory
+
 BASE_DIR = Path(__file__).parent
 INDEX_DB = BASE_DIR / "mail_index.db"
-RAG_DB = BASE_DIR / "rag.db"
 
 
 class RAGEngine:
@@ -28,20 +27,6 @@ class RAGEngine:
     def _get_index_db(self) -> sqlite3.Connection:
         conn = sqlite3.connect(str(INDEX_DB), timeout=10)
         conn.row_factory = sqlite3.Row
-        return conn
-
-    def _get_rag_db(self) -> sqlite3.Connection:
-        conn = sqlite3.connect(str(RAG_DB), timeout=10)
-        conn.execute("""
-            CREATE TABLE IF NOT EXISTS rag_queries (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                query TEXT NOT NULL,
-                answer TEXT,
-                sources TEXT,
-                created_at TEXT DEFAULT (datetime('now'))
-            )
-        """)
-        conn.commit()
         return conn
 
     def search_emails(self, query: str, limit: int = 10) -> List[Dict[str, Any]]:
@@ -146,7 +131,12 @@ class RAGEngine:
                 }
             )
 
-        self._save_query(user_query, answer, json.dumps(sources, ensure_ascii=False))
+        memory.save_rag_query(
+            user_query,
+            answer or "Konnte keine Antwort generieren.",
+            json.dumps(sources, ensure_ascii=False),
+            len(emails),
+        )
 
         return {
             "success": True,
@@ -182,18 +172,6 @@ class RAGEngine:
         except Exception as e:
             return None
 
-    def _save_query(self, query: str, answer: str, sources: str):
-        try:
-            conn = self._get_rag_db()
-            conn.execute(
-                "INSERT INTO rag_queries (query, answer, sources) VALUES (?, ?, ?)",
-                (query, answer, sources),
-            )
-            conn.commit()
-            conn.close()
-        except Exception:
-            pass
-
     def get_status(self) -> Dict[str, Any]:
         conn = self._get_index_db()
         try:
@@ -208,11 +186,7 @@ class RAGEngine:
                 "SELECT category, COUNT(*) as cnt FROM emails GROUP BY category ORDER BY cnt DESC"
             ).fetchall()
 
-            rag_conn = self._get_rag_db()
-            query_count = rag_conn.execute(
-                "SELECT COUNT(*) FROM rag_queries"
-            ).fetchone()[0]
-            rag_conn.close()
+            query_count = memory.get_rag_query_count()
 
             return {
                 "total_emails": total,

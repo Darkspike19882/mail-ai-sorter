@@ -125,6 +125,86 @@ class LLMHelper:
         messages = [{"role": "user", "content": prompt}]
         return self.chat(messages, system=system, temperature=0.5, max_tokens=400)
 
+    def analyze_email(
+        self, subject: str, from_addr: str, body: str, category: str = "auto"
+    ) -> Optional[Dict[str, Any]]:
+        system = (
+            "Du bist ein Email-Assistent. Analysiere eine Email auf Deutsch. "
+            "Antworte IMMER als JSON mit den Feldern: summary, importance, tone, action_needed, priority_score. "
+            "importance muss hoch, mittel oder niedrig sein. "
+            "tone soll kurz sein, z.B. freundlich, neutral, dringend, formal. "
+            "action_needed muss true oder false sein. "
+            "priority_score muss eine Zahl von 0 bis 100 sein."
+        )
+        prompt = (
+            f"Betreff: {subject}\n"
+            f"Von: {from_addr}\n"
+            f"Kategorie: {category}\n"
+            f"Inhalt: {body[:4000]}\n\n"
+            "Analysiere diese Email für Priorisierung und Antworthilfe."
+        )
+        result = self.chat(
+            [{"role": "user", "content": prompt}],
+            system=system,
+            json_format=True,
+            temperature=0.2,
+            max_tokens=300,
+        )
+        if not result:
+            return None
+        try:
+            data = json.loads(result)
+        except json.JSONDecodeError:
+            return None
+        data["importance"] = str(data.get("importance", "mittel")).lower()
+        data["tone"] = str(data.get("tone", "neutral")).lower()
+        data["action_needed"] = bool(data.get("action_needed", False))
+        try:
+            data["priority_score"] = max(
+                0, min(100, int(data.get("priority_score", 50)))
+            )
+        except (TypeError, ValueError):
+            data["priority_score"] = 50
+        return data
+
+    def draft_reply(
+        self,
+        subject: str,
+        from_addr: str,
+        body: str,
+        tone: str = "freundlich",
+        language: str = "de",
+    ) -> Optional[Dict[str, str]]:
+        system = (
+            "Du bist ein Email-Assistent. Erstelle kurze, versandbereite Antwortentwürfe. "
+            "Antworte IMMER als JSON mit den Feldern: subject, reply."
+        )
+        prompt = (
+            f"Sprache: {language}\n"
+            f"Ton: {tone}\n"
+            f"Original-Betreff: {subject}\n"
+            f"Absender: {from_addr}\n"
+            f"Original-Inhalt: {body[:4000]}\n\n"
+            "Erstelle eine kurze passende Antwort. Wenn Informationen fehlen, formuliere vorsichtig und hilfreich."
+        )
+        result = self.chat(
+            [{"role": "user", "content": prompt}],
+            system=system,
+            json_format=True,
+            temperature=0.5,
+            max_tokens=300,
+        )
+        if not result:
+            return None
+        try:
+            data = json.loads(result)
+        except json.JSONDecodeError:
+            return None
+        return {
+            "subject": data.get("subject") or subject,
+            "reply": data.get("reply", "").strip(),
+        }
+
     def should_notify(
         self, subject: str, from_addr: str, category: str, importance: str
     ) -> bool:

@@ -11,38 +11,25 @@ import time
 import urllib.request
 import urllib.error
 from datetime import datetime
-from pathlib import Path
 from typing import Optional
 
-BASE_DIR = Path(__file__).parent
-CONFIG_FILE = BASE_DIR / "config.json"
-SECRETS_FILE = BASE_DIR / "secrets.env"
+from config_service import (
+    CONFIG_FILE,
+    load_config as shared_load_config,
+    load_secrets,
+    save_config as shared_save_config,
+)
 
 _poller_thread: Optional[threading.Thread] = None
 _poller_running = False
 
 
 def _load_config():
-    try:
-        with open(CONFIG_FILE, "r", encoding="utf-8") as f:
-            return json.load(f)
-    except Exception:
-        return {}
+    return shared_load_config()
 
 
 def _load_secrets():
-    secrets = {}
-    try:
-        if SECRETS_FILE.exists():
-            with open(SECRETS_FILE, "r", encoding="utf-8") as f:
-                for line in f:
-                    line = line.strip()
-                    if line and not line.startswith("#") and "=" in line:
-                        key, _, val = line.partition("=")
-                        secrets[key.strip()] = val.strip()
-    except Exception:
-        pass
-    return secrets
+    return load_secrets()
 
 
 def _get_bot_token():
@@ -50,10 +37,7 @@ def _get_bot_token():
 
 
 def _save_config(cfg):
-    tmp = str(CONFIG_FILE) + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(cfg, f, indent=2, ensure_ascii=False)
-    os.replace(tmp, str(CONFIG_FILE))
+    shared_save_config(cfg)
 
 
 def _tg_api(token: str, method: str, payload: Optional[dict] = None) -> Optional[dict]:

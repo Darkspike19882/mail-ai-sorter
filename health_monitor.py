@@ -14,25 +14,11 @@ import urllib.error
 from datetime import datetime
 from pathlib import Path
 
+from config_service import load_config, load_secrets
+
 BASE_DIR = Path(__file__).parent
 HEALTH_LOG = BASE_DIR / "health.log"
-CONFIG_FILE = BASE_DIR / "secrets.env"
 INTERVAL = 60
-
-
-def _load_secrets():
-    secrets = {}
-    try:
-        sf = BASE_DIR / "secrets.env"
-        if sf.exists():
-            for line in sf.read_text(encoding="utf-8").splitlines():
-                line = line.strip()
-                if line and not line.startswith("#") and "=" in line:
-                    k, _, v = line.partition("=")
-                    secrets[k.strip()] = v.strip()
-    except Exception:
-        pass
-    return secrets
 
 
 def _tg_send(token, chat_id, text):
@@ -90,17 +76,9 @@ def run_monitor():
                     "CRITICAL",
                 )
                 if consecutive_failures >= 3:
-                    secrets = _load_secrets()
+                    secrets = load_secrets()
                     token = secrets.get("TELEGRAM_BOT_TOKEN", "")
-                    cfg_path = BASE_DIR / "config.json"
-                    chat_id = ""
-                    try:
-                        with open(cfg_path) as f:
-                            chat_id = (
-                                json.load(f).get("telegram", {}).get("chat_id", "")
-                            )
-                    except Exception:
-                        pass
+                    chat_id = load_config().get("telegram", {}).get("chat_id", "")
                     if token and chat_id:
                         key = "server_down"
                         if (
@@ -140,17 +118,9 @@ def run_monitor():
                     )
 
                     if errors > 10:
-                        secrets = _load_secrets()
+                        secrets = load_secrets()
                         token = secrets.get("TELEGRAM_BOT_TOKEN", "")
-                        cfg_path = BASE_DIR / "config.json"
-                        chat_id = ""
-                        try:
-                            with open(cfg_path) as f:
-                                chat_id = (
-                                    json.load(f).get("telegram", {}).get("chat_id", "")
-                                )
-                        except Exception:
-                            pass
+                        chat_id = load_config().get("telegram", {}).get("chat_id", "")
                         if token and chat_id:
                             key = "high_errors"
                             if (
