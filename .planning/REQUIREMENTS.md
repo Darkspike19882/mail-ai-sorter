@@ -75,30 +75,30 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INBX-01 | TBD | Pending |
-| INBX-02 | TBD | Pending |
-| INBX-03 | TBD | Pending |
-| SRCH-01 | TBD | Pending |
-| SRCH-02 | TBD | Pending |
-| SRCH-03 | TBD | Pending |
-| SRCH-04 | TBD | Pending |
-| RPLY-01 | TBD | Pending |
-| RPLY-02 | TBD | Pending |
-| RPLY-03 | TBD | Pending |
-| RPLY-04 | TBD | Pending |
-| AUTO-01 | TBD | Pending |
-| AUTO-02 | TBD | Pending |
-| AUTO-03 | TBD | Pending |
-| AUTO-04 | TBD | Pending |
-| LOCL-01 | TBD | Pending |
-| LOCL-02 | TBD | Pending |
-| LOCL-03 | TBD | Pending |
+| INBX-01 | Phase 1 | Pending |
+| INBX-02 | Phase 1 | Pending |
+| INBX-03 | Phase 1 | Pending |
+| SRCH-01 | Phase 2 | Pending |
+| SRCH-02 | Phase 2 | Pending |
+| SRCH-03 | Phase 2 | Pending |
+| SRCH-04 | Phase 2 | Pending |
+| RPLY-01 | Phase 3 | Pending |
+| RPLY-02 | Phase 3 | Pending |
+| RPLY-03 | Phase 3 | Pending |
+| RPLY-04 | Phase 3 | Pending |
+| AUTO-01 | Phase 4 | Pending |
+| AUTO-02 | Phase 4 | Pending |
+| AUTO-03 | Phase 4 | Pending |
+| AUTO-04 | Phase 4 | Pending |
+| LOCL-01 | Phase 5 | Pending |
+| LOCL-02 | Phase 3 | Pending |
+| LOCL-03 | Phase 5 | Pending |
 
 **Coverage:**
 - v1 requirements: 18 total
-- Mapped to phases: 0
-- Unmapped: 18 ⚠️
+- Mapped to phases: 18
+- Unmapped: 0 ✓
 
 ---
 *Requirements defined: 2026-04-17*
-*Last updated: 2026-04-17 after initial definition*
+*Last updated: 2026-04-17 after roadmap creation*
