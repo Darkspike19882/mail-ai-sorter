@@ -197,8 +197,8 @@ def build_thread_timeline(
 
     sequence_ids = []
     seen_sequence_ids = set()
-    for message_id in related_ids:
-        for header_name in ("Message-ID", "References", "In-Reply-To"):
+    for message_id in related_ids[:6]:
+        for header_name in ("Message-ID", "In-Reply-To"):
             for sequence_id in search_header_ids(conn, header_name, message_id):
                 if sequence_id in seen_sequence_ids:
                     continue
@@ -301,24 +301,31 @@ def list_folder_emails(
 ) -> Tuple[List[Dict[str, Any]], int]:
     conn = connect(account)
     try:
-        typ, _ = conn.select(folder, readonly=True)
+        typ, select_data = conn.select(folder, readonly=True)
         if typ != "OK":
             raise ValueError(f"Ordner {folder} nicht gefunden")
 
-        typ, data = conn.search(None, "ALL")
-        if typ != "OK" or not data or not data[0]:
+        try:
+            total = int(select_data[0]) if select_data and select_data[0] else 0
+        except Exception:
+            total = 0
+        if total <= 0:
             return [], 0
 
-        all_ids = data[0].split()
-        total = len(all_ids)
-        ordered_ids = list(reversed(all_ids))
         start = (page - 1) * per_page
         end = start + per_page
-        page_ids = ordered_ids[start:end]
-        if not page_ids:
+        if start >= total:
             return [], total
 
-        id_str = b",".join(page_ids)
+        newest_seq = total - start
+        oldest_seq = max(total - end + 1, 1)
+        sequence_ids = [
+            str(seq).encode() for seq in range(newest_seq, oldest_seq - 1, -1)
+        ]
+        if not sequence_ids:
+            return [], total
+
+        id_str = b",".join(sequence_ids)
         typ, fetched = conn.fetch(
             id_str,
             "(UID FLAGS BODY.PEEK[HEADER.FIELDS (FROM TO CC SUBJECT DATE MESSAGE-ID IN-REPLY-TO REFERENCES LIST-UNSUBSCRIBE)])",
@@ -409,28 +416,35 @@ def get_email_detail(account: Dict[str, Any], folder: str, uid: str) -> Dict[str
                 ctype = part.get_content_type()
                 disp = str(part.get("Content-Disposition") or "").lower()
                 filename = part.get_filename()
-                payload = part.get_payload(decode=True)
-                if not payload:
-                    continue
                 if (
                     "attachment" in disp
                     or "inline" in disp
                     or (filename and ctype not in {"text/plain", "text/html"})
                 ):
+                    raw_size = part.get("size")
+                    try:
+                        size = int(raw_size) if raw_size else 0
+                    except Exception:
+                        size = 0
                     attachments.append(
                         {
                             "filename": decode_header(filename)
                             if filename
                             else "attachment",
-                            "size": len(payload),
+                            "size": size,
                             "content_type": ctype,
-                            "data_b64": base64.b64encode(payload).decode("ascii"),
                         }
                     )
                 elif ctype == "text/plain":
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        continue
                     charset = part.get_content_charset() or "utf-8"
                     body_text = payload.decode(charset, errors="replace")
                 elif ctype == "text/html":
+                    payload = part.get_payload(decode=True)
+                    if not payload:
+                        continue
                     charset = part.get_content_charset() or "utf-8"
                     body_html = payload.decode(charset, errors="replace")
         else:

@@ -644,12 +644,21 @@ function inboxApp() {
         storageKey: 'mail-ai-sorter.inbox-state.v1',
 
         async fetchJson(url, options = {}) {
-            const response = await fetch(url, options);
-            const data = await response.json().catch(() => ({}));
-            if (!response.ok || data.error) {
-                throw new Error(data.error || `HTTP ${response.status}`);
+            const timeoutMs = Number(options.timeoutMs || 20000);
+            const fetchOptions = { ...options };
+            delete fetchOptions.timeoutMs;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), timeoutMs);
+            try {
+                const response = await fetch(url, { ...fetchOptions, signal: controller.signal });
+                const data = await response.json().catch(() => ({}));
+                if (!response.ok || data.error) {
+                    throw new Error(data.error || `HTTP ${response.status}`);
+                }
+                return data;
+            } finally {
+                clearTimeout(timeout);
             }
-            return data;
         },
 
         get totalUnread() {
@@ -702,7 +711,7 @@ function inboxApp() {
             this.restoreState();
             if (this.searchActive) await this.runSearch();
             else await this.loadMails();
-            await this.restoreSelectedMail();
+            this.restoreSelectedMail().catch(() => {});
             this.$nextTick(() => lucide.createIcons());
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
@@ -999,7 +1008,7 @@ function inboxApp() {
                 }).catch(() => {});
             }
             try {
-                this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`);
+                this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`, { timeoutMs: 15000 });
                 this.newTag = '';
                 await this.initInlineReply();
                 this.persistState();
@@ -1007,7 +1016,11 @@ function inboxApp() {
             } catch (error) {
                 this.selectedMail = null;
                 if (!options.preserveState) this.persistState();
-                showNotification(error.message || 'Email konnte nicht geladen werden', 'error');
+                if ((error && error.name === 'AbortError') || String(error).includes('AbortError')) {
+                    showNotification('Email-Laden dauert zu lange. Bitte erneut versuchen.', 'error');
+                } else {
+                    showNotification(error.message || 'Email konnte nicht geladen werden', 'error');
+                }
             }
         },
 
