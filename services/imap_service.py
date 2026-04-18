@@ -62,6 +62,14 @@ def connect(account: Dict[str, Any], use_pool: bool = True):
             host, port, timeout=timeout, ssl_context=ssl.create_default_context()
         )
     conn.login(username, password)
+
+    if use_pool:
+        try:
+            from services.cache_service import _imap_pool
+            _imap_pool.store(account, conn)
+        except Exception:
+            pass
+
     return conn
 
 
@@ -293,7 +301,10 @@ def list_folders(account: Dict[str, Any]) -> Dict[str, Any]:
                 )
 
         unread = {}
-        for folder in folders:
+        important_folders = [f for f in folders if f["name"] in ("INBOX", "[Google Mail]/Spam", "[Google Mail]/Papierkorb", "[Google Mail]/Wichtig", "[Google Mail]/Markiert")]
+        if not important_folders:
+            important_folders = [f for f in folders if f["depth"] == 0][:3]
+        for folder in important_folders:
             try:
                 status = conn.status(folder["name"], "(UNSEEN)")
                 if status[0] == "OK" and status[1]:
@@ -313,7 +324,10 @@ def list_folders(account: Dict[str, Any]) -> Dict[str, Any]:
         return {"folders": folders, "delimiter": delimiter}
     finally:
         try:
-            conn.logout()
+            try:
+                conn.noop()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -547,7 +561,10 @@ def get_email_detail(account: Dict[str, Any], folder: str, uid: str) -> Dict[str
         }
     finally:
         try:
-            conn.logout()
+            try:
+                conn.noop()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -607,7 +624,10 @@ def get_attachment(
         }
     finally:
         try:
-            conn.logout()
+            try:
+                conn.noop()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -631,7 +651,10 @@ def set_flag(account: Dict[str, Any], folder: str, uid: str, action: str) -> Non
             raise ValueError("Unbekannte Aktion")
     finally:
         try:
-            conn.logout()
+            try:
+                conn.noop()
+            except Exception:
+                pass
         except Exception:
             pass
 
@@ -668,6 +691,9 @@ def bulk_update(
             raise ValueError("Unbekannte Aktion")
     finally:
         try:
-            conn.logout()
+            try:
+                conn.noop()
+            except Exception:
+                pass
         except Exception:
             pass

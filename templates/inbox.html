@@ -158,7 +158,7 @@
                             </div>
                         </div>
                         <template x-for="mail in group.mails" :key="mail.account + ':' + mail.folder + ':' + mail.uid">
-                            <div class="mail-row px-3 py-2.5 cursor-pointer" :class="[{ 'active': selectedMailKey === mailKey(mail), 'unseen': !mail.seen }]" @click="selectMail(mail)">
+                            <div class="mail-row px-3 py-2.5 cursor-pointer" :class="[{ 'active': selectedMailKey === mailKey(mail), 'unseen': !mail.seen }]" @click="selectMail(mail)" @mouseenter="prefetchMail(mail)">
                                 <div class="flex items-start gap-2.5">
                                     <input type="checkbox" :checked="isSelected(mail)" @click.stop @change="toggleSelection(mail)" class="mt-0.5 w-3 h-3 shrink-0">
                                     <button @click.stop="toggleFlag(mail)" class="mt-0.5 shrink-0">
@@ -703,17 +703,17 @@ function inboxApp() {
 
         async loadBatchSummaries() {
             if (!this.showAiSummaries) return;
-            const unsampled = this.mails.slice(0, 20).filter(m => !m.ai_summary && m.body_text);
-            if (unsampled.length === 0) return;
+            const visible = this.visibleMails.slice(0, 10).filter(m => !m.ai_summary && m.body_text);
+            if (visible.length === 0) return;
             try {
                 const resp = await this.fetchJson('/api/ai/batch-summary', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ mails: unsampled.map(m => ({ uid: m.uid, account: m.account, folder: m.folder, subject: m.subject, body: (m.body_text || '').slice(0, 500) })) }),
+                    body: JSON.stringify({ mails: visible.map(m => ({ uid: m.uid, account: m.account, folder: m.folder, subject: m.subject, body: (m.body_text || '').slice(0, 500) })) }),
                 });
                 if (resp.summaries) {
                     for (const [key, summary] of Object.entries(resp.summaries)) {
-                        const mail = this.mails.find(m => m.uid === key);
+                        const mail = this.visibleMails.find(m => m.uid === key);
                         if (mail) mail.ai_summary = summary;
                     }
                 }
@@ -889,6 +889,20 @@ function inboxApp() {
 
         mailKey(mail) { return `${mail.account}:${mail.folder}:${mail.uid}`; },
 
+        _detailCache: {},
+        _prefetchTimer: null,
+
+        prefetchMail(mail) {
+            clearTimeout(this._prefetchTimer);
+            this._prefetchTimer = setTimeout(async () => {
+                const key = this.mailKey(mail);
+                if (this._detailCache[key]) return;
+                try {
+                    this._detailCache[key] = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`, { timeoutMs: 10000 });
+                } catch (_) {}
+            }, 150);
+        },
+
         isSelected(mail) { return !!this.selectedKeys[this.mailKey(mail)]; },
 
         toggleSelection(mail) {
@@ -1047,7 +1061,13 @@ function inboxApp() {
                 }).catch(() => {});
             }
             try {
-                this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`, { timeoutMs: 15000 });
+                const key = this.mailKey(mail);
+                if (this._detailCache[key]) {
+                    this.selectedMail = this._detailCache[key];
+                    delete this._detailCache[key];
+                } else {
+                    this.selectedMail = await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}`, { timeoutMs: 15000 });
+                }
                 this.newTag = '';
                 await this.initInlineReply();
                 this.persistState();
