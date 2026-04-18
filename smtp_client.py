@@ -22,6 +22,9 @@ import time
 from email.header import Header
 from typing import Any, Dict, List, Optional
 
+import keyring
+from config_service import SERVICE_NAME
+
 
 SMTP_PRESETS = {
     "gmail.com": {"host": "smtp.gmail.com", "port": 587, "encryption": "starttls"},
@@ -68,6 +71,7 @@ def build_smtp_config(account: Dict[str, Any]) -> Dict[str, Any]:
         ),
         "username": account["username"],
         "password": account.get("password")
+        or keyring.get_password(SERVICE_NAME, account.get("password_env", "").lower()) or ""
         or os.getenv(account.get("password_env", ""), ""),
         "from_name": account.get("from_name", ""),
     }
@@ -235,7 +239,7 @@ def _save_to_sent(account: Dict[str, Any], raw_msg: bytes) -> bool:
         imap_port = int(account.get("imap_port", 993))
         imap_encryption = str(account.get("imap_encryption", "ssl")).lower()
         username = account["username"]
-        pw = account.get("password") or os.getenv(account.get("password_env", ""), "")
+        pw = account.get("password") or keyring.get_password(SERVICE_NAME, account.get("password_env", "").lower()) or "" or os.getenv(account.get("password_env", ""), "")
         if not pw:
             return False
 

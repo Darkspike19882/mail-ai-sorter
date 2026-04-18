@@ -24,6 +24,9 @@ import urllib.error
 import urllib.request
 from typing import Any, Dict, List, Optional, Tuple
 
+import keyring
+from config_service import SERVICE_NAME
+
 # Optional index module (same directory)
 try:
     import importlib.util, pathlib
@@ -37,7 +40,8 @@ try:
     _get_db = _idx_mod.get_db
     _DB_PATH = _idx_mod.DB_PATH
     HAS_INDEX = True
-except Exception:
+except Exception as e:
+    log(f"[sorter] Failed to load index module: {e}")
     HAS_INDEX = False
 
 # Optional extensions module (same directory)
@@ -50,7 +54,8 @@ try:
     _ext_mod = importlib.util.module_from_spec(_spec_ext)  # type: ignore
     _spec_ext.loader.exec_module(_ext_mod)  # type: ignore
     HAS_EXTENSIONS = True
-except Exception:
+except Exception as e:
+    log(f"[sorter] Failed to load extensions module: {e}")
     HAS_EXTENSIONS = False
 
 
@@ -150,7 +155,8 @@ def extract_text(msg: email.message.Message, max_chars: int) -> str:
 def parse_date(date_header: str) -> Optional[dt.datetime]:
     try:
         parsed = email.utils.parsedate_to_datetime(date_header)
-    except Exception:
+    except Exception as e:
+        log(f"[sorter] Date parse error: {e}")
         return None
     if parsed is None:
         return None
@@ -711,7 +717,7 @@ def process_account(
         "important_actions", {"flagged": True, "keyword": "$Important"}
     )
 
-    pw = cfg.get("password") or os.getenv(cfg.get("password_env", ""))
+    pw = cfg.get("password") or keyring.get_password(SERVICE_NAME, cfg.get("password_env", "").lower()) or "" or os.getenv(cfg.get("password_env", ""), "")
     if not pw:
         raise RuntimeError(f"[{name}] password missing (set {cfg.get('password_env')})")
 
@@ -818,9 +824,9 @@ def process_account(
                         reason=f"Noch {delay_remaining}min zu jung für Verarbeitung",
                         delayed=True,
                     )
-                except Exception:
-                    pass
-                continue
+                except Exception as e:
+            log(f"[{name}] ERROR on delayed email: {e}")
+            continue
 
             # ── Decision: List-Unsubscribe → Rule → Cache → LLM ────────────
             keywords: List[str] = []
