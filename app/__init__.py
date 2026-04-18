@@ -6,7 +6,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from starlette.requests import Request
 from starlette.responses import Response
 
-from app.routers import pages, health, inbox, email, ai, sorter, config, memory, rag, telegram, templates as tpl, command
+from app.routers import pages, health, inbox, email, ai, sorter, config, memory, rag, telegram, templates as tpl, command, data
 
 
 class CSPMiddleware(BaseHTTPMiddleware):
@@ -64,3 +64,4 @@ app.include_router(rag.router)
 app.include_router(telegram.router)
 app.include_router(tpl.router)
 app.include_router(command.router)
+app.include_router(data.router)
