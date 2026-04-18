@@ -1,20 +1,20 @@
-# Roadmap: Mail AI Sorter
+# Roadmap: Superhero Mail
 
 ## Overview
 
-This roadmap turns the existing brownfield app into a daily-driver local mail client by first locking in the core reading workflow, then making search and reply genuinely fast, then shipping controlled automation, and finally hardening the full product around its local-first and DSGVO-conscious promise.
+Superhero Mail ist der Umbau von Mail AI Sorter zu einem Superhuman-inspirierten, lokalen Mail-Client. Phase 0 etabliert das neue Branding + FastAPI, danach folgen Command Palette, Split Inbox, AI-Features und weitere Superhuman-Features.
 
 ## Phases
-
-**Phase Numbering:**
-- Integer phases (1, 2, 3): Planned milestone work
-- Decimal phases (2.1, 2.2): Urgent insertions (marked with INSERTED)
 
 - [x] **Phase 1: Unified Inbox & Thread Reading** - Users can read and move through mail across accounts in a thread-first workflow.
 - [x] **Phase 2: Search & Grounded Retrieval** - Users can find mail and ask grounded questions over the local corpus.
 - [x] **Phase 3: Fast Reply Workflow** - Users can finish replies quickly with a minimal composer, snippets, and local AI drafting.
 - [x] **Phase 4: Delayed Sorting & Reviewability** - Users can rely on bounded automation that waits, explains itself, and stays controllable.
-- [ ] **Phase 5: Local-First Trust & Deployment** - Users can run the full product without required cloud dependencies and with a DSGVO-conscious operating model.
+- [ ] **Phase 5: Superhero Rebranding + FastAPI** - Rebranding zu Superhero Mail + Migration von Flask zu FastAPI.
+- [ ] **Phase 6: Command Palette (Cmd+K)** - Zentrale Suchleiste fuer alle Aktionen, Keyboard-First.
+- [ ] **Phase 7: Split Inbox + Inline AI Summary** - Multiple Inbox-Views + 1-Zeilen-KI-Zusammenfassung.
+- [ ] **Phase 8: Snooze + Send Later** - Zeitgesteuerte Wiedervorlage und Senden.
+- [ ] **Phase 9: Snippets + Follow-ups + Inbox Zero** - Templates, Follow-up-Reminders und Celebration-Animation.
 
 ## Phase Details
 
@@ -79,6 +79,47 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
   1. User can complete core mail, search, and AI-assisted workflows without any required cloud service.
   2. User can run the product in a local deployment model that keeps mail data and intelligence under local control.
   3. User can evaluate the app as consistent with its local, open-source, DSGVO-conscious positioning.
+**Plans**: 2 plans
+- [ ] 05-01-PLAN — Credential security + network hardening + CSP (keyring migration, no-cloud test, CSP middleware)
+- [ ] 05-02-PLAN — Privacy documentation + data APIs (PRIVACY.md, export/delete endpoints)
+
+### Phase 5: Superhero Rebranding + FastAPI
+**Goal**: Rebrand zu Superhero Mail (Electric Blue, Blitz-Icon) und Migration von Flask zu FastAPI.
+**Depends on**: Phase 4
+**Requirements**: BRND-01, BACK-01
+**Success Criteria** (what must be TRUE):
+  1. Alle Templates zeigen "Superhero Mail" als Titel und Electric Blue als Farbschema.
+  2. FastAPI ersetzt Flask als Backend, alle Routes funktionieren als APIRouter.
+  3. Pydantic Models fuer alle Request/Response-Schemas.
+  4. App startet und dient alle bestehenden Seiten korrekt aus.
+**Plans**: TBD
+
+### Phase 6: Command Palette (Cmd+K)
+**Goal**: Zentrale Overlay-Suchleiste fuer alle Aktionen — Superhuman-Speed.
+**Depends on**: Phase 5
+**Requirements**: UX-01, UX-02
+**Success Criteria** (what must be TRUE):
+  1. Cmd+K oeffnet Command Palette Overlay.
+  2. Fuzzy Search ueber alle Aktionen, Emails und Einstellungen.
+  3. Jede Aktion per Tastatur ausfuehrbar.
+**Plans**: TBD
+
+### Phase 7: Split Inbox + Inline AI Summary
+**Goal**: Split Inbox (Important/Newsletter/Alle) + 1-Zeilen-KI-Zusammenfassung pro Email.
+**Depends on**: Phase 6
+**Requirements**: UX-03, AI-01
+**Plans**: TBD
+
+### Phase 8: Snooze + Send Later
+**Goal**: Emails zeitgesteuert wiedervorstellen und zeitverzoegert senden.
+**Depends on**: Phase 7
+**Requirements**: SNZ-01, SND-01
+**Plans**: TBD
+
+### Phase 9: Snippets + Follow-ups + Inbox Zero
+**Goal**: Template-Bibliothek, Follow-up-Reminders und Inbox-Zero-Animation.
+**Depends on**: Phase 8
+**Requirements**: SNIP-01, FLLW-01, UX-04
 **Plans**: TBD
 
 ## Progress
@@ -89,8 +130,11 @@ This roadmap turns the existing brownfield app into a daily-driver local mail cl
 | 2. Search & Grounded Retrieval | 3/3 | Completed | 2026-04-17 |
 | 3. Fast Reply Workflow | 3/3 | Completed | 2026-04-17 |
 | 4. Delayed Sorting & Reviewability | 1/1 | Completed | 2026-04-17 |
-| 5. Local-First Trust & Deployment | 0/TBD | Not started | - |
+| 5. Local-First Trust & Deployment | 0/2 | Planned | - |
+| 6. Command Palette (Cmd+K) | 0/TBD | Not started | - |
+| 7. Split Inbox + Inline AI Summary | 0/TBD | Not started | - |
+| 8. Snooze + Send Later | 0/TBD | Not started | - |
+| 9. Snippets + Follow-ups + Inbox Zero | 0/TBD | Not started | - |
 
 ---
-*Granularity: standard (defaulted because no explicit granularity key exists in config.json)*
-*Last updated: 2026-04-17 during phase 1 planning*
+*Last updated: 2026-04-17 — Superhero Mail rebranding + new roadmap*
