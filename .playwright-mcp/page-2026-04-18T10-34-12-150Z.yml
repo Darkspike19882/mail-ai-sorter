@@ -1,0 +1,136 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Superhero" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: Superhero
+      - generic [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+          - text: Dashboard
+        - link "Inbox" [ref=e16] [cursor=pointer]:
+          - /url: /inbox
+          - img [ref=e17]
+          - text: Inbox
+        - link "Logs" [ref=e20] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e21]
+          - text: Logs
+        - link "Stats" [ref=e24] [cursor=pointer]:
+          - /url: /stats
+          - img [ref=e25]
+          - text: Stats
+        - link "Settings" [ref=e27] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e28]
+          - text: Settings
+    - generic [ref=e31]:
+      - button "Suchen... ⌘K" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - generic [ref=e36]: Suchen...
+        - generic [ref=e37]: ⌘K
+      - button [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+  - generic [ref=e42]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - heading "Statistiken" [level=1] [ref=e46]
+        - paragraph [ref=e47]:
+          - img [ref=e48]
+          - text: Detaillierte Analyse deiner Email-Klassifizierung
+      - generic [ref=e50]:
+        - combobox [ref=e51]:
+          - option "Letzte 7 Tage"
+          - option "Letzte 30 Tage" [selected]
+          - option "Letzte 90 Tage"
+          - option "Letztes Jahr"
+          - option "Alles"
+        - button "Aktualisieren" [ref=e52] [cursor=pointer]:
+          - img [ref=e53]
+          - text: Aktualisieren
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - img [ref=e62]
+        - generic [ref=e65]: "16"
+        - generic [ref=e66]: Mails sortiert
+      - generic [ref=e67]:
+        - img [ref=e70]
+        - generic [ref=e72]: "4"
+        - generic [ref=e73]: Kategorien genutzt
+      - generic [ref=e74]:
+        - img [ref=e77]
+        - generic [ref=e82]: "12"
+        - generic [ref=e83]: Verschiedene Absender
+      - generic [ref=e84]:
+        - img [ref=e87]
+        - generic [ref=e90]: "8.0"
+        - generic [ref=e91]: Mails/Tag (Durchschnitt)
+    - generic [ref=e92]:
+      - heading "Email-Volumen pro Tag 2 Tage" [level=3] [ref=e94]:
+        - img [ref=e95]
+        - text: Email-Volumen pro Tag
+        - generic [ref=e97]: 2 Tage
+      - heading "Kategorien-Verteilung 4 Kategorien" [level=3] [ref=e101]:
+        - img [ref=e102]
+        - text: Kategorien-Verteilung
+        - generic [ref=e105]: 4 Kategorien
+    - generic [ref=e108]:
+      - heading "Verteilung nach Wochentag" [level=3] [ref=e110]:
+        - img [ref=e111]
+        - text: Verteilung nach Wochentag
+      - heading "Verteilung nach Stunde" [level=3] [ref=e117]:
+        - img [ref=e118]
+        - text: Verteilung nach Stunde
+    - generic [ref=e123]:
+      - heading "Top 10 Absender" [level=3] [ref=e125]:
+        - img [ref=e126]
+        - text: Top 10 Absender
+      - heading "Monatliches Volumen" [level=3] [ref=e132]:
+        - img [ref=e133]
+        - text: Monatliches Volumen
+    - generic [ref=e136]:
+      - heading "Alle Kategorien im Detail" [level=3] [ref=e137]:
+        - img [ref=e138]
+        - text: Alle Kategorien im Detail
+      - table [ref=e140]:
+        - rowgroup [ref=e141]:
+          - row "# Kategorie Anzahl Anteil Verteilung" [ref=e142]:
+            - columnheader "#" [ref=e143]
+            - columnheader "Kategorie" [ref=e144]
+            - columnheader "Anzahl" [ref=e145]
+            - columnheader "Anteil" [ref=e146]
+            - columnheader "Verteilung" [ref=e147]
+        - rowgroup [ref=e148]:
+          - row "1 newsletter 8 50.0%" [ref=e149]:
+            - cell "1" [ref=e150]
+            - cell "newsletter" [ref=e151]:
+              - generic [ref=e152]: newsletter
+            - cell "8" [ref=e153]
+            - cell "50.0%" [ref=e154]
+            - cell [ref=e155]
+          - row "2 einkauf 5 31.3%" [ref=e158]:
+            - cell "2" [ref=e159]
+            - cell "einkauf" [ref=e160]:
+              - generic [ref=e161]: einkauf
+            - cell "5" [ref=e162]
+            - cell "31.3%" [ref=e163]
+            - cell [ref=e164]
+          - row "3 paperless 2 12.5%" [ref=e167]:
+            - cell "3" [ref=e168]
+            - cell "paperless" [ref=e169]:
+              - generic [ref=e170]: paperless
+            - cell "2" [ref=e171]
+            - cell "12.5%" [ref=e172]
+            - cell [ref=e173]
+          - row "4 tech 1 6.3%" [ref=e176]:
+            - cell "4" [ref=e177]
+            - cell "tech" [ref=e178]:
+              - generic [ref=e179]: tech
+            - cell "1" [ref=e180]
+            - cell "6.3%" [ref=e181]
+            - cell [ref=e182]
+    - heading "Top Absender pro Kategorie" [level=3] [ref=e186]:
+      - img [ref=e187]
+      - text: Top Absender pro Kategorie

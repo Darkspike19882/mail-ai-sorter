@@ -6,11 +6,14 @@ Used by: web_ui.py, llm_helper.py, rag_engine.py, telegram_bot.py, sorter_daemon
 """
 
 import json
+import logging
 import sqlite3
 import threading
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, List, Optional
+
+logger = logging.getLogger(__name__)
 
 BASE_DIR = Path(__file__).parent
 MEMORY_DB = BASE_DIR / "llm_memory.db"
@@ -129,8 +132,8 @@ def get_db() -> sqlite3.Connection:
         try:
             conn.execute("SELECT 1")
             return conn
-        except Exception:
-            pass
+        except Exception as e:
+            logger.debug(f"[memory] DB connection check failed: {e}")
     conn = sqlite3.connect(str(MEMORY_DB), timeout=10)
     conn.row_factory = sqlite3.Row
     if not _db_initialized:
@@ -237,8 +240,8 @@ def _migrate_email_summaries(conn: sqlite3.Connection) -> None:
             conn.execute(
                 "ALTER TABLE email_summaries ADD COLUMN created_at TEXT DEFAULT (datetime('now'))"
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[memory] email_summaries migration failed: {e}")
 
 
 def _migrate_user_facts(conn: sqlite3.Connection) -> None:
@@ -317,8 +320,8 @@ def _migrate_user_facts(conn: sqlite3.Connection) -> None:
         conn.execute(
             "CREATE UNIQUE INDEX IF NOT EXISTS idx_facts_unique ON user_facts(fact)"
         )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[memory] user_facts migration failed: {e}")
 
 
 def _migrate_rag_queries(conn: sqlite3.Connection) -> None:
@@ -336,8 +339,8 @@ def _migrate_rag_queries(conn: sqlite3.Connection) -> None:
             conn.execute(
                 "ALTER TABLE rag_queries ADD COLUMN created_at TEXT DEFAULT (datetime('now'))"
             )
-    except Exception:
-        pass
+    except Exception as e:
+        logger.debug(f"[memory] rag_queries migration failed: {e}")
 
 
 def _ensure_indexes(conn: sqlite3.Connection) -> None:

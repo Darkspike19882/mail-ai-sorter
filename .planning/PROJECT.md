@@ -1,12 +1,19 @@
-# Mail AI Sorter
+# Superhero Mail
 
 ## What This Is
 
-Mail AI Sorter ist ein lokaler, DSGVO-konformer Open-Source-Mail-Client mit KI-gestuetzter Vorsortierung und Antwortunterstuetzung. Die App ist fuer mich selbst und spaeter auch fuer andere gedacht, die sehr viele Emails effizient vorsichten, priorisieren, durchsuchen und bearbeiten wollen, ohne Cloud-Zwang oder Abo-Modell. Sie verbindet klassischen Mail-Client-Workflow mit einer schnellen, minimalistischen UI im Stil von Superhuman und einer zeitversetzten Automatisierung ueber Paperless, Regeln und lokale LLMs.
+Superhero Mail ist ein lokaler, DSGVO-konformer Open-Source-Mail-Client im Stil von Superhuman — aber 100% lokal, ohne Cloud, ohne Abo. Er bietet E-Mail-Superkraefte: Command Palette, Split Inbox, AI-Zusammenfassungen, Snooze, Send Later, Snippets und Follow-up-Reminders — alles betrieben durch lokale LLMs via Ollama. Das Projekt ist ein Fork/Umbau des bestehenden Mail AI Sorter.
 
 ## Core Value
 
-Ich kann einen grossen Email-Eingang lokal, schnell und mit minimalem mentalem Aufwand sichten, beantworten und vorsortieren.
+Ich kann einen grossen Email-Eingang lokal, schnell und mit minimalen mentalen Aufwand sichten, beantworten und vorsortieren — mit Superhuman-Speed, aber ohne Cloud.
+
+## Branding
+
+- **Name:** Superhero Mail
+- **Tagline:** "E-Mail-Superkraefte — 100% lokal, 100% dein."
+- **Farbschema:** Electric Blue (#3B82F6) + Weiss
+- **Icon:** Blitz-Symbol
 
 ## Requirements
 
@@ -55,7 +62,8 @@ Das bestehende Projekt ist bereits ein Brownfield-Codebase mit Flask-Web-UI, Rou
 | Local-first statt Cloud-first | Datenschutz, DSGVO und Unabhaengigkeit vom Abo-Modell sind Kern des Produkts | — Pending |
 | Brownfield auf bestehender App statt kompletter Neubau | Es existiert bereits nutzbare Funktionalitaet fuer Inbox, Suche, LLM und Sortierung | — Pending |
 | Client- und Antwort-Workflow vor voller Automationsbreite priorisieren | Der groesste Alltagswert entsteht zuerst beim Lesen, Finden und Beantworten vieler Emails | — Pending |
-| Superhuman-inspirierte UX ohne Kopie | Die App soll sich schnell und fokussiert anfuehlen, aber lokal/offen bleiben | — Pending |
+| Superhuman-inspirierte UX — jetzt als "Superhero Mail" | Die App soll sich schnell und fokussiert anfuehlen, lokal/offen bleiben, und als eigenstaendiges Produkt positioniert werden | — Active (Phase 0 Rebranding) |
+| Flask zu FastAPI Migration | FastAPI bietet bessere Typsicherheit, async, OpenAPI-Docs und passt besser zum Stack | — Active (Phase 0) |
 | Paperless-verzoegerte Sortierung als Kernworkflow | Die automatische Verarbeitung soll mit dem bestehenden Dokumentenfluss zusammenspielen statt davor zu greifen | — Pending |
 
 ## Evolution

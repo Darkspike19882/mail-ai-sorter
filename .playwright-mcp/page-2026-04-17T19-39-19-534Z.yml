@@ -1,0 +1,105 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e8]
+          - generic [ref=e10]: Superhero Mail
+        - generic [ref=e11]:
+          - link "Inbox" [ref=e12] [cursor=pointer]:
+            - /url: /inbox
+            - img [ref=e13]
+            - text: Inbox
+          - link "Dashboard" [ref=e16] [cursor=pointer]:
+            - /url: /
+            - img [ref=e17]
+            - text: Dashboard
+          - link "Konfiguration" [ref=e22] [cursor=pointer]:
+            - /url: /config
+            - img [ref=e23]
+            - text: Konfiguration
+          - link "Logs" [ref=e26] [cursor=pointer]:
+            - /url: /logs
+            - img [ref=e27]
+            - text: Logs
+          - link "Statistiken" [ref=e30] [cursor=pointer]:
+            - /url: /stats
+            - img [ref=e31]
+            - text: Statistiken
+      - generic [ref=e33]:
+        - button "Suchen... ⌘K" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+          - generic [ref=e38]: Suchen...
+          - generic [ref=e39]: ⌘K
+        - button [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - generic [ref=e46]:
+          - heading "Inbox" [level=1] [ref=e47]
+          - paragraph [ref=e48]: Bulk-Aktionen, Tags, Analyse und Antwortentwürfe.
+        - generic [ref=e49]:
+          - button "Neue Email" [ref=e50] [cursor=pointer]
+          - button "Aktualisieren" [ref=e51] [cursor=pointer]
+      - generic [ref=e52]:
+        - complementary [ref=e53]:
+          - button "Alle Konten 0" [ref=e55] [cursor=pointer]:
+            - generic [ref=e56]: Alle Konten
+            - generic [ref=e57]: "0"
+          - button "Gmail 0" [ref=e60] [cursor=pointer]:
+            - generic [ref=e61]: Gmail
+            - generic [ref=e62]: "0"
+        - generic [ref=e64]:
+          - generic [ref=e65]:
+            - generic [ref=e66]:
+              - button "Alle 0" [ref=e67] [cursor=pointer]:
+                - img [ref=e68]
+                - text: Alle
+                - generic [ref=e71]: "0"
+              - button "Wichtig 0" [ref=e72] [cursor=pointer]:
+                - img [ref=e73]
+                - text: Wichtig
+                - generic [ref=e75]: "0"
+              - button "Ungelesen 0" [ref=e76] [cursor=pointer]:
+                - img [ref=e77]
+                - text: Ungelesen
+                - generic [ref=e80]: "0"
+              - button "Markiert 0" [ref=e81] [cursor=pointer]:
+                - img [ref=e82]
+                - text: Markiert
+                - generic [ref=e84]: "0"
+            - generic [ref=e85]:
+              - textbox "Suchen..." [ref=e86]
+              - button "Neu laden" [ref=e87] [cursor=pointer]
+              - button "KI-Frage" [ref=e88] [cursor=pointer]:
+                - img [ref=e89]
+                - generic [ref=e92]: KI-Frage
+            - generic [ref=e93]:
+              - button "Alle Konten" [ref=e94] [cursor=pointer]
+              - button "Gmail" [ref=e95] [cursor=pointer]
+              - button "Datum" [ref=e97] [cursor=pointer]:
+                - generic [ref=e98]: Datum
+                - img [ref=e99]
+            - generic [ref=e101]:
+              - checkbox [ref=e102]
+              - generic [ref=e103]: 0 / 0 Emails
+          - generic [ref=e105]:
+            - generic [ref=e106]: Keine Emails gefunden
+            - generic [ref=e107]: In diesem Ordner liegen aktuell keine passenden Emails.
+          - generic [ref=e108]:
+            - generic [ref=e109]: Seite 1 • Ende erreicht
+            - button "Mehr laden" [disabled] [ref=e110]
+        - generic [ref=e112]: Email auswählen
+  - contentinfo [ref=e113]:
+    - generic [ref=e115]:
+      - generic [ref=e116]:
+        - img [ref=e117]
+        - generic [ref=e119]: ⚡ Superhero Mail — E-Mail-Superkräfte, 100% lokal
+      - generic [ref=e120]:
+        - generic [ref=e121]:
+          - img [ref=e122]
+          - text: Optimized for Apple Silicon
+        - generic [ref=e125]:
+          - img [ref=e126]
+          - text: 100% Local & Private

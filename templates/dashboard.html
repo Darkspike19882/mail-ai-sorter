@@ -1,8 +1,9 @@
 {% extends "base.html" %}
 
-{% block title %}Dashboard - Mail AI Sorter{% endblock %}
+{% block title %}Dashboard - Superhero Mail{% endblock %}
 
 {% block head %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4"></script>
 <style>
     .stat-card {
         background: white;
@@ -45,8 +46,13 @@
 </style>
 {% endblock %}
 
-{% block nav_dashboard %}active{% endblock %}
-{% block nav_mobile_dashboard %}active{% endblock %}
+{% block nav %}
+<a href="/" class="nav-item active"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard</a>
+<a href="/inbox" class="nav-item"><i data-lucide="inbox" class="w-3.5 h-3.5"></i> Inbox</a>
+<a href="/logs" class="nav-item"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> Logs</a>
+<a href="/stats" class="nav-item"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Stats</a>
+<a href="/config" class="nav-item"><i data-lucide="settings" class="w-3.5 h-3.5"></i> Settings</a>
+{% endblock %}
 
 {% block content %}
 <div x-data="dashboard()" x-init="initDashboard()">
@@ -709,6 +715,8 @@ function dashboard() {
                 const r = await fetch('/api/rag/status');
                 this.ragStatus = await r.json();
             } catch(e) { this.ragStatus = {}; }
-        },
+        }
+    };
+}
 </script>
 {% endblock %}

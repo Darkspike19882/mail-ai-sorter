@@ -61,7 +61,7 @@ def api_ollama_check():
         data = json.loads(r.read().decode())
         result["installed"] = True
         result["version"] = data.get("version", "?")
-    except Exception:
+    except Exception as e:
         return jsonify(result)
     try:
         r = urllib.request.urlopen(ollama_url + "/api/tags", timeout=5)
@@ -70,6 +70,6 @@ def api_ollama_check():
             result["models"].append(
                 {"name": m["name"], "size_gb": round(m.get("size", 0) / 1e9, 1)}
             )
-    except Exception:
-        pass
+    except Exception as e:
+        pass  # Models list remains empty
     return jsonify(result)

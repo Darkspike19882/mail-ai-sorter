@@ -30,10 +30,12 @@ class CSPMiddleware(BaseHTTPMiddleware):
 
 @asynccontextmanager
 async def lifespan(application: FastAPI):
+    import os
+    port = os.environ.get("PORT", "8000")
     print("⚡ Superhero Mail")
     print("=" * 50)
-    print("Starte Server auf http://0.0.0.0:5001")
-    print("Lokal: http://localhost:5001")
+    print(f"Starte Server auf http://0.0.0.0:{port}")
+    print(f"Lokal: http://localhost:{port}")
     print("Druecke STRG+C zum Beenden")
     print("=" * 50)
     yield

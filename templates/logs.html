@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Logs - Mail AI Sorter{% endblock %}
+{% block title %}Logs - Superhero Mail{% endblock %}
 
 {% block head %}
 <style>
@@ -30,8 +30,13 @@
 </style>
 {% endblock %}
 
-{% block nav_logs %}active{% endblock %}
-{% block nav_mobile_logs %}active{% endblock %}
+{% block nav %}
+<a href="/" class="nav-item"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard</a>
+<a href="/inbox" class="nav-item"><i data-lucide="inbox" class="w-3.5 h-3.5"></i> Inbox</a>
+<a href="/logs" class="nav-item active"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> Logs</a>
+<a href="/stats" class="nav-item"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Stats</a>
+<a href="/config" class="nav-item"><i data-lucide="settings" class="w-3.5 h-3.5"></i> Settings</a>
+{% endblock %}
 
 {% block content %}
 <div x-data="logs()" x-init="initLogs()">
@@ -39,7 +44,7 @@
     <div class="mb-8 animate-fade-in">
         <h1 class="text-4xl font-bold gradient-text mb-2">Logs</h1>
         <p class="text-slate-600 dark:text-slate-400">
-            Live-Ansicht der Mail AI Sorter Aktivität
+            Live-Ansicht der Superhero Mail Aktivität
         </p>
     </div>
 

@@ -3,9 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Mail AI Sorter{% endblock %}</title>
-
-    <!-- Tailwind CSS (via CDN für einfache Integration) -->
+    <title>{% block title %}Superhero Mail{% endblock %}</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -13,258 +11,153 @@
             theme: {
                 extend: {
                     colors: {
-                        primary: {
-                            50: '#f0f9ff',
-                            100: '#e0f2fe',
-                            200: '#bae6fd',
-                            300: '#7dd3fc',
-                            400: '#38bdf8',
-                            500: '#0ea5e9',
-                            600: '#0284c7',
-                            700: '#0369a1',
-                            800: '#075985',
-                            900: '#0c4a6e',
-                        },
+                        brand: { 50:'#eef2ff', 100:'#e0e7ff', 200:'#c7d2fe', 300:'#a5b4fc', 400:'#818cf8', 500:'#6366f1', 600:'#4f46e5', 700:'#4338ca', 800:'#3730a3', 900:'#312e81' },
+                        surface: { 0:'#0f0f11', 1:'#16161a', 2:'#1c1c21', 3:'#242429', 4:'#2c2c33' },
                     },
-                    animation: {
-                        'fade-in': 'fadeIn 0.5s ease-in',
-                        'slide-up': 'slideUp 0.3s ease-out',
-                        'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-                    },
-                    keyframes: {
-                        fadeIn: {
-                            '0%': { opacity: '0' },
-                            '100%': { opacity: '1' },
-                        },
-                        slideUp: {
-                            '0%': { transform: 'translateY(10px)', opacity: '0' },
-                            '100%': { transform: 'translateY(0)', opacity: '1' },
-                        },
-                    },
+                    fontFamily: { sans: ['-apple-system','BlinkMacSystemFont','Inter','Segoe UI','sans-serif'] },
                 },
             },
         }
     </script>
-
-    <!-- Alpine.js für interaktive UI -->
-    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-
-    <!-- Chart.js für Diagramme -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
-
-    <!-- DOMPurify for safe HTML rendering -->
     <script src="https://cdn.jsdelivr.net/npm/dompurify@3/dist/purify.min.js"></script>
-
-    <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-
+    {% block scripts %}{% endblock %}
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
     <style>
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-            height: 8px;
-        }
-        ::-webkit-scrollbar-track {
-            background: #f1f5f9;
-        }
-        ::-webkit-scrollbar-thumb {
-            background: #94a3b8;
-            border-radius: 4px;
-        }
-        ::-webkit-scrollbar-thumb:hover {
-            background: #64748b;
-        }
-
-        /* Glassmorphism Effect */
-        .glass {
-            background: rgba(255, 255, 255, 0.1);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.2);
-        }
-
-        /* Loading Spinner */
-        .spinner {
-            border: 3px solid #f3f4f6;
-            border-top: 3px solid #0ea5e9;
-            border-radius: 50%;
-            width: 40px;
-            height: 40px;
-            animation: spin 1s linear infinite;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-
-        /* Gradient Text */
-        .gradient-text {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
+        * { -webkit-font-smoothing: antialiased; }
+        body { font-size: 14px; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #555; }
+        .dark ::-webkit-scrollbar-thumb { background: #444; }
+        @keyframes slideUp { 0% { opacity:0; transform:translateY(8px) } 100% { opacity:1; transform:translateY(0) } }
+        @keyframes fadeIn { 0% { opacity:0 } 100% { opacity:1 } }
+        .cmd-overlay { animation: fadeIn 0.15s ease-out; }
+        .cmd-panel { animation: slideUp 0.2s ease-out; }
     </style>
-
     {% block head %}{% endblock %}
 </head>
-<body class="bg-gradient-to-br from-slate-50 to-slate-100 dark:from-slate-900 dark:to-slate-800 min-h-screen transition-colors duration-300">
-    <div x-data="{ mobileMenuOpen: false }" class="min-h-screen">
-        <!-- Navigation -->
-        <nav class="bg-white dark:bg-slate-800 shadow-lg sticky top-0 z-50">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center">
-                        <div class="flex-shrink-0 flex items-center gap-2">
-                            <i data-lucide="bot" class="w-8 h-8 text-primary-600"></i>
-                            <span class="text-xl font-bold gradient-text">Mail AI Sorter</span>
-                        </div>
-                        <div class="hidden md:ml-10 md:flex md:space-x-4">
-                            <a href="/inbox" class="nav-link {% block nav_inbox %}{% endblock %}">
-                                <i data-lucide="inbox" class="w-4 h-4 inline mr-1"></i>
-                                Inbox
-                            </a>
-                            <a href="/" class="nav-link {% block nav_dashboard %}{% endblock %}">
-                                <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-1"></i>
-                                Dashboard
-                            </a>
-                            <a href="/config" class="nav-link {% block nav_config %}{% endblock %}">
-                                <i data-lucide="settings" class="w-4 h-4 inline mr-1"></i>
-                                Konfiguration
-                            </a>
-                            <a href="/logs" class="nav-link {% block nav_logs %}{% endblock %}">
-                                <i data-lucide="file-text" class="w-4 h-4 inline mr-1"></i>
-                                Logs
-                            </a>
-                            <a href="/stats" class="nav-link {% block nav_stats %}{% endblock %}">
-                                <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-1"></i>
-                                Statistiken
-                            </a>
-                        </div>
-                    </div>
-                    <div class="flex items-center gap-4">
-                        <button @click="darkMode = !darkMode" class="p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
-                            <i x-show="!darkMode" data-lucide="moon" class="w-5 h-5"></i>
-                            <i x-show="darkMode" data-lucide="sun" class="w-5 h-5"></i>
-                        </button>
-                        <button @click="mobileMenuOpen = !mobileMenuOpen" class="md:hidden p-2 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-700">
-                            <i data-lucide="menu" class="w-6 h-6"></i>
-                        </button>
-                    </div>
+<body class="bg-white dark:bg-surface-0 text-slate-800 dark:text-slate-200 h-screen overflow-hidden">
+    <div class="h-screen flex flex-col">
+
+        <!-- Top Bar -->
+        <header class="h-12 flex items-center justify-between px-4 border-b border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1 shrink-0">
+            <div class="flex items-center gap-3">
+                <a href="/" class="flex items-center gap-2 text-brand-600 hover:text-brand-500 transition-colors">
+                    <i data-lucide="zap" class="w-5 h-5"></i>
+                    <span class="font-semibold text-sm tracking-tight">Superhero</span>
+                </a>
+                <div class="hidden md:flex items-center gap-1 ml-4">
+                    {% block nav %}{% endblock %}
                 </div>
             </div>
-
-            <!-- Mobile Menu -->
-            <div x-show="mobileMenuOpen" @click.away="mobileMenuOpen = false" class="md:hidden bg-white dark:bg-slate-800 border-t dark:border-slate-700">
-                <div class="px-2 pt-2 pb-3 space-y-1">
-                    <a href="/inbox" class="mobile-nav-link {% block nav_mobile_inbox %}{% endblock %}">
-                        <i data-lucide="inbox" class="w-4 h-4 inline mr-2"></i>
-                        Inbox
-                    </a>
-                    <a href="/" class="mobile-nav-link {% block nav_mobile_dashboard %}{% endblock %}">
-                        <i data-lucide="layout-dashboard" class="w-4 h-4 inline mr-2"></i>
-                        Dashboard
-                    </a>
-                    <a href="/config" class="mobile-nav-link {% block nav_mobile_config %}{% endblock %}">
-                        <i data-lucide="settings" class="w-4 h-4 inline mr-2"></i>
-                        Konfiguration
-                    </a>
-                    <a href="/logs" class="mobile-nav-link {% block nav_mobile_logs %}{% endblock %}">
-                        <i data-lucide="file-text" class="w-4 h-4 inline mr-2"></i>
-                        Logs
-                    </a>
-                    <a href="/stats" class="mobile-nav-link {% block nav_mobile_stats %}{% endblock %}">
-                        <i data-lucide="bar-chart-3" class="w-4 h-4 inline mr-2"></i>
-                        Statistiken
-                    </a>
-                </div>
+            <div class="flex items-center gap-2">
+                <button @click="$dispatch('toggle-cmd')" class="flex items-center gap-2 px-3 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 text-xs text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 transition-colors">
+                    <i data-lucide="search" class="w-3.5 h-3.5"></i>
+                    <span>Suchen...</span>
+                    <kbd class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-surface-3 font-mono">⌘K</kbd>
+                </button>
+                <button @click="darkMode = !darkMode" class="p-1.5 rounded-md hover:bg-slate-100 dark:hover:bg-surface-2 transition-colors">
+                    <i x-show="!darkMode" data-lucide="moon" class="w-4 h-4 text-slate-400"></i>
+                    <i x-show="darkMode" data-lucide="sun" class="w-4 h-4 text-slate-400"></i>
+                </button>
             </div>
-        </nav>
+        </header>
 
-        <!-- Main Content -->
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+        <!-- Main Content Area -->
+        <div class="flex-1 overflow-hidden">
             {% block content %}{% endblock %}
-        </main>
+        </div>
+    </div>
 
-        <!-- Footer -->
-        <footer class="bg-white dark:bg-slate-800 border-t dark:border-slate-700 mt-auto">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-                <div class="flex flex-col md:flex-row justify-between items-center gap-4">
-                    <div class="flex items-center gap-2 text-sm text-slate-600 dark:text-slate-400">
-                        <i data-lucide="heart" class="w-4 h-4 text-red-500"></i>
-                        <span>Made with ❤️ for Open Source</span>
-                    </div>
-                    <div class="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="cpu" class="w-4 h-4"></i>
-                            Optimized for Apple Silicon
-                        </span>
-                        <span class="flex items-center gap-1">
-                            <i data-lucide="shield" class="w-4 h-4"></i>
-                            100% Local & Private
-                        </span>
+    <!-- Command Palette -->
+    <div x-data="commandPalette()" @keydown.cmd.k.prevent="open = !open" @keydown.ctrl.k.prevent="open = !open" @keydown.escape.window="if(open){ open=false; query='' }" @toggle-cmd.window="open = !open">
+        <template x-if="open">
+            <div class="fixed inset-0 z-[100] cmd-overlay">
+                <div class="absolute inset-0 bg-black/60 backdrop-blur-sm" @click="open=false; query=''"></div>
+                <div class="relative mx-auto mt-[15vh] max-w-xl cmd-panel">
+                    <div class="rounded-xl bg-white dark:bg-surface-1 shadow-2xl border border-slate-200 dark:border-surface-3 overflow-hidden">
+                        <div class="flex items-center gap-3 px-4 py-3.5 border-b border-slate-100 dark:border-surface-3">
+                            <i data-lucide="search" class="w-4 h-4 text-slate-400 shrink-0"></i>
+                            <input x-model="query" @input="search()" @keydown.down.prevent="selectedIdx = Math.min(selectedIdx+1, filtered.length-1)" @keydown.up.prevent="selectedIdx = Math.max(selectedIdx-1, 0)" @keydown.enter.prevent="executeSelected()" x-ref="cmdInput" type="text" placeholder="Befehl oder Aktion suchen..." class="flex-1 bg-transparent text-sm outline-none dark:text-white placeholder-slate-400" x-effect="if(open) setTimeout(() => { $refs.cmdInput.focus(); lucide.createIcons() }, 50)">
+                            <kbd class="px-2 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-surface-3 text-slate-400 font-mono">ESC</kbd>
+                        </div>
+                        <div class="max-h-80 overflow-y-auto p-1.5">
+                            <template x-for="(cmd, i) in filtered" :key="cmd.id">
+                                <button @click="executeCommand(cmd)" @mouseenter="selectedIdx = i" :class="i === selectedIdx ? 'bg-brand-50 dark:bg-brand-900/20' : ''" class="w-full flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-colors text-left">
+                                    <div class="flex items-center gap-3">
+                                        <div class="w-7 h-7 rounded-md bg-slate-100 dark:bg-surface-3 flex items-center justify-center"><i :data-lucide="cmd.icon" class="w-3.5 h-3.5 text-brand-600"></i></div>
+                                        <span class="text-sm dark:text-white" x-text="cmd.label"></span>
+                                    </div>
+                                    <kbd x-show="cmd.shortcut" class="px-1.5 py-0.5 rounded text-[10px] bg-slate-100 dark:bg-surface-3 text-slate-400 font-mono" x-text="cmd.shortcut"></kbd>
+                                </button>
+                            </template>
+                            <template x-if="filtered.length === 0">
+                                <div class="px-4 py-8 text-center text-sm text-slate-400">Keine Ergebnisse</div>
+                            </template>
+                        </div>
+                        <div class="flex items-center justify-between px-4 py-2 border-t border-slate-100 dark:border-surface-3 text-[10px] text-slate-400">
+                            <span>↑↓ Navigate · Enter · ESC Close</span>
+                            <span class="font-mono">⌘K</span>
+                        </div>
                     </div>
                 </div>
             </div>
-        </footer>
+        </template>
     </div>
 
     <script>
-        // Lucide Icons initialisieren
         lucide.createIcons();
 
-        // Globale Funktionen
-        function showNotification(message, type = 'success') {
-            const notification = document.createElement('div');
-            notification.className = `fixed top-4 right-4 p-4 rounded-lg shadow-lg z-50 animate-slide-up ${
-                type === 'success' ? 'bg-green-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500'
-            } text-white`;
-            notification.textContent = message;
-            document.body.appendChild(notification);
-
-            setTimeout(() => {
-                notification.remove();
-            }, 3000);
+        function commandPalette() {
+            return {
+                open: false, query: '', commands: [], filtered: [], selectedIdx: 0,
+                async init() {
+                    try { const r = await fetch('/api/command-palette'); this.commands = await r.json(); }
+                    catch(e) { this.commands = [{id:'inbox',label:'Inbox',icon:'inbox',shortcut:'G I',url:'/inbox'},{id:'compose',label:'Neue Email',icon:'pen-square',shortcut:'C'},{id:'search',label:'Suchen',icon:'search',shortcut:'/'},{id:'config',label:'Einstellungen',icon:'settings',url:'/config'}]; }
+                    this.filtered = this.commands;
+                },
+                search() {
+                    const q = this.query.toLowerCase();
+                    this.filtered = q ? this.commands.filter(c => c.label.toLowerCase().includes(q) || (c.category||'').toLowerCase().includes(q)) : this.commands;
+                    this.selectedIdx = 0;
+                },
+                executeSelected() { if(this.filtered[this.selectedIdx]) this.executeCommand(this.filtered[this.selectedIdx]); },
+                async executeCommand(cmd) {
+                    this.open = false; this.query = '';
+                    if(cmd.url?.startsWith('/') && !cmd.url.startsWith('/api')) { window.location.href = cmd.url; return; }
+                    if(cmd.id === 'dark_mode') { document.documentElement.classList.toggle('dark'); showNotification('Theme gewechselt'); return; }
+                    if(cmd.id === 'refresh' && typeof refreshInbox === 'function') { refreshInbox(); showNotification('Aktualisiert'); return; }
+                    if(cmd.id === 'compose' && typeof openNewCompose === 'function') { openNewCompose(); return; }
+                    if(cmd.id === 'sorter_start') { await fetch('/api/sorter/start',{method:'POST'}); showNotification('Daemon gestartet'); return; }
+                    if(cmd.id === 'sorter_stop') { await fetch('/api/sorter/stop',{method:'POST'}); showNotification('Daemon gestoppt'); return; }
+                    if(cmd.id === 'sorter_run') { await fetch('/api/run',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({dry_run:false,max_mails:10})}); showNotification('Sortierung gestartet'); return; }
+                }
+            }
         }
 
-        function formatNumber(num) {
-            return new Intl.NumberFormat('de-DE').format(num);
+        function showNotification(msg, type='success') {
+            const el = document.createElement('div');
+            el.className = `fixed top-4 right-4 px-4 py-2.5 rounded-lg shadow-lg z-[200] text-sm font-medium text-white ${type==='success'?'bg-brand-600':'bg-red-600'} animate-[slideUp_0.3s_ease-out]`;
+            el.textContent = msg;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 2500);
         }
+
+        document.addEventListener('keydown', function(e) {
+            if(e.target.tagName==='INPUT'||e.target.tagName==='TEXTAREA') return;
+            if(e.key==='/' && !e.metaKey && !e.ctrlKey) { e.preventDefault(); window.dispatchEvent(new CustomEvent('toggle-cmd')); }
+        });
     </script>
 
     <style>
-        .nav-link {
-            display: flex;
-            align-items: center;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 0.875rem;
-            font-weight: 500;
-            color: #334155;
-            transition: all 0.15s;
-        }
-        .dark .nav-link { color: #e2e8f0; }
-        .nav-link:hover { background: #f1f5f9; }
-        .dark .nav-link:hover { background: #334155; }
-        .nav-link.active { background: #e0f2fe; color: #0369a1; }
-        .dark .nav-link.active { background: #0c4a6e; color: #7dd3fc; }
-
-        .mobile-nav-link {
-            display: block;
-            padding: 0.5rem 0.75rem;
-            border-radius: 0.5rem;
-            font-size: 1rem;
-            font-weight: 500;
-            color: #334155;
-            transition: all 0.15s;
-        }
-        .dark .mobile-nav-link { color: #e2e8f0; }
-        .mobile-nav-link:hover { background: #f1f5f9; }
-        .dark .mobile-nav-link:hover { background: #334155; }
-        .mobile-nav-link.active { background: #e0f2fe; color: #0369a1; }
-        .dark .mobile-nav-link.active { background: #0c4a6e; color: #7dd3fc; }
+        .nav-item { display:flex; align-items:center; gap:0.375rem; padding:0.3rem 0.6rem; border-radius:0.375rem; font-size:0.8rem; font-weight:500; color:#64748b; transition:all 0.1s; }
+        .dark .nav-item { color:#94a3b8; }
+        .nav-item:hover { background:#f1f5f9; }
+        .dark .nav-item:hover { background:#242429; }
+        .nav-item.active { background:#eef2ff; color:#4f46e5; }
+        .dark .nav-item.active { background:#1e1b4b; color:#818cf8; }
     </style>
-
-    {% block scripts %}{% endblock %}
 </body>
 </html>

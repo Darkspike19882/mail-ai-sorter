@@ -1,0 +1,366 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Superhero" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: Superhero
+      - generic [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+          - text: Dashboard
+        - link "Inbox" [ref=e16] [cursor=pointer]:
+          - /url: /inbox
+          - img [ref=e17]
+          - text: Inbox
+        - link "Logs" [ref=e20] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e21]
+          - text: Logs
+        - link "Stats" [ref=e24] [cursor=pointer]:
+          - /url: /stats
+          - img [ref=e25]
+          - text: Stats
+        - link "Settings" [ref=e27] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e28]
+          - text: Settings
+    - generic [ref=e31]:
+      - button "Suchen... ⌘K" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - generic [ref=e36]: Suchen...
+        - generic [ref=e37]: ⌘K
+      - button [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+  - generic [ref=e42]:
+    - generic [ref=e44]:
+      - generic [ref=e45]:
+        - heading "Konfiguration" [level=1] [ref=e46]
+        - paragraph [ref=e47]: Alle Einstellungen für Ihren AI Email Sorter anpassen
+      - link "Setup-Assistent" [ref=e48] [cursor=pointer]:
+        - /url: /setup
+        - img [ref=e49]
+        - text: Setup-Assistent
+    - generic [ref=e52]:
+      - heading "KI-Modell Einstellungen" [level=3] [ref=e53]:
+        - img [ref=e54]
+        - text: KI-Modell Einstellungen
+      - generic [ref=e57]:
+        - generic [ref=e58]:
+          - generic [ref=e59]: Ollama URL
+          - textbox "http://127.0.0.1:11434" [ref=e60]
+          - paragraph [ref=e61]:
+            - img [ref=e62]
+            - text: URL zur lokalen Ollama-Instanz
+          - generic [ref=e65]: http://127.0.0.1:11434
+        - generic [ref=e66]:
+          - generic [ref=e67]: KI-Modell
+          - combobox [ref=e68]:
+            - option "llama3.1:8b (Empfohlen - Beste Balance)" [selected]
+            - option "gemma4:e4b (Sehr präzise, langsamer)"
+            - option "phi3:mini (Schnellste, gute Genauigkeit)"
+          - paragraph [ref=e69]:
+            - img [ref=e70]
+            - generic [ref=e72]: ⚡ 40% schneller, 92% Genauigkeit
+          - generic [ref=e74]: llama3.1:8b
+        - generic [ref=e75]:
+          - generic [ref=e76]: Timeout (Sekunden)
+          - spinbutton [ref=e77]
+          - paragraph [ref=e78]:
+            - img [ref=e79]
+            - text: Maximale Wartezeit auf KI-Antwort
+          - generic [ref=e83]: undefined Sekunden
+        - generic [ref=e84]:
+          - generic [ref=e85]: Context Window
+          - spinbutton [ref=e86]
+          - paragraph [ref=e87]:
+            - img [ref=e88]
+            - text: "Größe des Kontext-Fensters (Standard: 4096)"
+          - generic [ref=e94]: undefined Token
+        - generic [ref=e95]:
+          - generic [ref=e96]: Num Predict (Max Tokens)
+          - spinbutton [ref=e97]
+          - paragraph [ref=e98]:
+            - img [ref=e99]
+            - text: Maximale Antwort-Tokens der KI
+          - generic [ref=e102]: undefined Tokens
+        - generic [ref=e103]:
+          - generic [ref=e104]: Think Mode
+          - generic [ref=e106] [cursor=pointer]:
+            - checkbox "Aktivieren" [ref=e107]
+            - generic [ref=e108]: Aktivieren
+          - paragraph [ref=e109]:
+            - img [ref=e110]
+            - text: Lässt die KI "überdenken" für bessere Ergebnisse
+          - generic [ref=e119]: Aus
+      - generic [ref=e121]:
+        - img [ref=e122]
+        - generic [ref=e124]:
+          - heading "Performance Empfehlung" [level=4] [ref=e125]
+          - paragraph [ref=e126]:
+            - text: Für M1 Pro mit 16GB RAM wird
+            - strong [ref=e127]: llama3.1:8b
+            - text: mit Timeout 60s und Context 4096 empfohlen. Dies bietet die beste Balance aus Geschwindigkeit (1.2s pro Email) und Genauigkeit (92%).
+    - generic [ref=e128]:
+      - heading "Verarbeitungs-Einstellungen" [level=3] [ref=e129]:
+        - img [ref=e130]
+        - text: Verarbeitungs-Einstellungen
+      - generic [ref=e133]:
+        - generic [ref=e134]:
+          - generic [ref=e135]: Paperless-ngx Verzögerung (Minuten)
+          - generic [ref=e136]:
+            - slider [ref=e137] [cursor=pointer]: "30"
+            - spinbutton [ref=e138]: "30"
+          - paragraph [ref=e139]:
+            - img [ref=e140]
+            - text: Wartezeit bevor Emails sortiert werden (30min für PDF-Extraktion)
+          - generic [ref=e144]: 30 Minuten
+        - generic [ref=e145]:
+          - generic [ref=e146]: Check-Intervall (Minuten)
+          - spinbutton [ref=e147]
+          - paragraph [ref=e148]:
+            - img [ref=e149]
+            - text: Wie oft auf neue Emails geprüft wird
+          - generic [ref=e155]: undefined Minuten
+        - generic [ref=e156]:
+          - generic [ref=e157]: Maximale Zeichen pro Email
+          - spinbutton [ref=e158]
+          - paragraph [ref=e159]:
+            - img [ref=e160]
+            - text: Anzahl der Zeichen die an die KI gesendet werden
+          - generic [ref=e164]: NaN Zeichen
+        - generic [ref=e165]:
+          - generic [ref=e166]: IMAP Timeout (Sekunden)
+          - spinbutton [ref=e167]
+          - paragraph [ref=e168]:
+            - img [ref=e169]
+            - text: Timeout für IMAP-Verbindungen
+          - generic [ref=e173]: undefined Sekunden
+      - generic [ref=e175]:
+        - img [ref=e176]
+        - generic [ref=e178]:
+          - heading "30-Minuten Regel" [level=4] [ref=e179]
+          - paragraph [ref=e180]:
+            - text: Die 30-minütige Verzögerung ist
+            - strong [ref=e181]: wichtig für Paperless-ngx
+            - text: . Dies gibt dem System Zeit, PDFs aus Emails zu extrahieren bevor diese verschoben werden. Wenn Sie Paperless-ngx
+            - strong [ref=e182]: nicht
+            - text: verwenden, setzen Sie es auf 0.
+    - generic [ref=e183]:
+      - heading "Kategorien verwalten 15 Kategorien" [level=3] [ref=e184]:
+        - img [ref=e185]
+        - text: Kategorien verwalten
+        - generic [ref=e187]: 15 Kategorien
+      - generic [ref=e188]:
+        - generic [ref=e189]:
+          - paragraph [ref=e190]: Die Reihenfolge bestimmt die Priorität der Regeln. Ziehen Sie zum Sortieren.
+          - button "Standard wiederherstellen" [ref=e191] [cursor=pointer]:
+            - img [ref=e192]
+            - text: Standard wiederherstellen
+        - generic [ref=e195]:
+          - generic [ref=e196]:
+            - generic [ref=e197]:
+              - generic [ref=e198]: "#1"
+              - generic [ref=e199]:
+                - button [disabled] [ref=e200]:
+                  - img [ref=e201]
+                - button [ref=e203] [cursor=pointer]:
+                  - img [ref=e204]
+            - generic [ref=e208]: paperless
+          - generic [ref=e209]:
+            - generic [ref=e210]:
+              - generic [ref=e211]: "#2"
+              - generic [ref=e212]:
+                - button [ref=e213] [cursor=pointer]:
+                  - img [ref=e214]
+                - button [ref=e216] [cursor=pointer]:
+                  - img [ref=e217]
+            - generic [ref=e221]: apple
+          - generic [ref=e222]:
+            - generic [ref=e223]:
+              - generic [ref=e224]: "#3"
+              - generic [ref=e225]:
+                - button [ref=e226] [cursor=pointer]:
+                  - img [ref=e227]
+                - button [ref=e229] [cursor=pointer]:
+                  - img [ref=e230]
+            - generic [ref=e234]: finanzen
+          - generic [ref=e235]:
+            - generic [ref=e236]:
+              - generic [ref=e237]: "#4"
+              - generic [ref=e238]:
+                - button [ref=e239] [cursor=pointer]:
+                  - img [ref=e240]
+                - button [ref=e242] [cursor=pointer]:
+                  - img [ref=e243]
+            - generic [ref=e247]: vertraege
+          - generic [ref=e248]:
+            - generic [ref=e249]:
+              - generic [ref=e250]: "#5"
+              - generic [ref=e251]:
+                - button [ref=e252] [cursor=pointer]:
+                  - img [ref=e253]
+                - button [ref=e255] [cursor=pointer]:
+                  - img [ref=e256]
+            - generic [ref=e260]: einkauf
+          - generic [ref=e261]:
+            - generic [ref=e262]:
+              - generic [ref=e263]: "#6"
+              - generic [ref=e264]:
+                - button [ref=e265] [cursor=pointer]:
+                  - img [ref=e266]
+                - button [ref=e268] [cursor=pointer]:
+                  - img [ref=e269]
+            - generic [ref=e273]: reisen
+          - generic [ref=e274]:
+            - generic [ref=e275]:
+              - generic [ref=e276]: "#7"
+              - generic [ref=e277]:
+                - button [ref=e278] [cursor=pointer]:
+                  - img [ref=e279]
+                - button [ref=e281] [cursor=pointer]:
+                  - img [ref=e282]
+            - generic [ref=e286]: rettung
+          - generic [ref=e287]:
+            - generic [ref=e288]:
+              - generic [ref=e289]: "#8"
+              - generic [ref=e290]:
+                - button [ref=e291] [cursor=pointer]:
+                  - img [ref=e292]
+                - button [ref=e294] [cursor=pointer]:
+                  - img [ref=e295]
+            - generic [ref=e299]: arbeit
+          - generic [ref=e300]:
+            - generic [ref=e301]:
+              - generic [ref=e302]: "#9"
+              - generic [ref=e303]:
+                - button [ref=e304] [cursor=pointer]:
+                  - img [ref=e305]
+                - button [ref=e307] [cursor=pointer]:
+                  - img [ref=e308]
+            - generic [ref=e312]: politik
+          - generic [ref=e313]:
+            - generic [ref=e314]:
+              - generic [ref=e315]: "#10"
+              - generic [ref=e316]:
+                - button [ref=e317] [cursor=pointer]:
+                  - img [ref=e318]
+                - button [ref=e320] [cursor=pointer]:
+                  - img [ref=e321]
+            - generic [ref=e325]: behoerden
+          - generic [ref=e326]:
+            - generic [ref=e327]:
+              - generic [ref=e328]: "#11"
+              - generic [ref=e329]:
+                - button [ref=e330] [cursor=pointer]:
+                  - img [ref=e331]
+                - button [ref=e333] [cursor=pointer]:
+                  - img [ref=e334]
+            - generic [ref=e338]: wohnen
+          - generic [ref=e339]:
+            - generic [ref=e340]:
+              - generic [ref=e341]: "#12"
+              - generic [ref=e342]:
+                - button [ref=e343] [cursor=pointer]:
+                  - img [ref=e344]
+                - button [ref=e346] [cursor=pointer]:
+                  - img [ref=e347]
+            - generic [ref=e351]: tech
+          - generic [ref=e352]:
+            - generic [ref=e353]:
+              - generic [ref=e354]: "#13"
+              - generic [ref=e355]:
+                - button [ref=e356] [cursor=pointer]:
+                  - img [ref=e357]
+                - button [ref=e359] [cursor=pointer]:
+                  - img [ref=e360]
+            - generic [ref=e364]: community
+          - generic [ref=e365]:
+            - generic [ref=e366]:
+              - generic [ref=e367]: "#14"
+              - generic [ref=e368]:
+                - button [ref=e369] [cursor=pointer]:
+                  - img [ref=e370]
+                - button [ref=e372] [cursor=pointer]:
+                  - img [ref=e373]
+            - generic [ref=e377]: newsletter
+          - generic [ref=e378]:
+            - generic [ref=e379]:
+              - generic [ref=e380]: "#15"
+              - generic [ref=e381]:
+                - button [ref=e382] [cursor=pointer]:
+                  - img [ref=e383]
+                - button [disabled] [ref=e385]:
+                  - img [ref=e386]
+            - generic [ref=e390]: privat
+      - generic [ref=e391]:
+        - heading "Neue Kategorie hinzufügen" [level=4] [ref=e392]:
+          - img [ref=e393]
+          - text: Neue Kategorie hinzufügen
+        - generic [ref=e395]:
+          - textbox "Kategorie-Name" [ref=e396]
+          - button "Hinzufügen" [ref=e397] [cursor=pointer]
+    - generic [ref=e398]:
+      - heading "Email-Konten verwalten 1 Konten" [level=3] [ref=e399]:
+        - img [ref=e400]
+        - text: Email-Konten verwalten
+        - generic [ref=e405]: 1 Konten
+      - generic [ref=e406]:
+        - generic [ref=e407]:
+          - generic [ref=e408]:
+            - heading "Gmail" [level=4] [ref=e409]
+            - generic [ref=e410]:
+              - generic [ref=e411]: Aktiv
+              - button [ref=e412] [cursor=pointer]:
+                - img [ref=e413]
+              - button [ref=e416] [cursor=pointer]:
+                - img [ref=e417]
+          - generic [ref=e420]:
+            - generic [ref=e421]: "IMAP: imap.gmail.com:993"
+            - generic [ref=e422]: "Benutzer: impedire@googlemail.com"
+            - generic [ref=e423]: "Quelle: INBOX"
+            - generic [ref=e424]: "Ziele: 15 Ordner"
+        - button "Neues Konto hinzufügen" [ref=e425] [cursor=pointer]:
+          - img [ref=e426]
+          - text: Neues Konto hinzufügen
+    - generic [ref=e427]:
+      - heading "Telegram Benachrichtigungen Nicht verbunden" [level=3] [ref=e428]:
+        - img [ref=e429]
+        - text: Telegram Benachrichtigungen
+        - generic [ref=e432]: Nicht verbunden
+      - generic [ref=e433]:
+        - generic [ref=e434]:
+          - generic [ref=e435]:
+            - generic [ref=e436]: Bot-Token
+            - generic [ref=e437]:
+              - textbox "123456:ABC-DEF..." [ref=e438]
+              - button "Speichern" [ref=e439] [cursor=pointer]
+            - paragraph [ref=e440]:
+              - img [ref=e441]
+              - text: Erstelle einen Bot via
+              - link "@BotFather" [ref=e443] [cursor=pointer]:
+                - /url: https://t.me/BotFather
+          - generic [ref=e444]:
+            - generic [ref=e445]: Benachrichtigungs-Modus
+            - combobox [ref=e446]:
+              - option "Aus — Keine Benachrichtigungen" [selected]
+              - option "Wichtig — Nur wichtige Emails (hoch)"
+              - option "Alle — Alle klassifizierten Emails"
+            - paragraph [ref=e447]:
+              - img [ref=e448]
+              - text: Bestimmt welche Emails eine Telegram-Nachricht auslösen
+        - generic [ref=e452]:
+          - img [ref=e453]
+          - paragraph [ref=e455]: Gib einen Bot-Token ein, um Telegram-Benachrichtigungen einzurichten.
+    - generic [ref=e456]:
+      - button "Alle Änderungen verwerfen" [ref=e457] [cursor=pointer]:
+        - img [ref=e458]
+        - text: Alle Änderungen verwerfen
+      - generic [ref=e461]:
+        - button "Verbindung testen" [ref=e462] [cursor=pointer]:
+          - img [ref=e463]
+          - text: Verbindung testen
+        - button "Konfiguration speichern" [ref=e465] [cursor=pointer]:
+          - img [ref=e466]
+          - generic [ref=e470]: Konfiguration speichern

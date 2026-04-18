@@ -1,0 +1,74 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Superhero" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: Superhero
+      - generic [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+          - text: Dashboard
+        - link "Inbox" [ref=e16] [cursor=pointer]:
+          - /url: /inbox
+          - img [ref=e17]
+          - text: Inbox
+        - link "Logs" [ref=e20] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e21]
+          - text: Logs
+        - link "Stats" [ref=e24] [cursor=pointer]:
+          - /url: /stats
+          - img [ref=e25]
+          - text: Stats
+        - link "Settings" [ref=e27] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e28]
+          - text: Settings
+    - generic [ref=e31]:
+      - button "Suchen... ⌘K" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - generic [ref=e36]: Suchen...
+        - generic [ref=e37]: ⌘K
+      - button [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+  - generic [ref=e43]:
+    - complementary [ref=e44]:
+      - button "Alle Konten 0" [ref=e46] [cursor=pointer]:
+        - generic [ref=e47]:
+          - img [ref=e48]
+          - text: Alle Konten
+        - generic [ref=e52]: "0"
+      - button "Gmail" [ref=e55] [cursor=pointer]:
+        - generic [ref=e56]: Gmail
+    - generic [ref=e58]:
+      - generic [ref=e59]:
+        - generic [ref=e60]:
+          - button "Alle 0" [ref=e61] [cursor=pointer]
+          - button "0" [ref=e62] [cursor=pointer]:
+            - img [ref=e63]
+            - text: "0"
+          - button "0" [ref=e65] [cursor=pointer]:
+            - img [ref=e66]
+            - text: "0"
+          - button "0" [ref=e69] [cursor=pointer]:
+            - img [ref=e70]
+            - text: "0"
+        - generic [ref=e72]:
+          - generic [ref=e73]:
+            - img [ref=e74]
+            - textbox "Suchen..." [ref=e77]
+          - button "Neu laden" [ref=e78] [cursor=pointer]:
+            - img [ref=e79]
+          - button "KI-Frage" [ref=e84] [cursor=pointer]:
+            - img [ref=e85]
+        - generic [ref=e88]:
+          - checkbox [ref=e89]
+          - generic [ref=e90]: 0 / 0
+      - generic [ref=e93]:
+        - generic [ref=e94]: Keine Emails
+        - generic [ref=e95]: In diesem Ordner liegt nichts.
+      - generic [ref=e96]:
+        - generic [ref=e97]: 1 · Ende
+        - button "Mehr" [disabled] [ref=e98]

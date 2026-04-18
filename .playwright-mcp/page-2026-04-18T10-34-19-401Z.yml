@@ -1,0 +1,229 @@
+- generic [ref=e2]:
+  - banner [ref=e3]:
+    - generic [ref=e4]:
+      - link "Superhero" [ref=e5] [cursor=pointer]:
+        - /url: /
+        - img [ref=e6]
+        - generic [ref=e8]: Superhero
+      - generic [ref=e9]:
+        - link "Dashboard" [ref=e10] [cursor=pointer]:
+          - /url: /
+          - img [ref=e11]
+          - text: Dashboard
+        - link "Inbox" [ref=e16] [cursor=pointer]:
+          - /url: /inbox
+          - img [ref=e17]
+          - text: Inbox
+        - link "Logs" [ref=e20] [cursor=pointer]:
+          - /url: /logs
+          - img [ref=e21]
+          - text: Logs
+        - link "Stats" [ref=e24] [cursor=pointer]:
+          - /url: /stats
+          - img [ref=e25]
+          - text: Stats
+        - link "Settings" [ref=e27] [cursor=pointer]:
+          - /url: /config
+          - img [ref=e28]
+          - text: Settings
+    - generic [ref=e31]:
+      - button "Suchen... ⌘K" [ref=e32] [cursor=pointer]:
+        - img [ref=e33]
+        - generic [ref=e36]: Suchen...
+        - generic [ref=e37]: ⌘K
+      - button [ref=e38] [cursor=pointer]:
+        - img [ref=e39]
+  - generic [ref=e42]:
+    - generic [ref=e43]:
+      - heading "Logs" [level=1] [ref=e44]
+      - paragraph [ref=e45]: Live-Ansicht der Superhero Mail Aktivität
+    - generic [ref=e46]:
+      - generic [ref=e47]:
+        - generic [ref=e48]:
+          - generic [ref=e49] [cursor=pointer]:
+            - checkbox "Auto-Refresh" [checked] [ref=e50]
+            - generic [ref=e51]: Auto-Refresh
+          - combobox [ref=e52]:
+            - option "2 Sekunden" [selected]
+            - option "5 Sekunden"
+            - option "10 Sekunden"
+            - option "30 Sekunden"
+          - combobox [ref=e53]:
+            - option "Alle Logs" [selected]
+            - option "Nur Info"
+            - option "Nur Warnungen"
+            - option "Nur Fehler"
+        - generic [ref=e54]:
+          - button "Pausieren" [ref=e55] [cursor=pointer]:
+            - img [ref=e56]
+            - generic [ref=e59]: Pausieren
+          - button "Aktualisieren" [ref=e60] [cursor=pointer]:
+            - img [ref=e61]
+            - text: Aktualisieren
+          - button "Löschen" [ref=e66] [cursor=pointer]:
+            - img [ref=e67]
+            - text: Löschen
+      - generic [ref=e71]:
+        - generic [ref=e72]:
+          - generic [ref=e73]: "Gesamt:"
+          - generic [ref=e74]: "35"
+        - generic [ref=e75]:
+          - generic [ref=e77]: "Info:"
+          - generic [ref=e78]: "35"
+        - generic [ref=e79]:
+          - generic [ref=e81]: "Warnungen:"
+          - generic [ref=e82]: "0"
+        - generic [ref=e83]:
+          - generic [ref=e85]: "Fehler:"
+          - generic [ref=e86]: "0"
+        - generic [ref=e87]:
+          - generic [ref=e89]: "Erfolg:"
+          - generic [ref=e90]: "0"
+    - generic [ref=e91]:
+      - generic [ref=e92]:
+        - heading "mail_sorter.log Live" [level=3] [ref=e93]:
+          - img [ref=e94]
+          - text: mail_sorter.log
+          - generic [ref=e97]: Live
+        - button "Nach unten scrollen" [ref=e100] [cursor=pointer]:
+          - img [ref=e101]
+      - generic [ref=e103]:
+        - generic [ref=e104]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e105]: 2026-04-18 10:34:19 INFO Run 230 at 2026-04-18T12:22:13.289460 — error
+        - generic [ref=e106]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e107]: "2026-04-18 10:34:19 INFO STDERR:"
+        - generic [ref=e108]: 2026-04-18 10:34:19 INFO File "/Users/michaelkatschko/mail-ai-sorter/sorter.py", line 828
+        - generic [ref=e109]: "2026-04-18 10:34:19 INFO log(f\"[{name}] ERROR on delayed email: {e}\")"
+        - generic [ref=e110]: "2026-04-18 10:34:19 INFO IndentationError: expected an indented block after 'except' statement on line 827"
+        - generic [ref=e111]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e112]: 2026-04-18 10:34:19 INFO Run 231 at 2026-04-18T12:28:54.701663 — error
+        - generic [ref=e113]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e114]: "2026-04-18 10:34:19 INFO STDERR:"
+        - generic [ref=e115]: 2026-04-18 10:34:19 INFO File "/Users/michaelkatschko/mail-ai-sorter/sorter.py", line 828
+        - generic [ref=e116]: "2026-04-18 10:34:19 INFO log(f\"[{name}] ERROR on delayed email: {e}\")"
+        - generic [ref=e117]: "2026-04-18 10:34:19 INFO IndentationError: expected an indented block after 'except' statement on line 827"
+        - generic [ref=e118]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e119]: 2026-04-18 10:34:19 INFO Run 232 at 2026-04-18T12:28:58.670233 — error
+        - generic [ref=e120]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e121]: "2026-04-18 10:34:19 INFO STDERR:"
+        - generic [ref=e122]: 2026-04-18 10:34:19 INFO File "/Users/michaelkatschko/mail-ai-sorter/sorter.py", line 828
+        - generic [ref=e123]: "2026-04-18 10:34:19 INFO log(f\"[{name}] ERROR on delayed email: {e}\")"
+        - generic [ref=e124]: "2026-04-18 10:34:19 INFO IndentationError: expected an indented block after 'except' statement on line 827"
+        - generic [ref=e125]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e126]: 2026-04-18 10:34:19 INFO Run 233 at 2026-04-18T12:29:07.188123 — error
+        - generic [ref=e127]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e128]: "2026-04-18 10:34:19 INFO STDERR:"
+        - generic [ref=e129]: 2026-04-18 10:34:19 INFO File "/Users/michaelkatschko/mail-ai-sorter/sorter.py", line 828
+        - generic [ref=e130]: "2026-04-18 10:34:19 INFO log(f\"[{name}] ERROR on delayed email: {e}\")"
+        - generic [ref=e131]: "2026-04-18 10:34:19 INFO IndentationError: expected an indented block after 'except' statement on line 827"
+        - generic [ref=e132]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e133]: 2026-04-18 10:34:19 INFO Run 234 at 2026-04-18T12:29:13.720844 — error
+        - generic [ref=e134]: 2026-04-18 10:34:19 INFO ============================================================
+        - generic [ref=e135]: "2026-04-18 10:34:19 INFO STDERR:"
+        - generic [ref=e136]: 2026-04-18 10:34:19 INFO File "/Users/michaelkatschko/mail-ai-sorter/sorter.py", line 828
+        - generic [ref=e137]: "2026-04-18 10:34:19 INFO log(f\"[{name}] ERROR on delayed email: {e}\")"
+        - generic [ref=e138]: "2026-04-18 10:34:19 INFO IndentationError: expected an indented block after 'except' statement on line 827"
+    - generic [ref=e139]:
+      - generic [ref=e140]:
+        - heading "Sortier-Historie" [level=3] [ref=e141]:
+          - img [ref=e142]
+          - text: Sortier-Historie
+        - generic [ref=e145]:
+          - combobox [ref=e146]:
+            - option "Alle Konten" [selected]
+          - combobox [ref=e147]:
+            - option "Alle Zeit" [selected]
+            - option "Letzte 24h"
+            - option "Letzte 7 Tage"
+            - option "Letzte 30 Tage"
+          - button "Aktualisieren" [ref=e148] [cursor=pointer]
+      - generic [ref=e149]:
+        - generic [ref=e150]:
+          - generic [ref=e151]: "6"
+          - generic [ref=e152]: Gesamt
+        - generic [ref=e153]:
+          - generic [ref=e154]: "2"
+          - generic [ref=e155]: Verzögert
+        - generic [ref=e156]:
+          - generic [ref=e157]: "0"
+          - generic [ref=e158]: Per KI
+        - generic [ref=e159]:
+          - generic [ref=e160]: "1"
+          - generic [ref=e161]: Per Regel/Cache
+      - table [ref=e163]:
+        - rowgroup [ref=e164]:
+          - row "Zeit Konto Von Betreff Kategorie Ziel Methode Grund" [ref=e165]:
+            - columnheader "Zeit" [ref=e166]
+            - columnheader "Konto" [ref=e167]
+            - columnheader "Von" [ref=e168]
+            - columnheader "Betreff" [ref=e169]
+            - columnheader "Kategorie" [ref=e170]
+            - columnheader "Ziel" [ref=e171]
+            - columnheader "Methode" [ref=e172]
+            - columnheader "Grund" [ref=e173]
+        - rowgroup [ref=e174]:
+          - row "04-17 18:34 Gmail \"WiWi, Fachstudienberatun [FernUniversitaet in Hagen] Fakultät für Wirtschaf newsletter Newsletter list-unsub List-Unsubscribe Header erkannt" [ref=e175]:
+            - cell "04-17 18:34" [ref=e176]
+            - cell "Gmail" [ref=e177]
+            - cell "\"WiWi, Fachstudienberatun" [ref=e178]
+            - cell "[FernUniversitaet in Hagen] Fakultät für Wirtschaf" [ref=e179]
+            - cell "newsletter" [ref=e180]
+            - cell "Newsletter" [ref=e181]
+            - cell "list-unsub" [ref=e182]
+            - cell "List-Unsubscribe Header erkannt" [ref=e183]
+          - row "04-17 18:34 Gmail DHL Paket <noreply@dhl.de Ihre ESN.com Sendung ist unterwegs einkauf Einkauf rule Regel-Treffer für Absender/Betreff" [ref=e184]:
+            - cell "04-17 18:34" [ref=e185]
+            - cell "Gmail" [ref=e186]
+            - cell "DHL Paket <noreply@dhl.de" [ref=e187]
+            - cell "Ihre ESN.com Sendung ist unterwegs" [ref=e188]
+            - cell "einkauf" [ref=e189]
+            - cell "Einkauf" [ref=e190]
+            - cell "rule" [ref=e191]
+            - cell "Regel-Treffer für Absender/Betreff" [ref=e192]
+          - row "04-17 18:34 Gmail GitHub <noreply@github.co [GitHub] Sudo email verification code tech Tech cache Absender noreply@github.com aus Cache" [ref=e193]:
+            - cell "04-17 18:34" [ref=e194]
+            - cell "Gmail" [ref=e195]
+            - cell "GitHub <noreply@github.co" [ref=e196]
+            - cell "[GitHub] Sudo email verification code" [ref=e197]
+            - cell "tech" [ref=e198]
+            - cell "Tech" [ref=e199]
+            - cell "cache" [ref=e200]
+            - cell "Absender noreply@github.com aus Cache" [ref=e201]
+          - row "04-17 18:34 Gmail GitHub <noreply@github.co [GitHub] Sudo email verification code delayed delay Noch 24min zu jung für Verarbeitung" [ref=e202]:
+            - cell "04-17 18:34" [ref=e203]
+            - cell "Gmail" [ref=e204]
+            - cell "GitHub <noreply@github.co" [ref=e205]
+            - cell "[GitHub] Sudo email verification code" [ref=e206]
+            - cell "delayed" [ref=e207]
+            - cell [ref=e208]
+            - cell "delay" [ref=e209]
+            - cell "Noch 24min zu jung für Verarbeitung" [ref=e210]
+          - 'row "04-17 18:34 Gmail \"Meta\" <meta@marketing.me Now available: New Ray-Ban Meta styles newsletter Newsletter list-unsub List-Unsubscribe Header erkannt" [ref=e211]':
+            - cell "04-17 18:34" [ref=e212]
+            - cell "Gmail" [ref=e213]
+            - cell "\"Meta\" <meta@marketing.me" [ref=e214]
+            - 'cell "Now available: New Ray-Ban Meta styles" [ref=e215]'
+            - cell "newsletter" [ref=e216]
+            - cell "Newsletter" [ref=e217]
+            - cell "list-unsub" [ref=e218]
+            - cell "List-Unsubscribe Header erkannt" [ref=e219]
+          - row "04-17 18:32 Gmail GitHub <noreply@github.co [GitHub] Sudo email verification code delayed delay Noch 26min zu jung für Verarbeitung" [ref=e220]:
+            - cell "04-17 18:32" [ref=e221]
+            - cell "Gmail" [ref=e222]
+            - cell "GitHub <noreply@github.co" [ref=e223]
+            - cell "[GitHub] Sudo email verification code" [ref=e224]
+            - cell "delayed" [ref=e225]
+            - cell [ref=e226]
+            - cell "delay" [ref=e227]
+            - cell "Noch 26min zu jung für Verarbeitung" [ref=e228]
+    - generic [ref=e229]:
+      - heading "Export" [level=3] [ref=e230]:
+        - img [ref=e231]
+        - text: Export
+      - generic [ref=e234]:
+        - button "Als .txt exportieren" [ref=e235] [cursor=pointer]:
+          - img [ref=e236]
+          - text: Als .txt exportieren
+        - button "Als .json exportieren" [ref=e239] [cursor=pointer]:
+          - img [ref=e240]
+          - text: Als .json exportieren

@@ -153,11 +153,18 @@ def get_status() -> Dict[str, Any]:
 
 def run_sorter_once(dry_run: bool = False, max_mails: int = 10) -> Dict[str, Any]:
     try:
+        # Lade secrets.env und setze Umgebungsvariablen für subprocess
+        from config_service import load_secrets
+
+        secrets = load_secrets()
+        env = os.environ.copy()
+        env.update(secrets)
+
         cmd = ["./run.sh", "--max-per-account", str(max_mails)]
         if dry_run:
             cmd.append("--dry-run")
         result = subprocess.run(
-            cmd, cwd=BASE_DIR, capture_output=True, text=True, timeout=300
+            cmd, cwd=BASE_DIR, capture_output=True, text=True, timeout=300, env=env
         )
         return {
             "success": result.returncode == 0,

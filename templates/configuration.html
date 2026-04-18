@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Konfiguration - Mail AI Sorter{% endblock %}
+{% block title %}Konfiguration - Superhero Mail{% endblock %}
 
 {% block head %}
 <style>
@@ -67,8 +67,13 @@
 </style>
 {% endblock %}
 
-{% block nav_config %}active{% endblock %}
-{% block nav_mobile_config %}active{% endblock %}
+{% block nav %}
+<a href="/" class="nav-item"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard</a>
+<a href="/inbox" class="nav-item"><i data-lucide="inbox" class="w-3.5 h-3.5"></i> Inbox</a>
+<a href="/logs" class="nav-item"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> Logs</a>
+<a href="/stats" class="nav-item"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Stats</a>
+<a href="/config" class="nav-item active"><i data-lucide="settings" class="w-3.5 h-3.5"></i> Settings</a>
+{% endblock %}
 
 {% block content %}
 <div x-data="configEditor()" x-init="initConfig()">
@@ -814,7 +819,7 @@ function configEditor() {
                     const tr = await fetch('/api/telegram/send-test', {
                         method: 'POST',
                         headers: {'Content-Type': 'application/json'},
-                        body: JSON.stringify({ message: "📊 Täglicher Email-Bericht\n\n" + d.digest + "\n\nMail AI Sorter" })
+                        body: JSON.stringify({ message: "📊 Täglicher Email-Bericht\n\n" + d.digest + "\n\nSuperhero Mail" })
                     });
                     const td = await tr.json();
                     this.tgMessage = td.success ? 'Digest an Telegram gesendet!' : (td.error || 'Fehler');

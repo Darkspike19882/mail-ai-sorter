@@ -9,6 +9,19 @@ INDEX_DB = BASE_DIR / "mail_index.db"
 
 
 def get_stats():
+    """Get stats mit Caching für bessere Performance."""
+    try:
+        from services.cache_service import get_db_cache
+
+        cache = get_db_cache(INDEX_DB)
+        return cache.get_stats()
+    except Exception:
+        # Fallback auf direkte DB-Abfrage wenn Cache nicht verfügbar
+        return _get_stats_uncached()
+
+
+def _get_stats_uncached():
+    """Fallback ohne Cache."""
     try:
         conn = sqlite3.connect(INDEX_DB)
         cursor = conn.cursor()
@@ -40,6 +53,19 @@ def get_stats():
 
 
 def get_detailed_stats(days="30"):
+    """Get detaillierte Stats mit Caching für bessere Dashboard-Performance."""
+    try:
+        from services.cache_service import get_db_cache
+
+        cache = get_db_cache(INDEX_DB)
+        return cache.get_detailed_stats(days)
+    except Exception:
+        # Fallback auf direkte DB-Abfrage wenn Cache nicht verfügbar
+        return _get_detailed_stats_uncached(days)
+
+
+def _get_detailed_stats_uncached(days="30"):
+    """Fallback ohne Cache."""
     try:
         conn = sqlite3.connect(INDEX_DB)
         cursor = conn.cursor()

@@ -1,0 +1,142 @@
+- generic [ref=e2]:
+  - navigation [ref=e3]:
+    - generic [ref=e5]:
+      - generic [ref=e6]:
+        - generic [ref=e7]:
+          - img [ref=e8]
+          - generic [ref=e10]: Superhero Mail
+        - generic [ref=e11]:
+          - link "Inbox" [ref=e12] [cursor=pointer]:
+            - /url: /inbox
+            - img [ref=e13]
+            - text: Inbox
+          - link "Dashboard" [ref=e16] [cursor=pointer]:
+            - /url: /
+            - img [ref=e17]
+            - text: Dashboard
+          - link "Konfiguration" [ref=e22] [cursor=pointer]:
+            - /url: /config
+            - img [ref=e23]
+            - text: Konfiguration
+          - link "Logs" [ref=e26] [cursor=pointer]:
+            - /url: /logs
+            - img [ref=e27]
+            - text: Logs
+          - link "Statistiken" [ref=e30] [cursor=pointer]:
+            - /url: /stats
+            - img [ref=e31]
+            - text: Statistiken
+      - generic [ref=e33]:
+        - button "Suchen... ⌘K" [ref=e34] [cursor=pointer]:
+          - img [ref=e35]
+          - generic [ref=e38]: Suchen...
+          - generic [ref=e39]: ⌘K
+        - button [ref=e40] [cursor=pointer]:
+          - img [ref=e41]
+  - main [ref=e43]:
+    - generic [ref=e44]:
+      - generic [ref=e46]:
+        - generic [ref=e47]:
+          - heading "Dashboard" [level=1] [ref=e48]
+          - paragraph [ref=e49]:
+            - img [ref=e50]
+        - generic [ref=e53]:
+          - link "Setup" [ref=e54] [cursor=pointer]:
+            - /url: /setup
+            - img [ref=e55]
+            - text: Setup
+          - button "Aktualisieren" [ref=e58] [cursor=pointer]:
+            - img [ref=e59]
+            - text: Aktualisieren
+      - generic [ref=e65]:
+        - generic [ref=e66]:
+          - img [ref=e68]
+          - generic [ref=e70]:
+            - heading "Automatische Sortierung" [level=3] [ref=e71]
+            - paragraph
+        - generic [ref=e73]:
+          - generic [ref=e74]: "Ruhezeit:"
+          - textbox [ref=e75]
+          - generic [ref=e76]: "-"
+          - textbox [ref=e77]
+          - generic [ref=e78] [cursor=pointer]:
+            - checkbox "Aktiv" [ref=e79]
+            - generic [ref=e80]: Aktiv
+      - generic [ref=e81]:
+        - generic [ref=e82]:
+          - generic [ref=e83]:
+            - img [ref=e85]
+            - generic [ref=e88]: Live
+          - generic [ref=e90]: Gesamte Mails
+        - generic [ref=e91]:
+          - img [ref=e94]
+          - generic [ref=e96]: Kategorien
+        - generic [ref=e97]:
+          - img [ref=e100]
+          - generic [ref=e105]: Konten
+        - generic [ref=e106]:
+          - img [ref=e109]
+          - generic [ref=e118]: Genauigkeit
+      - generic [ref=e119]:
+        - heading "Kategorien-Verteilung" [level=3] [ref=e121]:
+          - img [ref=e122]
+          - text: Kategorien-Verteilung
+        - heading "Konto-Übersicht" [level=3] [ref=e128]:
+          - img [ref=e129]
+          - text: Konto-Übersicht
+      - heading "Top 10 Kategorien" [level=3] [ref=e133]:
+        - img [ref=e134]
+        - text: Top 10 Kategorien
+      - generic [ref=e137]:
+        - generic [ref=e138]:
+          - heading "Emails durchsuchen" [level=3] [ref=e139]:
+            - img [ref=e140]
+            - text: Emails durchsuchen
+          - generic [ref=e144]:
+            - textbox "Suchbegriff eingeben..." [ref=e145]
+            - button "Suchen" [ref=e146] [cursor=pointer]:
+              - img [ref=e147]
+              - text: Suchen
+        - generic [ref=e150]:
+          - heading "Schnell-Aktionen" [level=3] [ref=e151]:
+            - img [ref=e152]
+            - text: Schnell-Aktionen
+          - generic [ref=e154]:
+            - button [ref=e155] [cursor=pointer]:
+              - img [ref=e156]
+            - button "Testlauf (Dry-Run, 10 Mails)" [ref=e159] [cursor=pointer]:
+              - generic [ref=e161]: Testlauf (Dry-Run, 10 Mails)
+            - generic [ref=e163]:
+              - img [ref=e164]
+              - paragraph [ref=e166]:
+                - text: Der erste Durchlauf empfiehlt sich als
+                - strong [ref=e167]: Testlauf (Dry-Run)
+                - text: um Ergebnisse zu prüfen ohne zu verschieben.
+      - generic [ref=e168]:
+        - heading "KI Email-Assistent (RAG)" [level=3] [ref=e169]:
+          - img [ref=e170]
+          - text: KI Email-Assistent (RAG)
+        - generic [ref=e178]:
+          - button [ref=e180] [cursor=pointer]:
+            - img [ref=e181]
+          - generic [ref=e184]:
+            - generic [ref=e185]: Frag deine Emails
+            - generic [ref=e186]:
+              - textbox "z.B. Wann war die letzte Amazon-Bestellung?" [ref=e187]
+              - button [ref=e188] [cursor=pointer]
+            - generic [ref=e189]:
+              - button "→ Wann war die letzte Amazon-Bestellung?" [ref=e190] [cursor=pointer]
+              - button "→ Wie viele Rechnungen diesen Monat?" [ref=e191] [cursor=pointer]
+              - button "→ Gibt es wichtige unbeantwortete Emails?" [ref=e192] [cursor=pointer]
+  - contentinfo [ref=e193]:
+    - generic [ref=e195]:
+      - generic [ref=e196]:
+        - img [ref=e197]
+        - generic [ref=e199]: ⚡ Superhero Mail — E-Mail-Superkräfte, 100% lokal
+      - generic [ref=e200]:
+        - generic [ref=e201]:
+          - img [ref=e202]
+          - text: Optimized for Apple Silicon
+        - generic [ref=e205]:
+          - img [ref=e206]
+          - text: 100% Local & Private

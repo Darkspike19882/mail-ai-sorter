@@ -1,94 +1,97 @@
 {% extends "base.html" %}
 
-{% block title %}Inbox - Mail AI Sorter{% endblock %}
-{% block nav_inbox %}active{% endblock %}
-{% block nav_mobile_inbox %}active{% endblock %}
+{% block title %}Inbox - Superhero Mail{% endblock %}
+{% block nav %}
+<a href="/" class="nav-item"><i data-lucide="layout-dashboard" class="w-3.5 h-3.5"></i> Dashboard</a>
+<a href="/inbox" class="nav-item active"><i data-lucide="inbox" class="w-3.5 h-3.5"></i> Inbox</a>
+<a href="/logs" class="nav-item"><i data-lucide="file-text" class="w-3.5 h-3.5"></i> Logs</a>
+<a href="/stats" class="nav-item"><i data-lucide="bar-chart-3" class="w-3.5 h-3.5"></i> Stats</a>
+<a href="/config" class="nav-item"><i data-lucide="settings" class="w-3.5 h-3.5"></i> Settings</a>
+{% endblock %}
 
 {% block head %}
 <style>
-    .inbox-layout { display: grid; grid-template-columns: 220px 360px 1fr; min-height: calc(100vh - 10rem); }
-    @media (max-width: 1024px) { .inbox-layout { grid-template-columns: 220px 1fr; } .detail-pane { grid-column: 1 / -1; } }
+    .inbox-layout { display: grid; grid-template-columns: 200px 340px 1fr; height: 100%; }
+    @media (max-width: 1024px) { .inbox-layout { grid-template-columns: 200px 1fr; } .detail-pane { display: none; } }
     @media (max-width: 768px) { .inbox-layout { grid-template-columns: 1fr; } .folder-pane { display: none; } }
-    .folder-pane, .mail-list { border-right: 1px solid #e2e8f0; }
-    .dark .folder-pane, .dark .mail-list { border-color: #334155; }
-    .mail-row.active { background: #e0f2fe; }
-    .dark .mail-row.active { background: #0c4a6e; }
-    .mail-row.unseen .mail-subject { font-weight: 700; }
+    .mail-row { border-bottom: 1px solid transparent; }
+    .mail-row:hover { background: rgba(99,102,241,0.04); }
+    .dark .mail-row:hover { background: rgba(99,102,241,0.08); }
+    .mail-row.active { background: rgba(99,102,241,0.08); border-left: 2px solid #6366f1; }
+    .dark .mail-row.active { background: rgba(99,102,241,0.12); }
+    .mail-row.unseen .mail-subject { font-weight: 600; }
+    .split-tab { padding: 0.35rem 0.75rem; font-size: 0.8rem; font-weight: 500; border-radius: 0.25rem; transition: all 0.1s; cursor: pointer; }
+    .split-tab:hover { background: rgba(99,102,241,0.08); }
+    .dark .split-tab:hover { background: rgba(99,102,241,0.12); }
+    .split-tab.active { background: #6366f1; color: white; }
+    .folder-btn { width: 100%; display: flex; align-items: center; justify-content: space-between; padding: 0.3rem 0.5rem; border-radius: 0.25rem; font-size: 0.8rem; transition: background 0.1s; cursor: pointer; text-align: left; }
+    .folder-btn:hover { background: rgba(99,102,241,0.06); }
+    .dark .folder-btn:hover { background: rgba(99,102,241,0.1); }
+    .folder-btn.active { background: rgba(99,102,241,0.1); color: #6366f1; font-weight: 500; }
+    .dark .folder-btn.active { background: rgba(99,102,241,0.15); color: #818cf8; }
+    .detail-body { font-size: 14px; line-height: 1.6; }
+    .detail-body img { max-width: 100%; }
+    .detail-body a { color: #6366f1; }
+    .dark .detail-body a { color: #818cf8; }
 </style>
 {% endblock %}
 
 {% block content %}
-<div x-data="inboxApp()" x-init="initInbox()" class="space-y-4">
-    <div class="flex flex-wrap items-center justify-between gap-3">
-        <div>
-            <h1 class="text-2xl font-bold text-slate-900 dark:text-white">Inbox</h1>
-            <p class="text-sm text-slate-500 dark:text-slate-400">Bulk-Aktionen, Tags, Analyse und Antwortentwürfe.</p>
-        </div>
-        <div class="flex items-center gap-2">
-            <button @click="openNewCompose()" class="px-4 py-2 rounded-lg bg-primary-600 hover:bg-primary-700 text-white text-sm font-medium">Neue Email</button>
-            <button @click="refreshFolders(); loadMails()" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm text-slate-700 dark:text-slate-300">Aktualisieren</button>
-        </div>
-    </div>
+<div x-data="inboxApp()" x-init="initInbox()" class="h-full">
 
     <template x-if="inboxError">
-        <div class="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-200 flex items-center justify-between gap-3">
+        <div class="mx-3 mt-3 px-3 py-2 rounded-md border border-red-200 dark:border-red-900/50 bg-red-50 dark:bg-red-950/20 text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
             <span x-text="inboxError"></span>
-            <button @click="inboxError = ''" class="text-red-500">Schließen</button>
+            <button @click="inboxError = ''" class="text-red-400 hover:text-red-600 ml-2">&times;</button>
         </div>
     </template>
 
     <template x-if="degradedAccounts.length">
-        <div class="rounded-xl border border-amber-200 dark:border-amber-900 bg-amber-50 dark:bg-amber-950/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200 space-y-2">
-            <div class="font-medium">Die Unified Inbox ist nur teilweise geladen.</div>
-            <div x-text="degradedAccounts.map(item => item.account).filter(Boolean).join(', ')"></div>
+        <div class="mx-3 mt-2 px-3 py-2 rounded-md border border-amber-200 dark:border-amber-900/50 bg-amber-50 dark:bg-amber-950/20 text-xs text-amber-700 dark:text-amber-300">
+            Unified Inbox teilweise geladen: <span x-text="degradedAccounts.map(item => item.account).filter(Boolean).join(', ')"></span>
         </div>
     </template>
 
     <template x-if="searchActive">
-        <div class="rounded-xl border border-sky-200 dark:border-sky-900 bg-sky-50 dark:bg-sky-950/30 px-4 py-3 text-sm text-sky-700 dark:text-sky-200 flex flex-wrap items-center justify-between gap-3">
-            <span x-text="`Suche aktiv: &quot;${searchQuery}&quot; (${mails.length} Treffer)` + (searchAccountFilter ? ' in ' + searchAccountFilter : '') + (searchFolderFilter ? '/' + searchFolderFilter : '')"></span>
-            <button @click="clearSearch()" class="px-3 py-1.5 rounded-lg border border-sky-300 dark:border-sky-700">Suche beenden</button>
+        <div class="mx-3 mt-2 px-3 py-2 rounded-md border border-brand-200 dark:border-brand-800/50 bg-brand-50 dark:bg-brand-950/20 text-xs text-brand-700 dark:text-brand-300 flex items-center justify-between">
+            <span x-text="`Suche: &quot;${searchQuery}&quot; (${mails.length} Treffer)` + (searchAccountFilter ? ' in ' + searchAccountFilter : '') + (searchFolderFilter ? '/' + searchFolderFilter : '')"></span>
+            <button @click="clearSearch()" class="text-brand-500 hover:text-brand-700 ml-2 text-[11px] font-medium">Beenden</button>
         </div>
     </template>
 
     <template x-if="selectedCount > 0">
-        <div class="rounded-xl border border-primary-200 dark:border-primary-800 bg-primary-50 dark:bg-primary-950/40 p-3">
-            <div class="flex flex-wrap items-center gap-2 text-sm">
-                <span class="font-medium text-primary-800 dark:text-primary-200" x-text="selectedCount + ' ausgewählt'"></span>
-                <button @click="bulkAction('read')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Gelesen</button>
-                <button @click="bulkAction('unread')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Ungelesen</button>
-                <button @click="bulkAction('flag')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Stern</button>
-                <button @click="bulkAction('unflag')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Stern weg</button>
-                <button @click="bulkAction('delete')" class="px-3 py-1.5 rounded-lg bg-red-600 text-white">Löschen</button>
-                <input x-model="bulkTag" type="text" placeholder="Tag" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 min-w-24">
-                <button @click="bulkAction('tag')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Tag setzen</button>
-                <input x-model="bulkMoveFolder" type="text" placeholder="Zielordner" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 min-w-32">
-                <button @click="bulkAction('move')" class="px-3 py-1.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">Verschieben</button>
-                <button @click="clearSelection()" class="ml-auto px-3 py-1.5 rounded-lg text-slate-500">Auswahl aufheben</button>
-            </div>
+        <div class="mx-3 mt-2 px-3 py-2 rounded-md bg-brand-50 dark:bg-brand-950/20 border border-brand-200 dark:border-brand-800/40 flex flex-wrap items-center gap-2 text-xs">
+            <span class="font-medium text-brand-700 dark:text-brand-300" x-text="selectedCount + ' ausgewählt'"></span>
+            <button @click="bulkAction('read')" class="px-2 py-1 rounded bg-white dark:bg-surface-2 border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3">Gelesen</button>
+            <button @click="bulkAction('unread')" class="px-2 py-1 rounded bg-white dark:bg-surface-2 border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3">Ungelesen</button>
+            <button @click="bulkAction('flag')" class="px-2 py-1 rounded bg-white dark:bg-surface-2 border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3">Stern</button>
+            <button @click="bulkAction('delete')" class="px-2 py-1 rounded bg-red-600 text-white hover:bg-red-700">Löschen</button>
+            <input x-model="bulkTag" type="text" placeholder="Tag" class="px-2 py-1 rounded border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 w-20 text-xs">
+            <button @click="bulkAction('tag')" class="px-2 py-1 rounded bg-white dark:bg-surface-2 border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3">Tag</button>
+            <button @click="clearSelection()" class="ml-auto text-slate-400 hover:text-slate-600">Aufheben</button>
         </div>
     </template>
 
-    <div class="inbox-layout overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-sm">
-        <aside class="folder-pane bg-slate-50/70 dark:bg-slate-900/40">
-            <div class="p-3 border-b border-slate-200 dark:border-slate-700">
-                <button @click="selectUnified()" class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-left" :class="isUnified ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-800 dark:text-primary-200' : 'hover:bg-slate-100 dark:hover:bg-slate-800'">
-                    <span>Alle Konten</span>
-                    <span class="text-xs px-2 py-0.5 rounded-full bg-primary-600 text-white" x-text="totalUnread"></span>
+    <div class="inbox-layout flex-1">
+        <aside class="folder-pane border-r border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1 overflow-y-auto">
+            <div class="p-2 border-b border-slate-100 dark:border-surface-3">
+                <button @click="selectUnified()" class="folder-btn" :class="isUnified ? 'active' : ''">
+                    <span class="flex items-center gap-1.5"><i data-lucide="layers" class="w-3.5 h-3.5"></i> Alle Konten</span>
+                    <span class="text-[10px] px-1.5 py-0.5 rounded-full bg-brand-600 text-white font-medium" x-text="totalUnread"></span>
                 </button>
             </div>
-            <div class="p-2 space-y-3 overflow-y-auto">
+            <div class="p-2 space-y-0.5">
                 <template x-for="acc in accounts" :key="acc.name">
-                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                        <button @click="acc.expanded = !acc.expanded" class="w-full flex items-center justify-between px-3 py-2 text-sm font-medium">
+                    <div>
+                        <button @click="acc.expanded = !acc.expanded" class="w-full flex items-center justify-between px-2 py-1.5 text-xs font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-surface-2 rounded">
                             <span class="truncate" x-text="acc.name"></span>
-                            <span class="text-xs text-slate-500" x-text="acc.unreadTotal || 0"></span>
+                            <i data-lucide="chevron-down" class="w-3 h-3 transition-transform" :class="acc.expanded ? '' : '-rotate-90'"></i>
                         </button>
-                        <div x-show="acc.expanded" class="px-2 pb-2 space-y-1">
+                        <div x-show="acc.expanded" class="space-y-0.5 pl-1">
                             <template x-for="folder in acc.folders" :key="folder.name">
-                                <button @click="selectFolder(acc.name, folder.name)" class="w-full flex items-center justify-between px-3 py-1.5 rounded-lg text-sm" :class="!isUnified && currentAccount === acc.name && currentFolder === folder.name ? 'bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-200' : 'hover:bg-slate-100 dark:hover:bg-slate-700'">
+                                <button @click="selectFolder(acc.name, folder.name)" class="folder-btn text-xs" :class="!isUnified && currentAccount === acc.name && currentFolder === folder.name ? 'active' : ''">
                                     <span class="truncate" x-text="folderDisplayName(folder)"></span>
-                                    <span class="text-xs text-slate-500" x-text="folder.unread || 0"></span>
+                                    <span class="text-[10px] text-slate-400" x-text="folder.unread || ''"></span>
                                 </button>
                             </template>
                         </div>
@@ -97,87 +100,90 @@
             </div>
         </aside>
 
-        <section class="mail-list flex flex-col min-h-[70vh]">
-            <div class="p-3 border-b border-slate-200 dark:border-slate-700 space-y-2">
-                <div class="flex items-center gap-2">
-                    <input x-model="searchQuery" @input="debounceSearch()" @keydown.enter.prevent="runFilteredSearch()" @keydown.escape="clearSearch()" type="text" placeholder="Suchen..." class="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
-                    <button x-show="searchActive" @click="clearSearch()" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Zur Inbox</button>
-                    <button @click="loadMails()" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Neu laden</button>
-                    <button @click="openAiPanel()" class="px-3 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm flex items-center gap-1.5">
-                        <i data-lucide="sparkles" class="w-4 h-4"></i>
-                        <span class="hidden sm:inline">KI-Frage</span>
+        <section class="mail-list flex flex-col border-r border-slate-200 dark:border-surface-3">
+            <div class="p-2 border-b border-slate-100 dark:border-surface-3 space-y-2">
+                <div class="flex items-center gap-1">
+                    <button @click="setSplitView('all')" class="split-tab" :class="splitView === 'all' ? 'active' : 'text-slate-500 dark:text-slate-400'">
+                        Alle <span class="text-[10px] ml-1 opacity-70" x-text="totalMails"></span>
+                    </button>
+                    <button @click="setSplitView('important')" class="split-tab" :class="splitView === 'important' ? 'active' : 'text-slate-500 dark:text-slate-400'">
+                        <i data-lucide="alert-circle" class="w-3 h-3 inline -mt-0.5"></i> <span class="text-[10px] ml-0.5 opacity-70" x-text="importantCount"></span>
+                    </button>
+                    <button @click="setSplitView('unread')" class="split-tab" :class="splitView === 'unread' ? 'active' : 'text-slate-500 dark:text-slate-400'">
+                        <i data-lucide="mail" class="w-3 h-3 inline -mt-0.5"></i> <span class="text-[10px] ml-0.5 opacity-70" x-text="unreadCount"></span>
+                    </button>
+                    <button @click="setSplitView('flagged')" class="split-tab" :class="splitView === 'flagged' ? 'active' : 'text-slate-500 dark:text-slate-400'">
+                        <i data-lucide="star" class="w-3 h-3 inline -mt-0.5"></i> <span class="text-[10px] ml-0.5 opacity-70" x-text="flaggedCount"></span>
                     </button>
                 </div>
-                <div class="flex flex-wrap gap-1.5 items-center">
-                    <button @click="setSearchAccountFilter('')" class="px-3 py-1 rounded-full text-xs border transition-colors" :class="searchAccountFilter === '' ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'">Alle Konten</button>
-                    <template x-for="acc in accounts" :key="acc.name">
-                        <button @click="setSearchAccountFilter(acc.name)" class="px-3 py-1 rounded-full text-xs border transition-colors" :class="searchAccountFilter === acc.name ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'" x-text="acc.name"></button>
-                    </template>
-                    <template x-if="searchAccountFilter && accountFolders.length">
-                        <template x-for="folder in accountFolders" :key="folder.name">
-                            <button @click="setSearchFolderFilter(folder.name)" class="px-3 py-1 rounded-full text-xs border transition-colors" :class="searchFolderFilter === folder.name ? 'bg-slate-900 text-white border-slate-900 dark:bg-slate-100 dark:text-slate-900 dark:border-slate-100' : 'border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300'" x-text="folderDisplayName(folder)"></button>
-                        </template>
-                    </template>
-                    <div class="relative ml-1" x-data="{ dateOpen: false }">
-                        <button @click="dateOpen = !dateOpen" class="px-3 py-1 rounded-full text-xs border transition-colors border-slate-300 dark:border-slate-600 text-slate-600 dark:text-slate-300 flex items-center gap-1">
-                            <span x-text="searchDateFilter || 'Datum'"></span>
-                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                        </button>
-                        <div x-show="dateOpen" @click.away="dateOpen = false" class="absolute top-full left-0 mt-1 z-20 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-lg py-1 min-w-36" style="display:none">
-                            <button @click="setSearchDateFilter(''); dateOpen = false" class="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">Alle</button>
-                            <button @click="setSearchDateFilter('7d'); dateOpen = false" class="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">Letzte 7 Tage</button>
-                            <button @click="setSearchDateFilter('30d'); dateOpen = false" class="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">Letzte 30 Tage</button>
-                            <button @click="setSearchDateFilter('90d'); dateOpen = false" class="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">Letzte 90 Tage</button>
-                            <button @click="setSearchDateFilter('year'); dateOpen = false" class="w-full text-left px-3 py-1.5 text-xs hover:bg-slate-100 dark:hover:bg-slate-700">Dieses Jahr</button>
-                        </div>
+                <div class="flex items-center gap-1.5">
+                    <div class="flex-1 flex items-center gap-1.5 px-2 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2">
+                        <i data-lucide="search" class="w-3.5 h-3.5 text-slate-400 shrink-0"></i>
+                        <input x-model="searchQuery" @input="debounceSearch()" @keydown.enter.prevent="runFilteredSearch()" @keydown.escape="clearSearch()" type="text" placeholder="Suchen..." class="flex-1 bg-transparent text-xs outline-none dark:text-white placeholder-slate-400">
                     </div>
+                    <button @click="this._foldersCacheTime=0; loadMails()" class="p-1.5 rounded-md border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors" title="Neu laden">
+                        <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-slate-400"></i>
+                    </button>
+                    <button @click="openAiPanel()" class="p-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white transition-colors" title="KI-Frage">
+                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                    </button>
                 </div>
-                <div class="flex items-center gap-2 text-xs text-slate-500">
-                    <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectVisible($event.target.checked)">
-                    <span x-text="visibleMails.length + ' / ' + totalMails + ' Emails'"></span>
-                    <span x-show="degradedAccounts.length" class="px-2 py-0.5 rounded-full bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200">teilweise geladen</span>
+                <div class="flex items-center gap-1.5 text-[11px] text-slate-400">
+                    <input type="checkbox" :checked="allVisibleSelected" @change="toggleSelectVisible($event.target.checked)" class="w-3 h-3">
+                    <span x-text="visibleMails.length + ' / ' + totalMails"></span>
+                    <span x-show="degradedAccounts.length" class="px-1.5 py-0.5 rounded-full bg-amber-100 dark:bg-amber-900/30 text-amber-600 dark:text-amber-300">teilweise</span>
                 </div>
             </div>
 
             <div class="flex-1 overflow-y-auto">
                 <template x-if="loading && visibleMails.length === 0">
-                    <div class="p-8 text-center text-slate-400">Lade Emails...</div>
+                    <div class="flex items-center justify-center h-32 text-xs text-slate-400">
+                        <i data-lucide="loader" class="w-4 h-4 animate-spin mr-2"></i> Lade Emails...
+                    </div>
                 </template>
                 <template x-if="!loading && visibleMails.length === 0">
-                    <div class="p-8 text-center space-y-2">
-                        <div class="text-base font-medium text-slate-700 dark:text-slate-200" x-text="emptyStateTitle()"></div>
-                        <div class="text-sm text-slate-400" x-text="emptyStateText()"></div>
+                    <div class="flex items-center justify-center h-32 text-xs text-slate-400">
+                        <div>
+                            <div class="font-medium text-slate-600 dark:text-slate-300" x-text="emptyStateTitle()"></div>
+                            <div class="mt-0.5" x-text="emptyStateText()"></div>
+                        </div>
                     </div>
                 </template>
                 <template x-for="group in priorityGroups" :key="group.key">
-                    <div x-show="group.mails.length > 0" class="border-b border-slate-200 dark:border-slate-700 last:border-b-0">
-                        <div class="sticky top-0 z-10 px-3 py-2 bg-slate-50/95 dark:bg-slate-900/95 border-b border-slate-200 dark:border-slate-700">
+                    <div x-show="group.mails.length > 0">
+                        <div class="sticky top-0 z-10 px-3 py-1.5 bg-white/95 dark:bg-surface-1/95 backdrop-blur-sm border-b border-slate-100 dark:border-surface-3">
                             <div class="flex items-center justify-between">
-                                <div class="text-xs font-semibold uppercase tracking-wide" :class="priorityHeaderClass(group.key)" x-text="group.label"></div>
-                                <div class="text-xs text-slate-400" x-text="group.mails.length"></div>
+                                <span class="text-[10px] font-semibold uppercase tracking-wider" :class="priorityHeaderClass(group.key)" x-text="group.label"></span>
+                                <span class="text-[10px] text-slate-400" x-text="group.mails.length"></span>
                             </div>
                         </div>
                         <template x-for="mail in group.mails" :key="mail.account + ':' + mail.folder + ':' + mail.uid">
-                            <div class="mail-row border-b border-slate-100 dark:border-slate-700 px-3 py-3 cursor-pointer" :class="[{ 'active': selectedMailKey === mailKey(mail), 'unseen': !mail.seen }]" @click="selectMail(mail)">
-                                <div class="flex items-start gap-3">
-                                    <input type="checkbox" :checked="isSelected(mail)" @click.stop @change="toggleSelection(mail)">
-                                    <button @click.stop="toggleFlag(mail)" class="text-slate-400 hover:text-yellow-500">
-                                        <i data-lucide="star" class="w-4 h-4" :class="mail.flagged ? 'fill-yellow-500 text-yellow-500' : ''"></i>
+                            <div class="mail-row px-3 py-2.5 cursor-pointer" :class="[{ 'active': selectedMailKey === mailKey(mail), 'unseen': !mail.seen }]" @click="selectMail(mail)">
+                                <div class="flex items-start gap-2.5">
+                                    <input type="checkbox" :checked="isSelected(mail)" @click.stop @change="toggleSelection(mail)" class="mt-0.5 w-3 h-3 shrink-0">
+                                    <button @click.stop="toggleFlag(mail)" class="mt-0.5 shrink-0">
+                                        <i data-lucide="star" class="w-3.5 h-3.5" :class="mail.flagged ? 'fill-yellow-500 text-yellow-500' : 'text-slate-300 dark:text-surface-4 hover:text-yellow-400'"></i>
                                     </button>
                                     <div class="min-w-0 flex-1">
                                         <div class="flex items-center justify-between gap-2">
-                                            <div class="truncate text-sm text-slate-900 dark:text-white" x-text="cleanSender(mail.from)"></div>
-                                            <div class="text-xs text-slate-400" x-text="formatDate(mail.date)"></div>
+                                            <span class="truncate text-[13px] font-medium text-slate-900 dark:text-white" x-text="cleanSender(mail.from)"></span>
+                                            <span class="text-[11px] text-slate-400 whitespace-nowrap" x-text="formatDate(mail.date)"></span>
                                         </div>
-                                        <div class="mail-subject truncate text-sm text-slate-700 dark:text-slate-300" x-text="mail.subject || '(Kein Betreff)'"></div>
-                                        <template x-if="searchActive && mail.match_snippet">
-                                            <div class="mt-1 text-[13px] text-slate-500 leading-snug line-clamp-2" x-html="highlightSnippet(mail.match_snippet)"></div>
+                                        <div class="mail-subject truncate text-[13px] text-slate-600 dark:text-slate-300" x-text="mail.subject || '(Kein Betreff)'"></div>
+                                        <template x-if="mail.ai_summary">
+                                            <div class="mt-0.5 flex items-center gap-1 text-[11px] text-brand-600 dark:text-brand-400">
+                                                <i data-lucide="sparkles" class="w-2.5 h-2.5 shrink-0"></i>
+                                                <span class="truncate" x-text="mail.ai_summary"></span>
+                                            </div>
                                         </template>
-                                        <div class="mt-1 flex flex-wrap items-center gap-2 text-[11px] text-slate-400">
+                                        <template x-if="!mail.ai_summary && mail.body_text && showAiSummaries">
+                                            <div class="mt-0.5 text-[11px] text-slate-400 truncate" x-text="previewText(mail.body_text)"></div>
+                                        </template>
+                                        <div class="mt-1 flex items-center gap-1.5 text-[10px] text-slate-400">
                                             <span x-show="isUnified" x-text="mail.account"></span>
+                                            <span x-show="mail.folder && isUnified" class="opacity-50">/</span>
                                             <span x-show="mail.folder" x-text="mail.folder"></span>
-                                            <span class="px-1.5 py-0.5 rounded-full" :class="priorityPillClass(mail.smart_priority)" x-text="priorityLabel(mail.smart_priority)"></span>
-                                            <span x-show="mail.priority_score !== undefined" x-text="mail.priority_score + '/100'"></span>
+                                            <span class="px-1 py-0.5 rounded" :class="priorityPillClass(mail.smart_priority)" x-text="priorityLabel(mail.smart_priority)"></span>
                                         </div>
                                     </div>
                                 </div>
@@ -187,75 +193,72 @@
                 </template>
             </div>
 
-            <div class="p-3 border-t border-slate-200 dark:border-slate-700 flex items-center justify-between gap-3 text-xs text-slate-500">
-                <span x-text="hasMoreMails ? `Seite ${page} • weitere Emails verfügbar` : `Seite ${page} • Ende erreicht`"></span>
-                <button @click="loadMoreMails()" :disabled="loading || !hasMoreMails || searchActive" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm disabled:opacity-50 disabled:cursor-not-allowed">Mehr laden</button>
+            <div class="px-3 py-1.5 border-t border-slate-100 dark:border-surface-3 flex items-center justify-between text-[11px] text-slate-400">
+                <span x-text="hasMoreMails ? `Seite ${page}` : `${page} · Ende`"></span>
+                <button @click="loadMoreMails()" :disabled="loading || !hasMoreMails || searchActive" class="px-2 py-1 rounded border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3 disabled:opacity-40 disabled:cursor-not-allowed text-[11px]">Mehr</button>
             </div>
         </section>
 
-        <section class="detail-pane min-h-[70vh] bg-white dark:bg-slate-800">
+        <section class="detail-pane overflow-hidden">
             <template x-if="selectedMail">
                 <div class="flex flex-col h-full">
-                    <div class="border-b border-slate-200 dark:border-slate-700 p-4 space-y-3">
-                        <div class="flex flex-wrap items-start justify-between gap-3">
-                            <div>
-                                <h2 class="text-xl font-bold text-slate-900 dark:text-white" x-text="selectedMail.subject || '(Kein Betreff)'"></h2>
-                                <p class="text-sm text-slate-500 dark:text-slate-400">
+                    <div class="shrink-0 border-b border-slate-100 dark:border-surface-3 p-4 space-y-3">
+                        <div class="flex items-start justify-between gap-3">
+                            <div class="min-w-0">
+                                <h2 class="text-base font-semibold text-slate-900 dark:text-white truncate" x-text="selectedMail.subject || '(Kein Betreff)'"></h2>
+                                <p class="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
                                     <span x-text="selectedMail.from"></span>
-                                    <span class="mx-2">•</span>
+                                    <span class="mx-1.5 opacity-40">&middot;</span>
                                     <span x-text="formatDateFull(selectedMail.date)"></span>
                                 </p>
                             </div>
-                            <div class="flex flex-wrap items-center gap-2">
-                                <button @click="toggleReadFlag(selectedMail)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Gelesen/Ungelesen</button>
-                                <button @click="openReply(selectedMail)" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Antworten</button>
-                                <button @click="deleteMail(selectedMail)" class="px-3 py-1.5 rounded-lg bg-red-600 text-white text-sm">Löschen</button>
+                            <div class="flex items-center gap-1.5 shrink-0">
+                                <button @click="toggleReadFlag(selectedMail)" class="p-1.5 rounded-md border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors" title="Gelesen/Ungelesen">
+                                    <i data-lucide="mail-open" class="w-3.5 h-3.5 text-slate-400"></i>
+                                </button>
+                                <button @click="openReply(selectedMail)" class="p-1.5 rounded-md border border-slate-200 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-3 transition-colors" title="Antworten">
+                                    <i data-lucide="reply" class="w-3.5 h-3.5 text-slate-400"></i>
+                                </button>
+                                <button @click="deleteMail(selectedMail)" class="p-1.5 rounded-md border border-slate-200 dark:border-surface-3 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors" title="Löschen">
+                                    <i data-lucide="trash-2" class="w-3.5 h-3.5 text-slate-400 hover:text-red-500"></i>
+                                </button>
                             </div>
                         </div>
 
-                        <div class="flex flex-wrap items-center gap-2 text-xs">
-                            <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" x-text="selectedMail.account"></span>
-                            <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" x-text="selectedMail.folder"></span>
+                        <div class="flex flex-wrap items-center gap-1.5 text-[11px]">
+                            <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-surface-3 text-slate-600 dark:text-slate-400" x-text="selectedMail.account"></span>
+                            <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-surface-3 text-slate-600 dark:text-slate-400" x-text="selectedMail.folder"></span>
                             <template x-if="selectedMail.analysis && selectedMail.analysis.importance">
-                                <span class="px-2 py-1 rounded-full bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-200" x-text="'Priorität: ' + selectedMail.analysis.importance"></span>
-                            </template>
-                            <template x-if="selectedMail.analysis && selectedMail.analysis.tone">
-                                <span class="px-2 py-1 rounded-full bg-slate-100 dark:bg-slate-700 text-slate-700 dark:text-slate-200" x-text="'Ton: ' + selectedMail.analysis.tone"></span>
+                                <span class="px-1.5 py-0.5 rounded bg-red-100 dark:bg-red-900/30 text-red-700 dark:text-red-300" x-text="'Priorität: ' + selectedMail.analysis.importance"></span>
                             </template>
                             <template x-if="selectedMail.analysis && selectedMail.analysis.action_needed">
-                                <span class="px-2 py-1 rounded-full bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-200">Aktion nötig</span>
+                                <span class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300">Aktion nötig</span>
                             </template>
                             <template x-for="tag in (selectedMail.tags || [])" :key="tag">
-                                <button @click="removeTagForMail(tag)" class="px-2 py-1 rounded-full bg-primary-100 dark:bg-primary-900/40 text-primary-700 dark:text-primary-200" x-text="'#' + tag"></button>
+                                <button @click="removeTagForMail(tag)" class="px-1.5 py-0.5 rounded bg-brand-100 dark:bg-brand-900/30 text-brand-700 dark:text-brand-300 hover:bg-brand-200" x-text="'#' + tag"></button>
                             </template>
-                        </div>
-
-                        <div class="flex flex-wrap items-center gap-2">
-                            <input x-model="newTag" @keydown.enter.prevent="addTagForMail(newTag)" type="text" placeholder="Tag hinzufügen" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800">
-                            <button @click="addTagForMail(newTag)" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Tag speichern</button>
+                            <div class="flex items-center gap-1 ml-1">
+                                <input x-model="newTag" @keydown.enter.prevent="addTagForMail(newTag)" type="text" placeholder="+Tag" class="px-2 py-0.5 rounded border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-[11px] w-16">
+                            </div>
                             <template x-if="selectedMail.unsubscribe_options && selectedMail.unsubscribe_options.length > 0">
-                                <button @click="unsubscribeSelectedMail()" class="px-3 py-2 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 text-amber-700 dark:text-amber-200 text-sm">Abbestellen</button>
+                                <button @click="unsubscribeSelectedMail()" class="px-1.5 py-0.5 rounded bg-amber-100 dark:bg-amber-900/30 text-amber-700 dark:text-amber-300 hover:bg-amber-200">Abbestellen</button>
                             </template>
                         </div>
 
                         <template x-if="selectedMail.thread && selectedMail.thread.length">
-                            <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-3 space-y-2">
-                                <div class="flex items-center justify-between gap-3">
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Thread</div>
-                                    <div class="text-xs text-slate-400" x-text="selectedMail.thread.length + ' Nachrichten'"></div>
+                            <div class="border border-slate-200 dark:border-surface-3 rounded-lg p-2.5 space-y-1.5">
+                                <div class="flex items-center justify-between text-[11px]">
+                                    <span class="font-medium text-slate-500 uppercase tracking-wider">Thread</span>
+                                    <span class="text-slate-400" x-text="selectedMail.thread.length + ' Nachrichten'"></span>
                                 </div>
-                                <div class="space-y-2 text-sm text-slate-600 dark:text-slate-300 max-h-56 overflow-y-auto pr-1">
+                                <div class="space-y-1 max-h-40 overflow-y-auto">
                                     <template x-for="item in selectedMail.thread" :key="item.message_id || item.subject || item.date">
-                                        <button
-                                            @click="openThreadItem(item)"
-                                            class="w-full text-left rounded-xl border px-3 py-2 transition-colors"
-                                            :class="item.is_selected ? 'border-primary-300 bg-primary-50 dark:border-primary-800 dark:bg-primary-950/40' : 'border-slate-200 bg-white hover:border-slate-300 dark:border-slate-700 dark:bg-slate-800 dark:hover:border-slate-600'">
-                                            <div class="flex items-center justify-between gap-3">
-                                                <div class="min-w-0 font-medium truncate" x-text="item.subject || '(Kein Betreff)'"></div>
-                                                <div class="text-[11px] text-slate-400 whitespace-nowrap" x-text="formatDateFull(item.date)"></div>
+                                        <button @click="openThreadItem(item)" class="w-full text-left px-2 py-1.5 rounded text-xs transition-colors" :class="item.is_selected ? 'bg-brand-50 dark:bg-brand-900/20 text-brand-700 dark:text-brand-300' : 'hover:bg-slate-50 dark:hover:bg-surface-2 text-slate-600 dark:text-slate-400'">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="truncate font-medium" x-text="item.subject || '(Kein Betreff)'"></span>
+                                                <span class="text-[10px] text-slate-400 whitespace-nowrap" x-text="formatDateFull(item.date)"></span>
                                             </div>
-                                            <div class="mt-1 text-xs text-slate-500 truncate" x-text="item.from || '?' "></div>
-                                            <div class="mt-1 text-[11px] text-slate-400" x-text="item.is_selected ? 'Aktuell geoeffnet' : 'Im Thread oeffnen'"></div>
+                                            <div class="truncate text-[11px] text-slate-400 mt-0.5" x-text="item.from || '?'"></div>
                                         </button>
                                     </template>
                                 </div>
@@ -263,201 +266,182 @@
                         </template>
                     </div>
 
-                    <div class="grid lg:grid-cols-[1fr_320px] flex-1 min-h-0">
-                        <div class="overflow-y-auto p-4 space-y-4">
+                    <div class="flex-1 min-h-0 flex flex-col">
+                        <div class="flex-1 overflow-y-auto p-4 space-y-4">
                             <template x-if="selectedMail.analysis && selectedMail.analysis.summary">
-                                <div class="rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40 p-4">
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-500 mb-2">KI-Zusammenfassung</div>
-                                    <p class="text-sm text-slate-700 dark:text-slate-300" x-text="selectedMail.analysis.summary"></p>
+                                <div class="rounded-lg border border-brand-200 dark:border-brand-800/30 bg-brand-50 dark:bg-brand-950/20 p-3">
+                                    <div class="text-[10px] font-semibold uppercase tracking-wider text-brand-600 dark:text-brand-400 mb-1">KI-Zusammenfassung</div>
+                                    <p class="text-xs text-brand-800 dark:text-brand-200" x-text="selectedMail.analysis.summary"></p>
                                 </div>
                             </template>
 
                             <template x-if="selectedMail.body_html">
-                                <div class="prose prose-sm max-w-none dark:prose-invert" x-html="sanitizeHtml(selectedMail.body_html)"></div>
+                                <div class="detail-body max-w-none" x-html="sanitizeHtml(selectedMail.body_html)"></div>
                             </template>
                             <template x-if="!selectedMail.body_html">
                                 <pre class="whitespace-pre-wrap text-sm font-sans leading-relaxed text-slate-700 dark:text-slate-300" x-text="selectedMail.body_text || ''"></pre>
                             </template>
 
                             <template x-if="selectedMail.attachments && selectedMail.attachments.length">
-                                <div class="space-y-2">
-                                    <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Anhänge</div>
-                                    <div class="flex flex-wrap gap-2">
+                                <div>
+                                    <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400 mb-1.5">Anhänge</div>
+                                    <div class="flex flex-wrap gap-1.5">
                                         <template x-for="(att, idx) in selectedMail.attachments" :key="idx">
-                                            <a :href="'/api/email/' + encodeURIComponent(selectedMail.account) + '/' + encodeURIComponent(selectedMail.folder) + '/' + selectedMail.uid + '/attachment/' + idx" class="px-3 py-2 rounded-lg border border-slate-200 dark:border-slate-700 text-sm hover:border-primary-400">
+                                            <a :href="'/api/email/' + encodeURIComponent(selectedMail.account) + '/' + encodeURIComponent(selectedMail.folder) + '/' + selectedMail.uid + '/attachment/' + idx" class="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 text-xs text-slate-600 dark:text-slate-400 hover:border-brand-300 hover:text-brand-600 transition-colors flex items-center gap-1.5">
+                                                <i data-lucide="paperclip" class="w-3 h-3"></i>
                                                 <span x-text="att.filename"></span>
                                             </a>
                                         </template>
                                     </div>
                                 </div>
                             </template>
+                        </div>
 
-                            <div class="border-t border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
-                                <template x-if="replyGenerating || replyAdapting">
-                                    <div class="h-1 bg-sky-600 animate-pulse"></div>
-                                </template>
-                                <template x-if="replyError">
-                                    <div class="px-4 py-2 text-sm text-red-700 bg-red-50 dark:bg-red-950/30 border-b border-red-200 flex items-center justify-between">
-                                        <span x-text="replyError"></span>
-                                        <button @click="replyError = ''" class="text-red-500 text-xs">Schließen</button>
-                                    </div>
-                                </template>
-                                <div class="px-4 py-2 border-b border-slate-100 dark:border-slate-700 flex flex-wrap items-center gap-2">
-                                    <div class="relative" x-data="{ open: false }">
-                                        <button @click="open = !open; if(open) loadTemplates()" class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs flex items-center gap-1.5 hover:bg-slate-50 dark:hover:bg-slate-700">
-                                            <i data-lucide="file-text" class="w-3.5 h-3.5"></i> Vorlage
-                                            <i data-lucide="chevron-down" class="w-3 h-3"></i>
-                                        </button>
-                                        <div x-show="open" @click.away="open = false" class="absolute bottom-full mb-1 left-0 z-30 w-72 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-xl" style="display:none">
-                                            <div class="p-2 border-b border-slate-100 dark:border-slate-700">
-                                                <input x-model="templateSearchQuery" type="text" placeholder="Vorlage suchen..." class="w-full px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-sm bg-white dark:bg-slate-800">
-                                            </div>
-                                            <div class="max-h-64 overflow-y-auto p-1">
-                                                <template x-if="filteredTemplates.length === 0">
-                                                    <div class="p-3 text-sm text-slate-400 text-center">Keine Vorlagen vorhanden</div>
-                                                </template>
-                                                <template x-for="tmpl in filteredTemplates" :key="tmpl.id">
-                                                    <button @click="insertTemplate(tmpl); open = false" class="w-full text-left px-3 py-2 rounded-lg hover:bg-slate-50 dark:hover:bg-slate-700">
-                                                        <div class="text-sm font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></div>
-                                                        <div class="text-xs text-slate-500 truncate" x-text="tmpl.body.substring(0, 60)"></div>
-                                                    </button>
-                                                </template>
-                                            </div>
-                                            <div class="p-2 border-t border-slate-100 dark:border-slate-700 flex gap-2">
-                                                <button @click="openTemplateManager(); open = false" class="text-xs text-sky-600 hover:underline">Vorlagen verwalten</button>
-                                            </div>
+                        <div class="shrink-0 border-t border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1">
+                            <template x-if="replyGenerating || replyAdapting">
+                                <div class="h-0.5 bg-brand-600 animate-pulse"></div>
+                            </template>
+                            <template x-if="replyError">
+                                <div class="px-3 py-1.5 text-[11px] text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/20 border-b border-red-100 dark:border-red-900/30 flex items-center justify-between">
+                                    <span x-text="replyError"></span>
+                                    <button @click="replyError = ''" class="text-red-400">&times;</button>
+                                </div>
+                            </template>
+                            <div class="px-3 py-1.5 border-b border-slate-100 dark:border-surface-3 flex flex-wrap items-center gap-1.5">
+                                <div class="relative" x-data="{ open: false }">
+                                    <button @click="open = !open; if(open) loadTemplates()" class="px-2 py-1 rounded border border-slate-200 dark:border-surface-3 text-[11px] flex items-center gap-1 hover:bg-slate-50 dark:hover:bg-surface-2">
+                                        <i data-lucide="file-text" class="w-3 h-3"></i> Vorlage
+                                    </button>
+                                    <div x-show="open" @click.away="open = false" class="absolute bottom-full mb-1 left-0 z-30 w-64 rounded-lg border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1 shadow-xl" style="display:none">
+                                        <div class="p-2 border-b border-slate-100 dark:border-surface-3">
+                                            <input x-model="templateSearchQuery" type="text" placeholder="Vorlage suchen..." class="w-full px-2 py-1 rounded border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
+                                        </div>
+                                        <div class="max-h-48 overflow-y-auto p-1">
+                                            <template x-if="filteredTemplates.length === 0">
+                                                <div class="p-3 text-xs text-slate-400 text-center">Keine Vorlagen</div>
+                                            </template>
+                                            <template x-for="tmpl in filteredTemplates" :key="tmpl.id">
+                                                <button @click="insertTemplate(tmpl); open = false" class="w-full text-left px-2 py-1.5 rounded hover:bg-slate-50 dark:hover:bg-surface-2">
+                                                    <div class="text-xs font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></div>
+                                                    <div class="text-[11px] text-slate-400 truncate" x-text="tmpl.body.substring(0, 50)"></div>
+                                                </button>
+                                            </template>
+                                        </div>
+                                        <div class="p-2 border-t border-slate-100 dark:border-surface-3">
+                                            <button @click="openTemplateManager(); open = false" class="text-[11px] text-brand-600 hover:underline">Verwalten</button>
                                         </div>
                                     </div>
-                                    <select x-model="replyTone" class="px-2 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs bg-white dark:bg-slate-800">
-                                        <option value="freundlich">Freundlich</option>
-                                        <option value="formal">Formal</option>
-                                        <option value="kurz">Kurz</option>
-                                        <option value="bestimmt">Bestimmt</option>
-                                    </select>
-                                    <button @click="generateReplyDraft()" :disabled="replyGenerating" class="px-3 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs flex items-center gap-1 disabled:opacity-50">
-                                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                                        <span x-text="replyGenerating ? 'Generiere...' : 'KI-Entwurf'"></span>
-                                    </button>
-                                    <button @click="adaptReplyWithAI()" :disabled="replyAdapting || !replyDraft.trim()" class="px-3 py-1.5 rounded-lg border border-sky-300 dark:border-sky-700 text-sky-700 dark:text-sky-300 text-xs flex items-center gap-1 disabled:opacity-50">
-                                        <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
-                                        <span x-text="replyAdapting ? 'Passe an...' : 'KI anpassen'"></span>
-                                    </button>
                                 </div>
-                                <div class="px-4 py-3">
-                                    <textarea x-model="replyDraft" @input="debounceSaveDraft()" rows="4" placeholder="Antwort schreiben... (Strg+Enter zum Senden)" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm focus:ring-2 focus:ring-sky-500 focus:border-sky-500 resize-y min-h-[80px] max-h-[400px]"></textarea>
+                                <select x-model="replyTone" class="px-2 py-1 rounded border border-slate-200 dark:border-surface-3 text-[11px] bg-white dark:bg-surface-2">
+                                    <option value="freundlich">Freundlich</option>
+                                    <option value="formal">Formal</option>
+                                    <option value="kurz">Kurz</option>
+                                    <option value="bestimmt">Bestimmt</option>
+                                </select>
+                                <button @click="generateReplyDraft()" :disabled="replyGenerating" class="px-2 py-1 rounded bg-brand-600 hover:bg-brand-700 text-white text-[11px] flex items-center gap-1 disabled:opacity-50">
+                                    <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                    <span x-text="replyGenerating ? '...' : 'KI-Entwurf'"></span>
+                                </button>
+                                <button @click="adaptReplyWithAI()" :disabled="replyAdapting || !replyDraft.trim()" class="px-2 py-1 rounded border border-brand-200 dark:border-brand-800/30 text-brand-700 dark:text-brand-300 text-[11px] flex items-center gap-1 disabled:opacity-50">
+                                    <i data-lucide="sparkles" class="w-3 h-3"></i>
+                                    <span x-text="replyAdapting ? '...' : 'KI anpassen'"></span>
+                                </button>
+                            </div>
+                            <div class="px-3 py-2">
+                                <textarea x-model="replyDraft" @input="debounceSaveDraft()" rows="3" placeholder="Antwort schreiben... (Strg+Enter zum Senden)" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-sm focus:ring-1 focus:ring-brand-500 focus:border-brand-500 resize-y min-h-[60px] max-h-[300px]"></textarea>
+                            </div>
+                            <div class="px-3 py-1.5 border-t border-slate-100 dark:border-surface-3 flex items-center justify-between gap-2 text-[11px] text-slate-400">
+                                <div class="flex items-center gap-2 truncate">
+                                    <span>An: <span class="text-slate-600 dark:text-slate-300" x-text="replyTo"></span></span>
                                 </div>
-                                <div class="px-4 py-2 border-t border-slate-100 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2">
-                                    <div class="flex items-center gap-3 text-xs text-slate-500">
-                                        <span>An: <span class="text-slate-700 dark:text-slate-300" x-text="replyTo"></span></span>
-                                        <span>Betreff: <span class="text-slate-700 dark:text-slate-300" x-text="replySubject"></span></span>
-                                    </div>
-                                    <div class="flex items-center gap-2">
-                                        <label class="px-3 py-1.5 rounded-lg border border-slate-300 dark:border-slate-600 text-xs cursor-pointer hover:bg-slate-50 dark:hover:bg-slate-700">
-                                            <i data-lucide="paperclip" class="w-3.5 h-3.5 inline"></i> Anhang
-                                            <input type="file" multiple @change="handleReplyAttachments($event)" class="hidden">
-                                        </label>
-                                        <template x-if="replyAttachments.length">
-                                            <div class="flex gap-1">
-                                                <template x-for="(att, idx) in replyAttachments" :key="att.filename + ':' + idx">
-                                                    <span class="px-2 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-xs text-slate-600 dark:text-slate-300" x-text="att.filename + ' ×'" @click="replyAttachments.splice(idx, 1)" style="cursor:pointer"></span>
-                                                </template>
-                                            </div>
+                                <div class="flex items-center gap-1.5 shrink-0">
+                                    <label class="px-2 py-1 rounded border border-slate-200 dark:border-surface-3 cursor-pointer hover:bg-slate-50 dark:hover:bg-surface-2 flex items-center gap-1">
+                                        <i data-lucide="paperclip" class="w-3 h-3"></i>
+                                        <input type="file" multiple @change="handleReplyAttachments($event)" class="hidden">
+                                    </label>
+                                    <template x-if="replyAttachments.length">
+                                        <template x-for="(att, idx) in replyAttachments" :key="att.filename + ':' + idx">
+                                            <span class="px-1.5 py-0.5 rounded bg-slate-100 dark:bg-surface-3 text-slate-500 text-[10px] cursor-pointer" @click="replyAttachments.splice(idx, 1)" x-text="att.filename + ' ×'"></span>
                                         </template>
-                                        <button @click="discardReplyDraft()" x-show="replyDraft.trim()" class="px-3 py-1.5 text-xs text-red-600 hover:text-red-700">Entwurf verwerfen</button>
-                                        <button @click="sendInlineReply()" :disabled="replySending || !replyDraft.trim()" class="px-4 py-1.5 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-xs disabled:opacity-50 disabled:cursor-not-allowed" x-text="replySending ? 'Sende...' : 'Senden'"></button>
-                                    </div>
+                                    </template>
+                                    <button @click="discardReplyDraft()" x-show="replyDraft.trim()" class="text-red-400 hover:text-red-600">Verwerfen</button>
+                                    <button @click="sendInlineReply()" :disabled="replySending || !replyDraft.trim()" class="px-3 py-1 rounded bg-brand-600 hover:bg-brand-700 text-white disabled:opacity-40 disabled:cursor-not-allowed" x-text="replySending ? '...' : 'Senden'"></button>
                                 </div>
                             </div>
                         </div>
-
-                        <aside class="border-t lg:border-t-0 lg:border-l border-slate-200 dark:border-slate-700 p-4 space-y-4 overflow-y-auto">
-                            <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-4 space-y-3">
-                                <div class="flex items-center justify-between">
-                                    <div>
-                                        <div class="font-semibold text-slate-900 dark:text-white">Email-Analyse</div>
-                                        <div class="text-xs text-slate-500">Ton, Priorität, Handlungsbedarf</div>
-                                    </div>
-                                    <button @click="generateAnalysis()" class="px-3 py-1.5 rounded-lg bg-primary-600 text-white text-sm">Analysieren</button>
-                                </div>
-                                <template x-if="selectedMail.analysis && selectedMail.analysis.priority_score !== undefined">
-                                    <div class="text-sm text-slate-600 dark:text-slate-300" x-text="'Priority Score: ' + selectedMail.analysis.priority_score + '/100'"></div>
-                                </template>
-                            </div>
-
-                        </aside>
                     </div>
                 </div>
             </template>
 
             <template x-if="!selectedMail">
-                <div class="h-full flex items-center justify-center text-slate-400">Email auswählen</div>
+                <div class="h-full flex flex-col items-center justify-center text-slate-400 gap-2">
+                    <i data-lucide="mail" class="w-8 h-8 opacity-30"></i>
+                    <span class="text-sm">Email auswählen</span>
+                </div>
             </template>
         </section>
     </div>
 
-    <div x-show="showAiPanel" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="fixed inset-y-0 right-0 z-40 w-full sm:w-[480px]">
-        <div class="absolute inset-0 bg-black/30" @click="closeAiPanel()"></div>
-        <div class="relative h-full bg-white dark:bg-slate-800 border-l border-slate-200 dark:border-slate-700 shadow-2xl flex flex-col">
-            <div class="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+    <div x-show="showAiPanel" x-transition:enter="transition ease-out duration-200" x-transition:enter-start="translate-x-full" x-transition:enter-end="translate-x-0" x-transition:leave="transition ease-in duration-150" x-transition:leave-start="translate-x-0" x-transition:leave-end="translate-x-full" class="fixed inset-y-0 right-0 z-40 w-full sm:w-[440px]">
+        <div class="absolute inset-0 bg-black/40 backdrop-blur-sm" @click="closeAiPanel()"></div>
+        <div class="relative h-full bg-white dark:bg-surface-1 border-l border-slate-200 dark:border-surface-3 shadow-2xl flex flex-col">
+            <div class="flex items-center justify-between px-4 py-3 border-b border-slate-100 dark:border-surface-3">
                 <div class="flex items-center gap-2">
-                    <i data-lucide="sparkles" class="w-5 h-5 text-sky-600"></i>
-                    <h3 class="font-semibold text-slate-900 dark:text-white">KI-Frage an deine Emails</h3>
+                    <i data-lucide="sparkles" class="w-4 h-4 text-brand-600"></i>
+                    <span class="font-semibold text-sm text-slate-900 dark:text-white">KI-Frage</span>
                 </div>
-                <button @click="closeAiPanel()" class="text-slate-500 hover:text-slate-700 dark:hover:text-slate-300">
-                    <i data-lucide="x" class="w-5 h-5"></i>
+                <button @click="closeAiPanel()" class="p-1 rounded hover:bg-slate-100 dark:hover:bg-surface-3">
+                    <i data-lucide="x" class="w-4 h-4 text-slate-400"></i>
                 </button>
             </div>
             <template x-if="aiStatus">
-                <div class="px-4 py-2 text-xs text-slate-500 border-b border-slate-100 dark:border-slate-700">
+                <div class="px-4 py-1.5 text-[11px] text-slate-400 border-b border-slate-50 dark:border-surface-3 flex items-center gap-2">
                     <span x-text="aiStatus.total_emails + ' Emails'"></span>
-                    <span class="mx-1">|</span>
+                    <span>&middot;</span>
                     <span x-text="aiStatus.model"></span>
-                    <span class="mx-1">|</span>
+                    <span>&middot;</span>
                     <span :class="aiStatus.ollama_reachable ? 'text-green-600' : 'text-red-500'" x-text="aiStatus.ollama_reachable ? '● Online' : '● Offline'"></span>
                 </div>
             </template>
             <template x-if="aiStatus && !aiStatus.ollama_reachable">
-                <div class="px-4 py-3 text-sm text-amber-700 dark:text-amber-200 bg-amber-50 dark:bg-amber-950/30 border-b border-amber-200 dark:border-amber-900">
+                <div class="px-4 py-2 text-xs text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/20 border-b border-amber-100 dark:border-amber-900/30">
                     Ollama ist nicht erreichbar. Stelle sicher, dass Ollama läuft.
                 </div>
             </template>
-            <div class="flex-1 overflow-y-auto p-4 space-y-4">
-                <div class="flex gap-2">
-                    <input x-model="aiQuestion" @keydown.enter.prevent="askAiQuestion()" type="text" placeholder="Stelle eine Frage zu deinen Emails..." :disabled="aiLoading || (aiStatus && !aiStatus.ollama_reachable)" class="flex-1 px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm disabled:opacity-50">
-                    <button @click="askAiQuestion()" :disabled="aiLoading || !aiQuestion.trim() || (aiStatus && !aiStatus.ollama_reachable)" class="px-4 py-2 rounded-lg bg-sky-600 hover:bg-sky-700 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1.5">
-                        <span x-text="aiLoading ? '...' : 'Fragen'"></span>
-                        <i data-lucide="arrow-right" class="w-4 h-4"></i>
+            <div class="flex-1 overflow-y-auto p-4 space-y-3">
+                <div class="flex gap-1.5">
+                    <div class="flex-1 flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2">
+                        <input x-model="aiQuestion" @keydown.enter.prevent="askAiQuestion()" type="text" placeholder="Frage zu deinen Emails..." :disabled="aiLoading || (aiStatus && !aiStatus.ollama_reachable)" class="flex-1 bg-transparent text-xs outline-none dark:text-white placeholder-slate-400 disabled:opacity-50">
+                    </div>
+                    <button @click="askAiQuestion()" :disabled="aiLoading || !aiQuestion.trim() || (aiStatus && !aiStatus.ollama_reachable)" class="px-3 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white text-xs disabled:opacity-40">
+                        <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
                     </button>
                 </div>
                 <template x-if="aiLoading">
-                    <div class="text-center py-8 space-y-2">
-                        <div class="animate-pulse text-sky-600 text-sm">Antwort wird generiert...</div>
+                    <div class="text-center py-6">
+                        <div class="animate-pulse text-brand-600 text-xs">Antwort wird generiert...</div>
                     </div>
                 </template>
                 <template x-if="aiError">
-                    <div class="rounded-xl border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-4 py-3 text-sm text-red-700 dark:text-red-200">
+                    <div class="rounded-md border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs text-red-700 dark:text-red-300 flex items-center justify-between">
                         <span x-text="aiError"></span>
-                        <button @click="aiError = ''" class="ml-2 underline">Schließen</button>
+                        <button @click="aiError = ''" class="text-red-400 ml-2">&times;</button>
                     </div>
                 </template>
                 <template x-if="aiAnswer && !aiLoading">
-                    <div class="space-y-4">
-                        <div class="border-l-4 border-sky-400 pl-3 italic text-sm text-slate-600 dark:text-slate-400" x-text="aiAnswer.query"></div>
-                        <div class="text-sm text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap" x-text="aiAnswer.answer"></div>
+                    <div class="space-y-3">
+                        <div class="border-l-2 border-brand-400 pl-3 italic text-xs text-slate-500 dark:text-slate-400" x-text="aiAnswer.query"></div>
+                        <div class="text-xs text-slate-700 dark:text-slate-300 leading-relaxed whitespace-pre-wrap" x-text="aiAnswer.answer"></div>
                         <template x-if="aiAnswer.sources && aiAnswer.sources.length">
-                            <div class="space-y-2">
-                                <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Quellen</div>
+                            <div class="space-y-1.5">
+                                <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Quellen</div>
                                 <template x-for="(source, idx) in aiAnswer.sources" :key="idx">
-                                    <div class="rounded-lg border border-slate-200 dark:border-slate-700 p-3 space-y-1">
-                                        <div class="flex items-center justify-between gap-2">
-                                            <div class="flex items-center gap-2 min-w-0">
-                                                <span class="text-xs font-medium text-slate-400" x-text="'[' + (idx + 1) + ']'"></span>
-                                                <span class="text-[12px] text-slate-500 truncate" x-text="source.date"></span>
-                                                <span class="text-[12px] text-slate-500 truncate" x-text="(source.from_addr || '').substring(0, 30)"></span>
-                                            </div>
-                                            <button @click="openSourceEmail(source)" class="text-sky-600 hover:underline text-xs whitespace-nowrap">Email öffnen</button>
+                                    <div class="rounded-md border border-slate-200 dark:border-surface-3 p-2 flex items-center justify-between gap-2">
+                                        <div class="min-w-0 flex items-center gap-1.5 text-[11px] text-slate-500">
+                                            <span class="font-mono text-[10px] text-slate-400" x-text="'[' + (idx + 1) + ']'"></span>
+                                            <span class="truncate" x-text="(source.subject || '').substring(0, 40)"></span>
                                         </div>
-                                        <div class="text-xs text-slate-600 dark:text-slate-400 truncate" x-text="(source.subject || '').substring(0, 60)"></div>
+                                        <button @click="openSourceEmail(source)" class="text-brand-600 hover:underline text-[11px] shrink-0">Öffnen</button>
                                     </div>
                                 </template>
                             </div>
@@ -465,68 +449,65 @@
                     </div>
                 </template>
                 <template x-if="!aiLoading && !aiAnswer && !aiError">
-                    <div class="text-center py-8 space-y-2">
-                        <div class="text-base font-medium text-slate-700 dark:text-slate-200">Noch keine Fragen gestellt</div>
-                        <div class="text-sm text-slate-400">Stelle deine erste Frage an deine Emails, z.B. "Welche Emails habe ich diese Woche bekommen?"</div>
+                    <div class="text-center py-8 text-xs text-slate-400">
+                        <div class="font-medium text-slate-600 dark:text-slate-300 mb-1">Noch keine Fragen</div>
+                        <div>Stelle eine Frage, z.B. "Welche Emails habe ich diese Woche?"</div>
                     </div>
                 </template>
                 <template x-if="aiHistory.length > 0 && !aiLoading">
-                    <div class="border-t border-slate-200 dark:border-slate-700 pt-3 space-y-2">
-                        <div class="text-xs font-semibold uppercase tracking-wide text-slate-500">Vorherige Fragen</div>
+                    <div class="border-t border-slate-100 dark:border-surface-3 pt-2 space-y-1">
+                        <div class="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Vorherige Fragen</div>
                         <template x-for="item in aiHistory.slice(0, 5)" :key="item.id || item.query">
-                            <button @click="aiQuestion = item.query; askAiQuestion()" class="block w-full text-left text-sm text-slate-600 dark:text-slate-400 hover:text-sky-600 truncate" x-text="item.query"></button>
+                            <button @click="aiQuestion = item.query; askAiQuestion()" class="block w-full text-left text-[11px] text-slate-500 dark:text-slate-400 hover:text-brand-600 truncate" x-text="item.query"></button>
                         </template>
                     </div>
                 </template>
-                <div class="pt-2">
-                    <button @click="triggerReindex()" class="text-xs text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 underline">Index neu aufbauen</button>
+                <div class="pt-1">
+                    <button @click="triggerReindex()" class="text-[11px] text-slate-400 hover:text-slate-600 underline">Index neu aufbauen</button>
                 </div>
             </div>
         </div>
     </div>
 
     <div x-show="showTemplateManager" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50" @click="closeTemplateManager()"></div>
-        <div class="relative w-full max-w-2xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl max-h-[80vh] flex flex-col">
-            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 p-4">
-                <h3 class="font-semibold text-slate-900 dark:text-white">Vorlagen verwalten</h3>
-                <button @click="closeTemplateManager()" class="text-slate-500">Schließen</button>
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeTemplateManager()"></div>
+        <div class="relative w-full max-w-xl rounded-lg border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1 shadow-2xl max-h-[80vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-surface-3 px-4 py-3">
+                <h3 class="font-semibold text-sm text-slate-900 dark:text-white">Vorlagen</h3>
+                <button @click="closeTemplateManager()" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-4 border-b border-slate-200 dark:border-slate-700 space-y-3">
-                <div class="grid grid-cols-[1fr_120px] gap-2">
-                    <input x-model="templateForm.name" type="text" placeholder="Name der Vorlage" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
-                    <select x-model="templateForm.category" class="px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
+            <div class="p-4 border-b border-slate-100 dark:border-surface-3 space-y-2">
+                <div class="grid grid-cols-[1fr_100px] gap-2">
+                    <input x-model="templateForm.name" type="text" placeholder="Name" class="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
+                    <select x-model="templateForm.category" class="px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
                         <option value="Allgemein">Allgemein</option>
                         <option value="Dringend">Dringend</option>
                         <option value="Termin">Termin</option>
                         <option value="Danke">Danke</option>
                     </select>
                 </div>
-                <textarea x-model="templateForm.body" rows="4" placeholder="Vorlagen-Text..." class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"></textarea>
+                <textarea x-model="templateForm.body" rows="3" placeholder="Vorlagen-Text..." class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs"></textarea>
                 <div class="flex gap-2">
-                    <button @click="saveTemplate()" class="px-4 py-2 rounded-lg bg-sky-600 text-white text-sm" x-text="editingTemplate ? 'Aktualisieren' : 'Speichern'"></button>
-                    <button x-show="editingTemplate" @click="editingTemplate = null; templateForm = {name:'', body:'', category:'Allgemein'}" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Abbrechen</button>
+                    <button @click="saveTemplate()" class="px-3 py-1.5 rounded-md bg-brand-600 text-white text-xs" x-text="editingTemplate ? 'Aktualisieren' : 'Speichern'"></button>
+                    <button x-show="editingTemplate" @click="editingTemplate = null; templateForm = {name:'', body:'', category:'Allgemein'}" class="px-3 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 text-xs">Abbrechen</button>
                 </div>
             </div>
-            <div class="flex-1 overflow-y-auto p-4 space-y-2">
+            <div class="flex-1 overflow-y-auto p-4 space-y-1.5">
                 <template x-if="templates.length === 0">
-                    <div class="text-center py-8">
-                        <div class="text-base font-medium text-slate-700 dark:text-slate-200">Noch keine Vorlagen</div>
-                        <div class="text-sm text-slate-400 mt-1">Vorlagen helfen dir, wiederkehrende Antworten schnell einzufügen.</div>
-                    </div>
+                    <div class="text-center py-8 text-xs text-slate-400">Noch keine Vorlagen</div>
                 </template>
                 <template x-for="tmpl in templates" :key="tmpl.id">
-                    <div class="rounded-xl border border-slate-200 dark:border-slate-700 p-3 flex items-start justify-between gap-3">
+                    <div class="flex items-center justify-between gap-3 px-3 py-2 rounded-md border border-slate-100 dark:border-surface-3 hover:bg-slate-50 dark:hover:bg-surface-2">
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2">
-                                <span class="text-sm font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></span>
-                                <span class="px-1.5 py-0.5 rounded-full bg-slate-100 dark:bg-slate-700 text-[11px] text-slate-500" x-text="tmpl.category"></span>
+                            <div class="flex items-center gap-1.5">
+                                <span class="text-xs font-medium text-slate-900 dark:text-white" x-text="tmpl.name"></span>
+                                <span class="px-1 py-0.5 rounded bg-slate-100 dark:bg-surface-3 text-[10px] text-slate-400" x-text="tmpl.category"></span>
                             </div>
-                            <div class="text-xs text-slate-500 mt-1 line-clamp-2" x-text="tmpl.body.substring(0, 100)"></div>
+                            <div class="text-[11px] text-slate-400 mt-0.5 truncate" x-text="tmpl.body.substring(0, 80)"></div>
                         </div>
-                        <div class="flex items-center gap-1">
-                            <button @click="editTemplate(tmpl)" class="px-2 py-1 text-xs text-slate-500 hover:text-sky-600">Bearbeiten</button>
-                            <button @click="deleteTemplate(tmpl.id)" class="px-2 py-1 text-xs text-red-500 hover:text-red-700">Löschen</button>
+                        <div class="flex items-center gap-1 text-[11px] shrink-0">
+                            <button @click="editTemplate(tmpl)" class="text-slate-400 hover:text-brand-600">Edit</button>
+                            <button @click="deleteTemplate(tmpl.id)" class="text-slate-400 hover:text-red-600">Del</button>
                         </div>
                     </div>
                 </template>
@@ -535,40 +516,40 @@
     </div>
 
     <div x-show="showCompose" class="fixed inset-0 z-50 flex items-center justify-center p-4">
-        <div class="absolute inset-0 bg-black/50" @click="showCompose = false"></div>
-        <div class="relative w-full max-w-3xl rounded-2xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 shadow-2xl max-h-[85vh] flex flex-col">
-            <div class="flex items-center justify-between border-b border-slate-200 dark:border-slate-700 p-4">
-                <h3 class="font-semibold text-slate-900 dark:text-white" x-text="composeMode === 'new' ? 'Neue Email' : 'Antwort verfassen'"></h3>
-                <button @click="showCompose = false" class="text-slate-500">Schließen</button>
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="showCompose = false"></div>
+        <div class="relative w-full max-w-2xl rounded-lg border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-1 shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="flex items-center justify-between border-b border-slate-100 dark:border-surface-3 px-4 py-3">
+                <h3 class="font-semibold text-sm text-slate-900 dark:text-white" x-text="composeMode === 'new' ? 'Neue Email' : 'Antwort verfassen'"></h3>
+                <button @click="showCompose = false" class="text-slate-400 hover:text-slate-600"><i data-lucide="x" class="w-4 h-4"></i></button>
             </div>
-            <div class="p-4 space-y-3 overflow-y-auto">
-                <select x-model="compose.account" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
+            <div class="p-4 space-y-2.5 overflow-y-auto">
+                <select x-model="compose.account" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
                     <template x-for="acc in accounts" :key="acc.name">
                         <option :value="acc.name" x-text="acc.name"></option>
                     </template>
                 </select>
-                <input x-model="compose.to" type="text" placeholder="An" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
-                <input x-model="compose.cc" type="text" placeholder="Cc" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
-                <input x-model="compose.subject" type="text" placeholder="Betreff" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm">
-                <textarea x-model="compose.body" rows="14" placeholder="Nachricht" class="w-full px-3 py-2 rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-800 text-sm"></textarea>
-                <div class="space-y-2">
-                    <label class="block text-sm font-medium text-slate-700 dark:text-slate-300">Anhänge</label>
-                    <input type="file" multiple @change="handleComposeAttachments($event)" class="block w-full text-sm text-slate-500 file:mr-3 file:rounded-lg file:border-0 file:bg-slate-100 file:px-3 file:py-2 file:text-slate-700 dark:file:bg-slate-700 dark:file:text-slate-200">
+                <input x-model="compose.to" type="text" placeholder="An" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
+                <input x-model="compose.cc" type="text" placeholder="Cc" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
+                <input x-model="compose.subject" type="text" placeholder="Betreff" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs">
+                <textarea x-model="compose.body" rows="12" placeholder="Nachricht" class="w-full px-2.5 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 bg-white dark:bg-surface-2 text-xs"></textarea>
+                <div>
+                    <label class="block text-[11px] font-medium text-slate-500 mb-1">Anhänge</label>
+                    <input type="file" multiple @change="handleComposeAttachments($event)" class="block w-full text-xs text-slate-400 file:mr-2 file:rounded file:border-0 file:bg-slate-100 dark:file:bg-surface-3 file:px-2.5 file:py-1 file:text-xs file:text-slate-600">
                     <template x-if="compose.attachments.length">
-                        <div class="flex flex-wrap gap-2">
+                        <div class="flex flex-wrap gap-1 mt-1.5">
                             <template x-for="(att, idx) in compose.attachments" :key="att.filename + ':' + idx">
-                                <button @click="removeComposeAttachment(idx)" class="px-3 py-1.5 rounded-full bg-slate-100 dark:bg-slate-700 text-sm text-slate-700 dark:text-slate-200" x-text="att.filename + ' ×'"></button>
+                                <button @click="removeComposeAttachment(idx)" class="px-2 py-0.5 rounded bg-slate-100 dark:bg-surface-3 text-[11px] text-slate-500" x-text="att.filename + ' ×'"></button>
                             </template>
                         </div>
                     </template>
                 </div>
                 <template x-if="composeError">
-                    <div class="rounded-lg border border-red-200 dark:border-red-900 bg-red-50 dark:bg-red-950/30 px-3 py-2 text-sm text-red-700 dark:text-red-200" x-text="composeError"></div>
+                    <div class="rounded-md border border-red-200 dark:border-red-900/30 bg-red-50 dark:bg-red-950/20 px-3 py-2 text-xs text-red-700 dark:text-red-300" x-text="composeError"></div>
                 </template>
             </div>
-            <div class="flex items-center justify-end gap-2 border-t border-slate-200 dark:border-slate-700 p-4">
-                <button @click="showCompose = false" class="px-4 py-2 rounded-lg border border-slate-300 dark:border-slate-600 text-sm">Abbrechen</button>
-                <button @click="sendCompose()" :disabled="sendingCompose" class="px-4 py-2 rounded-lg bg-primary-600 text-white text-sm disabled:opacity-50 disabled:cursor-not-allowed" x-text="sendingCompose ? 'Sende...' : 'Senden'"></button>
+            <div class="flex items-center justify-end gap-2 border-t border-slate-100 dark:border-surface-3 px-4 py-3">
+                <button @click="showCompose = false" class="px-3 py-1.5 rounded-md border border-slate-200 dark:border-surface-3 text-xs">Abbrechen</button>
+                <button @click="sendCompose()" :disabled="sendingCompose" class="px-4 py-1.5 rounded-md bg-brand-600 hover:bg-brand-700 text-white text-xs disabled:opacity-40" x-text="sendingCompose ? 'Sende...' : 'Senden'"></button>
             </div>
         </div>
     </div>
@@ -586,7 +567,7 @@ function inboxApp() {
         loading: false,
         foldersLoading: false,
         page: 1,
-        perPage: 50,
+        perPage: 25,
         isUnified: true,
         currentAccount: '',
         currentFolder: 'INBOX',
@@ -609,6 +590,8 @@ function inboxApp() {
         bulkMoveFolder: '',
         newTag: '',
         activePriorityFilter: 'all',
+        splitView: localStorage.getItem('superhero.splitView') || 'all',
+        showAiSummaries: localStorage.getItem('superhero.aiSummaries') !== 'false',
         inboxError: '',
         composeError: '',
         sendingCompose: false,
@@ -631,13 +614,6 @@ function inboxApp() {
         templateSearchQuery: '',
         templates: [],
         draftSaveTimer: null,
-        priorityOptions: [
-            { value: 'all', label: 'Alle' },
-            { value: 'dringend', label: 'Dringend' },
-            { value: 'heute', label: 'Heute beantworten' },
-            { value: 'info', label: 'Info' },
-            { value: 'niedrig', label: 'Niedrig' },
-        ],
         showCompose: false,
         composeMode: 'new',
         compose: { account: '', to: '', cc: '', subject: '', body: '', in_reply_to: '', references: '', attachments: [] },
@@ -688,8 +664,60 @@ function inboxApp() {
         },
 
         get visibleMails() {
-            if (this.activePriorityFilter === 'all') return this.mails;
-            return this.mails.filter(mail => (mail.smart_priority || 'info') === this.activePriorityFilter);
+            let result = this.mails;
+            if (this.activePriorityFilter !== 'all') {
+                result = result.filter(mail => (mail.smart_priority || 'info') === this.activePriorityFilter);
+            }
+            if (this.splitView === 'important') {
+                result = result.filter(m => ['dringend', 'hoch', 'heute'].includes(m.smart_priority) || m.flagged);
+            } else if (this.splitView === 'unread') {
+                result = result.filter(m => !m.seen);
+            } else if (this.splitView === 'flagged') {
+                result = result.filter(m => m.flagged);
+            }
+            return result;
+        },
+
+        get importantCount() {
+            return this.mails.filter(m => ['dringend', 'hoch', 'heute'].includes(m.smart_priority) || m.flagged).length;
+        },
+
+        get unreadCount() {
+            return this.mails.filter(m => !m.seen).length;
+        },
+
+        get flaggedCount() {
+            return this.mails.filter(m => m.flagged).length;
+        },
+
+        setSplitView(view) {
+            this.splitView = view;
+            localStorage.setItem('superhero.splitView', view);
+        },
+
+        previewText(body) {
+            if (!body) return '';
+            const text = body.replace(/\s+/g, ' ').trim();
+            return text.length > 80 ? text.slice(0, 80) + '...' : text;
+        },
+
+        async loadBatchSummaries() {
+            if (!this.showAiSummaries) return;
+            const unsampled = this.mails.slice(0, 20).filter(m => !m.ai_summary && m.body_text);
+            if (unsampled.length === 0) return;
+            try {
+                const resp = await this.fetchJson('/api/ai/batch-summary', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ mails: unsampled.map(m => ({ uid: m.uid, account: m.account, folder: m.folder, subject: m.subject, body: (m.body_text || '').slice(0, 500) })) }),
+                });
+                if (resp.summaries) {
+                    for (const [key, summary] of Object.entries(resp.summaries)) {
+                        const mail = this.mails.find(m => m.uid === key);
+                        if (mail) mail.ai_summary = summary;
+                    }
+                }
+            } catch(e) {}
         },
 
         get priorityGroups() {
@@ -702,17 +730,55 @@ function inboxApp() {
             }));
         },
 
+        navigateMail(direction) {
+            const allMails = this.visibleMails || [];
+            if (!allMails.length) return;
+            const currentKey = this.selectedMailKey;
+            let currentIdx = allMails.findIndex(m => this.mailKey(m) === currentKey);
+            if (currentIdx === -1) currentIdx = 0;
+            const nextIdx = Math.max(0, Math.min(allMails.length - 1, currentIdx + direction));
+            this.selectMail(allMails[nextIdx]);
+        },
+
+        async summarizeSelectedMail() {
+            if (!this.selectedMail) return;
+            try {
+                const result = await this.fetchJson('/api/ai/summarize', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        subject: this.selectedMail.subject,
+                        from_addr: this.selectedMail.from,
+                        body: this.selectedMail.body_text || '',
+                        uid: this.selectedMail.uid,
+                        account: this.selectedMail.account,
+                        folder: this.selectedMail.folder,
+                    }),
+                });
+                if (result.summary) showNotification(result.summary, 'info');
+                else showNotification('Keine Zusammenfassung moeglich', 'error');
+            } catch(e) {
+                showNotification('AI nicht erreichbar', 'error');
+            }
+        },
+
+        archiveMail(mail) {
+            showNotification('Archiviert: ' + (mail.subject || '').slice(0, 40));
+        },
+
         async initInbox() {
             try { this.savedDrafts = JSON.parse(localStorage.getItem('mail-ai-sorter.drafts.v1') || '{}'); } catch(_) { this.savedDrafts = {}; }
             const cfg = await this.fetchJson('/api/config');
             this.accounts = (cfg.accounts || []).map(acc => ({ name: acc.name, folders: [], expanded: true, unreadTotal: 0 }));
             this.compose.account = this.accounts[0]?.name || '';
-            await this.refreshFolders();
             this.restoreState();
-            if (this.searchActive) await this.runSearch();
-            else await this.loadMails();
+            const [_, mailData] = await Promise.all([
+                this.refreshFolders(),
+                this.searchActive ? this.runSearch() : this.loadMails(),
+            ]);
             this.restoreSelectedMail().catch(() => {});
             this.$nextTick(() => lucide.createIcons());
+            this.loadBatchSummaries();
             document.addEventListener('keydown', (e) => {
                 if (e.target.tagName === 'INPUT' || e.target.tagName === 'TEXTAREA' || e.target.tagName === 'SELECT') {
                     if (e.key === 'Escape') {
@@ -722,18 +788,26 @@ function inboxApp() {
                     }
                     return;
                 }
-                if (e.key === '/') {
+                const key = e.key.toLowerCase();
+                if (key === 'j') { e.preventDefault(); this.navigateMail(1); }
+                else if (key === 'k') { e.preventDefault(); this.navigateMail(-1); }
+                else if (key === 'e' && this.selectedMail) { e.preventDefault(); this.archiveMail(this.selectedMail); }
+                else if (key === 'd' && this.selectedMail) { e.preventDefault(); this.deleteMail(this.selectedMail); }
+                else if (key === 'f' && this.selectedMail) { e.preventDefault(); this.toggleFlag(this.selectedMail); }
+                else if (key === 'a' && this.selectedMail) { e.preventDefault(); this.openReply(this.selectedMail); }
+                else if (key === 'c') { e.preventDefault(); this.openNewCompose(); }
+                else if (key === 's' && this.selectedMail) { e.preventDefault(); this.summarizeSelectedMail(); }
+                else if (key === 'x' && this.selectedMail) { e.preventDefault(); this.toggleSelection(this.selectedMail); }
+                else if (key === '/') {
                     e.preventDefault();
                     const input = document.querySelector('.mail-list input[type="text"]');
                     if (input) input.focus();
-                } else if (e.key === '?' || (e.key === '/' && e.shiftKey)) {
-                    e.preventDefault();
-                    this.openAiPanel();
-                } else if (e.key === 'r') {
+                } else if (key === 'r' && this.selectedMail) {
                     e.preventDefault();
                     const ta = document.querySelector('.detail-pane textarea');
                     if (ta) ta.focus();
-                } else if (e.key === 'Escape') {
+                    else this.openReply(this.selectedMail);
+                } else if (key === 'escape') {
                     if (this.showAiPanel) this.closeAiPanel();
                     else if (this.searchActive) this.clearSearch();
                 }
@@ -749,11 +823,7 @@ function inboxApp() {
                 page: this.page,
                 searchQuery: this.searchQuery,
                 activePriorityFilter: this.activePriorityFilter,
-                selectedMail: selected ? {
-                    account: selected.account,
-                    folder: selected.folder,
-                    uid: selected.uid,
-                } : null,
+                selectedMail: selected ? { account: selected.account, folder: selected.folder, uid: selected.uid } : null,
             };
         },
 
@@ -782,11 +852,7 @@ function inboxApp() {
 
         restoreState() {
             let stored = {};
-            try {
-                stored = JSON.parse(localStorage.getItem(this.storageKey) || '{}') || {};
-            } catch (_) {
-                stored = {};
-            }
+            try { stored = JSON.parse(localStorage.getItem(this.storageKey) || '{}') || {}; } catch (_) { stored = {}; }
             const params = new URLSearchParams(window.location.search);
             const view = params.get('view') || (stored.isUnified === false ? 'folder' : 'unified');
             this.isUnified = view !== 'folder';
@@ -801,10 +867,7 @@ function inboxApp() {
             this.selectedMail = null;
             this.selectedMailKey = selectedAccount && selectedFolder && selectedUid ? `${selectedAccount}:${selectedFolder}:${selectedUid}` : '';
             if (!this.isUnified && !this.currentFolder) this.currentFolder = 'INBOX';
-            if (this.isUnified) {
-                this.currentAccount = '';
-                this.currentFolder = '';
-            }
+            if (this.isUnified) { this.currentAccount = ''; this.currentFolder = ''; }
         },
 
         findSelectedMail() {
@@ -825,13 +888,9 @@ function inboxApp() {
             await this.selectMail(mail, { preserveState: true });
         },
 
-        mailKey(mail) {
-            return `${mail.account}:${mail.folder}:${mail.uid}`;
-        },
+        mailKey(mail) { return `${mail.account}:${mail.folder}:${mail.uid}`; },
 
-        isSelected(mail) {
-            return !!this.selectedKeys[this.mailKey(mail)];
-        },
+        isSelected(mail) { return !!this.selectedKeys[this.mailKey(mail)]; },
 
         toggleSelection(mail) {
             const key = this.mailKey(mail);
@@ -849,9 +908,7 @@ function inboxApp() {
             this.selectedKeys = { ...this.selectedKeys };
         },
 
-        clearSelection() {
-            this.selectedKeys = {};
-        },
+        clearSelection() { this.selectedKeys = {}; },
 
         priorityCount(key) {
             if (key === 'all') return this.mails.length;
@@ -859,62 +916,69 @@ function inboxApp() {
         },
 
         priorityLabel(key) {
-            return {
-                dringend: 'Dringend',
-                heute: 'Heute',
-                info: 'Info',
-                niedrig: 'Niedrig',
-            }[key] || 'Unklar';
+            return { dringend: 'Dringend', heute: 'Heute', info: 'Info', niedrig: 'Niedrig' }[key] || 'Unklar';
         },
 
         priorityPillClass(key) {
             return {
-                dringend: 'bg-red-100 text-red-700 dark:bg-red-900/40 dark:text-red-200',
-                heute: 'bg-amber-100 text-amber-700 dark:bg-amber-900/40 dark:text-amber-200',
-                info: 'bg-sky-100 text-sky-700 dark:bg-sky-900/40 dark:text-sky-200',
-                niedrig: 'bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200',
-            }[key] || 'bg-slate-100 text-slate-700';
+                dringend: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300',
+                heute: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-300',
+                info: 'bg-brand-100 text-brand-700 dark:bg-brand-900/30 dark:text-brand-300',
+                niedrig: 'bg-slate-100 text-slate-600 dark:bg-surface-3 dark:text-slate-400',
+            }[key] || 'bg-slate-100 text-slate-600';
         },
 
         priorityHeaderClass(key) {
             return {
-                dringend: 'text-red-700 dark:text-red-200',
-                heute: 'text-amber-700 dark:text-amber-200',
-                info: 'text-sky-700 dark:text-sky-200',
-                niedrig: 'text-slate-600 dark:text-slate-300',
-            }[key] || 'text-slate-600';
+                dringend: 'text-red-600 dark:text-red-400',
+                heute: 'text-amber-600 dark:text-amber-400',
+                info: 'text-brand-600 dark:text-brand-400',
+                niedrig: 'text-slate-500 dark:text-slate-400',
+            }[key] || 'text-slate-500';
         },
 
-        async refreshFolders() {
+        _foldersCache: null,
+        _foldersCacheTime: 0,
+        FOLDERS_CACHE_TTL: 300000,
+
+        async refreshFolders(force = false) {
+            const now = Date.now();
+            if (!force && this._foldersCache && (now - this._foldersCacheTime) < this.FOLDERS_CACHE_TTL) {
+                for (const acc of this.accounts) {
+                    const cached = this._foldersCache[acc.name];
+                    if (cached) { acc.folders = cached.folders; acc.unreadTotal = cached.unreadTotal; }
+                }
+                return;
+            }
             this.foldersLoading = true;
-            for (const acc of this.accounts) {
+            const cache = {};
+            const promises = this.accounts.map(async (acc) => {
                 try {
                     const data = await this.fetchJson('/api/folders?account=' + encodeURIComponent(acc.name));
                     acc.folders = (data.folders || []).filter(folder => !(folder.flags || '').includes('\\Noselect'));
                     acc.unreadTotal = acc.folders.reduce((sum, folder) => sum + (folder.unread || 0), 0);
-                } catch (_) {
-                    acc.folders = [];
-                    acc.unreadTotal = 0;
-                }
-            }
+                    cache[acc.name] = { folders: acc.folders, unreadTotal: acc.unreadTotal };
+                } catch (_) { acc.folders = []; acc.unreadTotal = 0; cache[acc.name] = { folders: [], unreadTotal: 0 }; }
+            });
+            await Promise.all(promises);
+            this._foldersCache = cache;
+            this._foldersCacheTime = now;
             this.foldersLoading = false;
-            if (!this.accounts.length) {
-                this.inboxError = 'Es sind noch keine Mailkonten konfiguriert.';
-            }
+            if (!this.accounts.length) this.inboxError = 'Es sind noch keine Mailkonten konfiguriert.';
         },
 
         emptyStateTitle() {
             if (this.inboxError) return 'Inbox derzeit nicht erreichbar';
             if (this.searchActive) return 'Keine Treffer';
             if (!this.accounts.length) return 'Keine Konten konfiguriert';
-            return 'Keine Emails gefunden';
+            return 'Keine Emails';
         },
 
         emptyStateText() {
-            if (this.inboxError) return 'Prüfe Kontodaten, IMAP-Zugang oder Netzwerkverbindung.';
-            if (this.searchActive) return 'Versuche einen anderen Suchbegriff oder beende die Suche.';
-            if (!this.accounts.length) return 'Lege zuerst in der Konfiguration mindestens ein Konto an.';
-            return 'In diesem Ordner liegen aktuell keine passenden Emails.';
+            if (this.inboxError) return 'Prüfe IMAP-Zugang und Netzwerk.';
+            if (this.searchActive) return 'Anderer Suchbegriff?';
+            if (!this.accounts.length) return 'Lege zuerst ein Konto an.';
+            return 'In diesem Ordner liegt nichts.';
         },
 
         folderDisplayName(folder) {
@@ -923,31 +987,19 @@ function inboxApp() {
         },
 
         async selectUnified() {
-            this.isUnified = true;
-            this.currentAccount = '';
-            this.currentFolder = '';
-            this.page = 1;
-            this.clearSearch(false);
-            this.selectedMail = null;
-            this.selectedMailKey = '';
+            this.isUnified = true; this.currentAccount = ''; this.currentFolder = '';
+            this.page = 1; this.clearSearch(false); this.selectedMail = null; this.selectedMailKey = '';
             await this.loadMails();
         },
 
         async selectFolder(account, folder) {
-            this.isUnified = false;
-            this.currentAccount = account;
-            this.currentFolder = folder;
-            this.page = 1;
-            this.clearSearch(false);
-            this.selectedMail = null;
-            this.selectedMailKey = '';
+            this.isUnified = false; this.currentAccount = account; this.currentFolder = folder;
+            this.page = 1; this.clearSearch(false); this.selectedMail = null; this.selectedMailKey = '';
             await this.loadMails();
         },
 
         async loadMails(append = false) {
-            this.loading = true;
-            this.inboxError = '';
-            this.degradedAccounts = [];
+            this.loading = true; this.inboxError = ''; this.degradedAccounts = [];
             try {
                 const url = this.isUnified
                     ? `/api/unified-inbox?page=${this.page}&per_page=${this.perPage}`
@@ -957,17 +1009,13 @@ function inboxApp() {
                 if (append) {
                     const existing = new Set(this.mails.map(mail => this.mailKey(mail)));
                     this.mails = [...this.mails, ...incoming.filter(mail => !existing.has(this.mailKey(mail)))];
-                } else {
-                    this.mails = incoming;
-                }
+                } else { this.mails = incoming; }
                 this.totalMails = data.total || 0;
                 this.degradedAccounts = data.failures || [];
                 await this.restoreSelectedMail();
                 this.persistState();
             } catch (error) {
-                this.mails = [];
-                this.totalMails = 0;
-                this.degradedAccounts = [];
+                this.mails = []; this.totalMails = 0; this.degradedAccounts = [];
                 this.inboxError = error.message || 'Inbox konnte nicht geladen werden';
                 showNotification(error.message || 'Inbox konnte nicht geladen werden', 'error');
             } finally {
@@ -984,17 +1032,11 @@ function inboxApp() {
 
         clearSearch(reload = true) {
             if (!this.searchQuery && !this.searchAccountFilter && !this.searchFolderFilter && !this.searchDateFilter && reload) {
-                this.persistState();
-                return;
+                this.persistState(); return;
             }
-            this.searchQuery = '';
-            this.searchAccountFilter = '';
-            this.searchFolderFilter = '';
-            this.searchDateFilter = '';
-            clearTimeout(this.searchTimer);
-            this.page = 1;
-            if (reload) this.loadMails();
-            else this.persistState();
+            this.searchQuery = ''; this.searchAccountFilter = ''; this.searchFolderFilter = ''; this.searchDateFilter = '';
+            clearTimeout(this.searchTimer); this.page = 1;
+            if (reload) this.loadMails(); else this.persistState();
         },
 
         async selectMail(mail, options = {}) {
@@ -1002,9 +1044,7 @@ function inboxApp() {
             if (!mail.seen) {
                 mail.seen = true;
                 fetch(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}/flag`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'read' }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'read' }),
                 }).catch(() => {});
             }
             try {
@@ -1016,21 +1056,14 @@ function inboxApp() {
             } catch (error) {
                 this.selectedMail = null;
                 if (!options.preserveState) this.persistState();
-                if ((error && error.name === 'AbortError') || String(error).includes('AbortError')) {
-                    showNotification('Email-Laden dauert zu lange. Bitte erneut versuchen.', 'error');
-                } else {
-                    showNotification(error.message || 'Email konnte nicht geladen werden', 'error');
-                }
+                showNotification(error.message || 'Email konnte nicht geladen werden', 'error');
             }
         },
 
         async openThreadItem(item) {
             if (!item?.uid || item.is_selected) return;
             const listItem = this.mails.find(mail => this.mailKey(mail) === this.mailKey(item));
-            if (listItem) {
-                await this.selectMail(listItem);
-                return;
-            }
+            if (listItem) { await this.selectMail(listItem); return; }
             this.selectedMailKey = this.mailKey(item);
             await this.selectMail(item);
         },
@@ -1041,14 +1074,9 @@ function inboxApp() {
             mail.flagged = !mail.flagged;
             try {
                 await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}/flag`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
                 });
-            } catch (error) {
-                mail.flagged = previous;
-                showNotification(error.message || 'Markierung fehlgeschlagen', 'error');
-            }
+            } catch (error) { mail.flagged = previous; showNotification(error.message || 'Markierung fehlgeschlagen', 'error'); }
         },
 
         async toggleReadFlag(mail) {
@@ -1057,54 +1085,34 @@ function inboxApp() {
             mail.seen = !mail.seen;
             try {
                 await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}/flag`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action }),
                 });
-            } catch (error) {
-                mail.seen = previous;
-                showNotification(error.message || 'Statusänderung fehlgeschlagen', 'error');
-            }
+            } catch (error) { mail.seen = previous; showNotification(error.message || 'Statusänderung fehlgeschlagen', 'error'); }
         },
 
         async deleteMail(mail) {
             if (!confirm('Email wirklich löschen?')) return;
             try {
                 await this.fetchJson(`/api/email/${encodeURIComponent(mail.account)}/${encodeURIComponent(mail.folder)}/${mail.uid}/flag`, {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ action: 'delete' }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ action: 'delete' }),
                 });
-            } catch (error) {
-                showNotification(error.message || 'Löschen fehlgeschlagen', 'error');
-                return;
-            }
+            } catch (error) { showNotification(error.message || 'Löschen fehlgeschlagen', 'error'); return; }
             this.mails = this.mails.filter(item => this.mailKey(item) !== this.mailKey(mail));
-            if (this.selectedMailKey === this.mailKey(mail)) {
-                this.selectedMail = null;
-                this.selectedMailKey = '';
-            }
+            if (this.selectedMailKey === this.mailKey(mail)) { this.selectedMail = null; this.selectedMailKey = ''; }
             this.persistState();
             showNotification('Email gelöscht');
         },
 
         async runSearch() {
-            if (!this.searchQuery) {
-                this.degradedAccounts = [];
-                await this.loadMails();
-                return;
-            }
+            if (!this.searchQuery) { this.degradedAccounts = []; await this.loadMails(); return; }
             await this.runFilteredSearch();
         },
 
         debounceSearch() {
             clearTimeout(this.searchTimer);
             this.searchTimer = setTimeout(async () => {
-                if (this.searchQuery.trim().length >= 2) {
-                    await this.runFilteredSearch();
-                } else if (!this.searchQuery.trim()) {
-                    await this.runSearch();
-                }
+                if (this.searchQuery.trim().length >= 2) await this.runFilteredSearch();
+                else if (!this.searchQuery.trim()) await this.runSearch();
             }, 250);
         },
 
@@ -1114,21 +1122,12 @@ function inboxApp() {
             const payload = { items, action, tag: this.bulkTag, target_folder: this.bulkMoveFolder };
             let data;
             try {
-                data = await this.fetchJson('/api/email/bulk', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                });
-            } catch (error) {
-                showNotification(error.message || 'Bulk-Aktion fehlgeschlagen', 'error');
-                return;
-            }
+                data = await this.fetchJson('/api/email/bulk', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload) });
+            } catch (error) { showNotification(error.message || 'Bulk-Aktion fehlgeschlagen', 'error'); return; }
             showNotification(`${data.updated || 0} Emails aktualisiert`);
-            this.clearSelection();
-            this.bulkTag = '';
-            if (action === 'delete' || action === 'move') {
-                await this.loadMails();
-            } else {
+            this.clearSelection(); this.bulkTag = '';
+            if (action === 'delete' || action === 'move') { await this.loadMails(); }
+            else {
                 for (const mail of this.mails) {
                     const key = this.mailKey(mail);
                     const hit = items.find(item => `${item.account}:${item.folder}:${item.uid}` === key);
@@ -1139,28 +1138,16 @@ function inboxApp() {
                     if (action === 'unflag') mail.flagged = false;
                 }
             }
-            if (this.selectedMail && ['tag', 'untag'].includes(action)) {
-                await this.selectMail(this.selectedMail);
-            }
+            if (this.selectedMail && ['tag', 'untag'].includes(action)) await this.selectMail(this.selectedMail);
             this.persistState();
         },
 
         async addTagForMail(tag) {
             if (!this.selectedMail || !tag) return;
-            await this.fetchJson('/api/tags', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    msg_uid: this.selectedMail.uid,
-                    account: this.selectedMail.account,
-                    folder: this.selectedMail.folder,
-                    tag,
-                }),
-            });
+            await this.fetchJson('/api/tags', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ msg_uid: this.selectedMail.uid, account: this.selectedMail.account, folder: this.selectedMail.folder, tag }) });
             this.selectedMail.tags = this.selectedMail.tags || [];
             if (!this.selectedMail.tags.includes(tag)) this.selectedMail.tags.push(tag);
-            this.newTag = '';
-            this.persistState();
+            this.newTag = ''; this.persistState();
         },
 
         async removeTagForMail(tag) {
@@ -1175,22 +1162,10 @@ function inboxApp() {
             let data;
             try {
                 data = await this.fetchJson('/api/llm/analyze-email', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        uid: this.selectedMail.uid,
-                        account: this.selectedMail.account,
-                        folder: this.selectedMail.folder,
-                        subject: this.selectedMail.subject || '',
-                        from_addr: this.selectedMail.from || '',
-                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
-                        category: this.selectedMail.analysis?.category || 'auto',
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ uid: this.selectedMail.uid, account: this.selectedMail.account, folder: this.selectedMail.folder, subject: this.selectedMail.subject || '', from_addr: this.selectedMail.from || '', body: this.selectedMail.body_text || this.selectedMail.body_html || '', category: this.selectedMail.analysis?.category || 'auto' }),
                 });
-            } catch (error) {
-                showNotification(error.message || 'Analyse fehlgeschlagen', 'error');
-                return;
-            }
+            } catch (error) { showNotification(error.message || 'Analyse fehlgeschlagen', 'error'); return; }
             this.selectedMail.analysis = data;
             const listItem = this.mails.find(mail => this.mailKey(mail) === this.selectedMailKey);
             if (listItem) {
@@ -1208,33 +1183,21 @@ function inboxApp() {
         async unsubscribeSelectedMail() {
             if (!this.selectedMail) return;
             let data;
-            try {
-                data = await this.fetchJson(`/api/email/${encodeURIComponent(this.selectedMail.account)}/${encodeURIComponent(this.selectedMail.folder)}/${this.selectedMail.uid}/unsubscribe`, {
-                    method: 'POST',
-                });
-            } catch (error) {
-                showNotification(error.message || 'Abbestellen fehlgeschlagen', 'error');
-                return;
-            }
-            if (data.url) {
-                window.open(data.url, '_blank');
-            }
+            try { data = await this.fetchJson(`/api/email/${encodeURIComponent(this.selectedMail.account)}/${encodeURIComponent(this.selectedMail.folder)}/${this.selectedMail.uid}/unsubscribe`, { method: 'POST' }); }
+            catch (error) { showNotification(error.message || 'Abbestellen fehlgeschlagen', 'error'); return; }
+            if (data.url) window.open(data.url, '_blank');
             showNotification('Unsubscribe ausgelöst');
         },
 
         openNewCompose() {
-            this.composeMode = 'new';
-            this.composeError = '';
+            this.composeMode = 'new'; this.composeError = '';
             this.compose = { account: this.currentAccount || this.accounts[0]?.name || '', to: '', cc: '', subject: '', body: '', in_reply_to: '', references: '', attachments: [] };
             this.showCompose = true;
         },
 
         openReply(mail) {
             this.initInlineReply();
-            this.$nextTick(() => {
-                const ta = document.querySelector('.detail-pane textarea');
-                if (ta) ta.focus();
-            });
+            this.$nextTick(() => { const ta = document.querySelector('.detail-pane textarea'); if (ta) ta.focus(); });
         },
 
         async handleComposeAttachments(event) {
@@ -1259,32 +1222,18 @@ function inboxApp() {
         },
 
         async sendCompose() {
-            this.composeError = '';
-            this.sendingCompose = true;
+            this.composeError = ''; this.sendingCompose = true;
             try {
                 await this.fetchJson('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        account: this.compose.account,
-                        to: this.compose.to.split(',').map(item => item.trim()).filter(Boolean),
-                        cc: this.compose.cc.split(',').map(item => item.trim()).filter(Boolean),
-                        subject: this.compose.subject,
-                        body_text: this.compose.body,
-                        in_reply_to: this.compose.in_reply_to || null,
-                        references: this.compose.references || null,
-                        attachments: this.compose.attachments,
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account: this.compose.account, to: this.compose.to.split(',').map(item => item.trim()).filter(Boolean), cc: this.compose.cc.split(',').map(item => item.trim()).filter(Boolean), subject: this.compose.subject, body_text: this.compose.body, in_reply_to: this.compose.in_reply_to || null, references: this.compose.references || null, attachments: this.compose.attachments }),
                 });
             } catch (error) {
                 this.composeError = error.message || 'Senden fehlgeschlagen';
                 showNotification(error.message || 'Senden fehlgeschlagen', 'error');
-                this.sendingCompose = false;
-                return;
+                this.sendingCompose = false; return;
             }
-            showNotification('Email gesendet');
-            this.sendingCompose = false;
-            this.showCompose = false;
+            showNotification('Email gesendet'); this.sendingCompose = false; this.showCompose = false;
         },
 
         cleanSender(value) {
@@ -1295,37 +1244,17 @@ function inboxApp() {
 
         formatDate(value) {
             if (!value) return '';
-            try {
-                return new Date(value).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' });
-            } catch (_) {
-                return value;
-            }
+            try { return new Date(value).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit' }); } catch (_) { return value; }
         },
 
         formatDateFull(value) {
             if (!value) return '';
-            try {
-                return new Date(value).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' });
-            } catch (_) {
-                return value;
-            }
+            try { return new Date(value).toLocaleString('de-DE', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }); } catch (_) { return value; }
         },
 
-        setSearchAccountFilter(account) {
-            this.searchAccountFilter = account;
-            this.searchFolderFilter = '';
-            if (this.searchActive) this.runFilteredSearch();
-        },
-
-        setSearchFolderFilter(folder) {
-            this.searchFolderFilter = folder;
-            if (this.searchActive) this.runFilteredSearch();
-        },
-
-        setSearchDateFilter(value) {
-            this.searchDateFilter = value;
-            if (this.searchActive) this.runFilteredSearch();
-        },
+        setSearchAccountFilter(account) { this.searchAccountFilter = account; this.searchFolderFilter = ''; if (this.searchActive) this.runFilteredSearch(); },
+        setSearchFolderFilter(folder) { this.searchFolderFilter = folder; if (this.searchActive) this.runFilteredSearch(); },
+        setSearchDateFilter(value) { this.searchDateFilter = value; if (this.searchActive) this.runFilteredSearch(); },
 
         getDateSinceParam() {
             if (!this.searchDateFilter) return '';
@@ -1341,15 +1270,10 @@ function inboxApp() {
 
         async runFilteredSearch() {
             if (!this.searchQuery || this.searchQuery.trim().length < 2) {
-                if (!this.searchQuery) {
-                    this.degradedAccounts = [];
-                    await this.loadMails();
-                }
+                if (!this.searchQuery) { this.degradedAccounts = []; await this.loadMails(); }
                 return;
             }
-            this.loading = true;
-            this.inboxError = '';
-            this.degradedAccounts = [];
+            this.loading = true; this.inboxError = ''; this.degradedAccounts = [];
             try {
                 const params = new URLSearchParams({ q: this.searchQuery });
                 if (this.searchAccountFilter) params.set('account', this.searchAccountFilter);
@@ -1357,16 +1281,10 @@ function inboxApp() {
                 const since = this.getDateSinceParam();
                 if (since) params.set('since', since);
                 const data = await this.fetchJson('/api/search?' + params.toString());
-                this.page = 1;
-                this.mails = data.emails || [];
-                this.totalMails = data.total || this.mails.length;
-                await this.restoreSelectedMail();
-                this.persistState();
-            } catch (error) {
-                this.inboxError = error.message || 'Suche fehlgeschlagen';
-            } finally {
-                this.loading = false;
-            }
+                this.page = 1; this.mails = data.emails || []; this.totalMails = data.total || this.mails.length;
+                await this.restoreSelectedMail(); this.persistState();
+            } catch (error) { this.inboxError = error.message || 'Suche fehlgeschlagen'; }
+            finally { this.loading = false; }
         },
 
         highlightSnippet(text) {
@@ -1377,33 +1295,21 @@ function inboxApp() {
         async openAiPanel() {
             this.showAiPanel = true;
             this.$nextTick(() => lucide.createIcons());
-            try {
-                this.aiStatus = await this.fetchJson('/api/rag/status');
-            } catch (_) {
-                this.aiStatus = { total_emails: 0, model: '?', ollama_reachable: false };
-            }
+            try { this.aiStatus = await this.fetchJson('/api/rag/status'); }
+            catch (_) { this.aiStatus = { total_emails: 0, model: '?', ollama_reachable: false }; }
             await this.loadAiHistory();
         },
 
-        closeAiPanel() {
-            this.showAiPanel = false;
-        },
+        closeAiPanel() { this.showAiPanel = false; },
 
         async askAiQuestion() {
             if (!this.aiQuestion.trim()) return;
-            this.aiLoading = true;
-            this.aiError = '';
-            this.aiAnswer = null;
+            this.aiLoading = true; this.aiError = ''; this.aiAnswer = null;
             try {
                 const payload = { query: this.aiQuestion, limit: 10 };
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 30000);
-                const response = await fetch('/api/rag/query', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify(payload),
-                    signal: controller.signal,
-                });
+                const response = await fetch('/api/rag/query', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload), signal: controller.signal });
                 clearTimeout(timeout);
                 const data = await response.json();
                 if (data.error) throw new Error(data.error);
@@ -1411,14 +1317,8 @@ function inboxApp() {
                 this.aiQuestion = '';
                 await this.loadAiHistory();
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    this.aiError = 'Die Antwort dauert zu lange. Ollama reagiert möglicherweise nicht.';
-                } else {
-                    this.aiError = 'Fehler bei der KI-Anfrage: ' + (error.message || 'Unbekannter Fehler');
-                }
-            } finally {
-                this.aiLoading = false;
-            }
+                this.aiError = error.name === 'AbortError' ? 'Die Antwort dauert zu lange.' : 'Fehler: ' + (error.message || 'Unbekannt');
+            } finally { this.aiLoading = false; }
         },
 
         async openSourceEmail(source) {
@@ -1426,37 +1326,28 @@ function inboxApp() {
             this.closeAiPanel();
             try {
                 const mail = await this.fetchJson(`/api/email/${encodeURIComponent(source.account)}/${encodeURIComponent(source.folder)}/${source.msg_uid}`);
-                this.selectedMail = mail;
-                this.selectedMailKey = `${source.account}:${source.folder}:${source.msg_uid}`;
-                this.persistState();
-                this.$nextTick(() => lucide.createIcons());
-            } catch (error) {
-                showNotification(error.message || 'Email konnte nicht geöffnet werden', 'error');
-            }
+                this.selectedMail = mail; this.selectedMailKey = `${source.account}:${source.folder}:${source.msg_uid}`;
+                this.persistState(); this.$nextTick(() => lucide.createIcons());
+            } catch (error) { showNotification(error.message || 'Email konnte nicht geöffnet werden', 'error'); }
         },
 
         async loadAiHistory() {
-            try {
-                const data = await this.fetchJson('/api/rag/history?limit=10');
-                this.aiHistory = data.history || [];
-            } catch (_) {
-                this.aiHistory = [];
-            }
+            try { const data = await this.fetchJson('/api/rag/history?limit=10'); this.aiHistory = data.history || []; }
+            catch (_) { this.aiHistory = []; }
         },
 
         async triggerReindex() {
-            if (!confirm('Index wirklich neu aufbauen? Dies kann einige Minuten dauern.')) return;
-            try {
-                await this.fetchJson('/api/rag/reindex', { method: 'POST' });
-                showNotification('Index wird neu aufgebaut.');
-            } catch (error) {
-                showNotification(error.message || 'Neuaufbau fehlgeschlagen', 'error');
-            }
+            if (!confirm('Index wirklich neu aufbauen?')) return;
+            try { await this.fetchJson('/api/rag/reindex', { method: 'POST' }); showNotification('Index wird neu aufgebaut.'); }
+            catch (error) { showNotification(error.message || 'Neuaufbau fehlgeschlagen', 'error'); }
         },
 
         sanitizeHtml(html) {
             if (typeof DOMPurify !== 'undefined') return DOMPurify.sanitize(html);
-            return html;
+            // DOMPurify unavailable — escape HTML to prevent XSS
+            const div = document.createElement('div');
+            div.textContent = html;
+            return div.innerHTML;
         },
 
         async initInlineReply() {
@@ -1473,112 +1364,57 @@ function inboxApp() {
                 this.replyDraft = '';
                 this.replySubject = prefixSubject(this.selectedMail.subject || '', 'Re');
                 this.replyTo = extractEmail(this.selectedMail.from || '');
-                this.replyCc = '';
-                this.replyTone = 'freundlich';
+                this.replyCc = ''; this.replyTone = 'freundlich';
             }
             this.replyInReplyTo = this.selectedMail.message_id || '';
             this.replyReferences = ((this.selectedMail.references ? this.selectedMail.references + ' ' : '') + (this.selectedMail.message_id || '')).trim();
-            this.replyAttachments = [];
-            this.replyError = '';
-            this.replyGenerating = false;
-            this.replyAdapting = false;
-            this.replySending = false;
+            this.replyAttachments = []; this.replyError = ''; this.replyGenerating = false; this.replyAdapting = false; this.replySending = false;
         },
 
-        debounceSaveDraft() {
-            clearTimeout(this.draftSaveTimer);
-            this.draftSaveTimer = setTimeout(() => this.saveDraftToLocal(), 1000);
-        },
+        debounceSaveDraft() { clearTimeout(this.draftSaveTimer); this.draftSaveTimer = setTimeout(() => this.saveDraftToLocal(), 1000); },
 
         saveDraftToLocal() {
             if (!this.selectedMail) return;
             const key = this.mailKey(this.selectedMail);
-            if (!this.replyDraft.trim()) {
-                delete this.savedDrafts[key];
-            } else {
-                this.savedDrafts[key] = {
-                    body: this.replyDraft,
-                    subject: this.replySubject,
-                    to: this.replyTo,
-                    cc: this.replyCc,
-                    tone: this.replyTone,
-                    ts: new Date().toISOString(),
-                };
-            }
-            try {
-                localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts));
-            } catch (_) {}
+            if (!this.replyDraft.trim()) { delete this.savedDrafts[key]; }
+            else { this.savedDrafts[key] = { body: this.replyDraft, subject: this.replySubject, to: this.replyTo, cc: this.replyCc, tone: this.replyTone, ts: new Date().toISOString() }; }
+            try { localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts)); } catch (_) {}
         },
 
-        loadDraftFromLocal(key) {
-            return this.savedDrafts[key] || null;
-        },
+        loadDraftFromLocal(key) { return this.savedDrafts[key] || null; },
 
         clearDraftForMail(key) {
             delete this.savedDrafts[key];
-            try {
-                localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts));
-            } catch (_) {}
+            try { localStorage.setItem('mail-ai-sorter.drafts.v1', JSON.stringify(this.savedDrafts)); } catch (_) {}
         },
 
-        discardReplyDraft() {
-            this.replyDraft = '';
-            if (this.selectedMail) this.clearDraftForMail(this.mailKey(this.selectedMail));
-        },
+        discardReplyDraft() { this.replyDraft = ''; if (this.selectedMail) this.clearDraftForMail(this.mailKey(this.selectedMail)); },
 
         async sendInlineReply() {
             if (!this.replyDraft.trim() || !this.selectedMail) return;
-            this.replySending = true;
-            this.replyError = '';
+            this.replySending = true; this.replyError = '';
             try {
                 await this.fetchJson('/api/send', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        account: this.selectedMail.account,
-                        to: [this.replyTo],
-                        cc: this.replyCc ? this.replyCc.split(',').map(s => s.trim()).filter(Boolean) : [],
-                        subject: this.replySubject,
-                        body_text: this.replyDraft,
-                        in_reply_to: this.replyInReplyTo || null,
-                        references: this.replyReferences || null,
-                        attachments: this.replyAttachments,
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ account: this.selectedMail.account, to: [this.replyTo], cc: this.replyCc ? this.replyCc.split(',').map(s => s.trim()).filter(Boolean) : [], subject: this.replySubject, body_text: this.replyDraft, in_reply_to: this.replyInReplyTo || null, references: this.replyReferences || null, attachments: this.replyAttachments }),
                 });
                 this.clearDraftForMail(this.mailKey(this.selectedMail));
-                this.replyDraft = '';
-                this.replyAttachments = [];
+                this.replyDraft = ''; this.replyAttachments = [];
                 showNotification('Email gesendet');
-            } catch (error) {
-                this.replyError = error.message || 'Senden fehlgeschlagen';
-            } finally {
-                this.replySending = false;
-            }
+            } catch (error) { this.replyError = error.message || 'Senden fehlgeschlagen'; }
+            finally { this.replySending = false; }
         },
 
         async generateReplyDraft() {
             if (!this.selectedMail) return;
-            this.replyGenerating = true;
-            this.replyError = '';
+            this.replyGenerating = true; this.replyError = '';
             try {
-                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({
-                    from: item.from || '?',
-                    subject: item.subject || '?',
-                    body: (item.body_text || '').substring(0, 500),
-                }));
+                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({ from: item.from || '?', subject: item.subject || '?', body: (item.body_text || '').substring(0, 500) }));
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 30000);
                 const response = await fetch('/api/llm/quick-reply', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        subject: this.selectedMail.subject || '',
-                        from_addr: this.selectedMail.from || '',
-                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
-                        tone: this.replyTone,
-                        language: 'de',
-                        thread_context: threadContext,
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ subject: this.selectedMail.subject || '', from_addr: this.selectedMail.from || '', body: this.selectedMail.body_text || this.selectedMail.body_html || '', tone: this.replyTone, language: 'de', thread_context: threadContext }),
                     signal: controller.signal,
                 });
                 clearTimeout(timeout);
@@ -1587,40 +1423,20 @@ function inboxApp() {
                 this.replyDraft = data.reply || '';
                 if (data.subject) this.replySubject = data.subject;
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    this.replyError = 'KI-Antwort dauert zu lange. Ollama reagiert möglicherweise nicht.';
-                } else {
-                    this.replyError = 'KI-Entwurf fehlgeschlagen: ' + (error.message || 'Unbekannter Fehler');
-                }
-            } finally {
-                this.replyGenerating = false;
-            }
+                this.replyError = error.name === 'AbortError' ? 'KI-Antwort dauert zu lange.' : 'KI-Entwurf fehlgeschlagen: ' + (error.message || '');
+            } finally { this.replyGenerating = false; }
         },
 
         async adaptReplyWithAI() {
             if (!this.replyDraft.trim() || !this.selectedMail) return;
-            this.replyAdapting = true;
-            this.replyError = '';
+            this.replyAdapting = true; this.replyError = '';
             try {
-                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({
-                    from: item.from || '?',
-                    subject: item.subject || '?',
-                    body: (item.body_text || '').substring(0, 500),
-                }));
+                const threadContext = (this.selectedMail.thread || []).slice(-3).map(item => ({ from: item.from || '?', subject: item.subject || '?', body: (item.body_text || '').substring(0, 500) }));
                 const controller = new AbortController();
                 const timeout = setTimeout(() => controller.abort(), 30000);
                 const response = await fetch('/api/llm/adapt-template', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({
-                        template_body: this.replyDraft,
-                        subject: this.selectedMail.subject || '',
-                        from_addr: this.selectedMail.from || '',
-                        body: this.selectedMail.body_text || this.selectedMail.body_html || '',
-                        tone: this.replyTone,
-                        language: 'de',
-                        thread_context: threadContext,
-                    }),
+                    method: 'POST', headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ template_body: this.replyDraft, subject: this.selectedMail.subject || '', from_addr: this.selectedMail.from || '', body: this.selectedMail.body_text || this.selectedMail.body_html || '', tone: this.replyTone, language: 'de', thread_context: threadContext }),
                     signal: controller.signal,
                 });
                 clearTimeout(timeout);
@@ -1628,39 +1444,24 @@ function inboxApp() {
                 if (data.error) throw new Error(data.error);
                 if (data.reply) this.replyDraft = data.reply;
             } catch (error) {
-                if (error.name === 'AbortError') {
-                    this.replyError = 'KI-Anpassung dauert zu lange.';
-                } else {
-                    this.replyError = 'KI-Anpassung fehlgeschlagen: ' + (error.message || 'Unbekannter Fehler');
-                }
-            } finally {
-                this.replyAdapting = false;
-            }
+                this.replyError = error.name === 'AbortError' ? 'KI-Anpassung dauert zu lange.' : 'KI-Anpassung fehlgeschlagen: ' + (error.message || '');
+            } finally { this.replyAdapting = false; }
         },
 
         async loadTemplates() {
-            try {
-                const data = await this.fetchJson('/api/templates');
-                this.templates = data.templates || [];
-            } catch (_) {
-                this.templates = [];
-            }
+            try { const data = await this.fetchJson('/api/templates'); this.templates = data.templates || []; }
+            catch (_) { this.templates = []; }
         },
 
         get filteredTemplates() {
             if (!this.templateSearchQuery.trim()) return this.templates;
             const q = this.templateSearchQuery.toLowerCase();
-            return this.templates.filter(t =>
-                t.name.toLowerCase().includes(q) || t.body.toLowerCase().includes(q)
-            );
+            return this.templates.filter(t => t.name.toLowerCase().includes(q) || t.body.toLowerCase().includes(q));
         },
 
         insertTemplate(tmpl) {
-            if (!this.replyDraft.trim()) {
-                this.replyDraft = tmpl.body;
-            } else {
-                this.replyDraft += '\n\n' + tmpl.body;
-            }
+            if (!this.replyDraft.trim()) this.replyDraft = tmpl.body;
+            else this.replyDraft += '\n\n' + tmpl.body;
         },
 
         handleReplyAttachments(event) {
@@ -1668,11 +1469,7 @@ function inboxApp() {
             for (const file of files) {
                 const reader = new FileReader();
                 reader.onload = () => {
-                    this.replyAttachments.push({
-                        filename: file.name,
-                        size: file.size,
-                        data_b64: String(reader.result).split(',')[1] || '',
-                    });
+                    this.replyAttachments.push({ filename: file.name, size: file.size, data_b64: String(reader.result).split(',')[1] || '' });
                     this.replyAttachments = [...this.replyAttachments];
                 };
                 reader.readAsDataURL(file);
@@ -1681,40 +1478,25 @@ function inboxApp() {
         },
 
         openTemplateManager() {
-            this.showTemplateManager = true;
-            this.editingTemplate = null;
+            this.showTemplateManager = true; this.editingTemplate = null;
             this.templateForm = { name: '', body: '', category: 'Allgemein' };
-            this.loadTemplates();
-            this.$nextTick(() => lucide.createIcons());
+            this.loadTemplates(); this.$nextTick(() => lucide.createIcons());
         },
 
-        closeTemplateManager() {
-            this.showTemplateManager = false;
-        },
+        closeTemplateManager() { this.showTemplateManager = false; },
 
         async saveTemplate() {
             const form = this.templateForm;
             if (!form.name.trim() || !form.body.trim()) return;
             try {
                 if (this.editingTemplate) {
-                    await this.fetchJson(`/api/templates/${this.editingTemplate.id}`, {
-                        method: 'PUT',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(form),
-                    });
+                    await this.fetchJson(`/api/templates/${this.editingTemplate.id}`, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
                 } else {
-                    await this.fetchJson('/api/templates', {
-                        method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify(form),
-                    });
+                    await this.fetchJson('/api/templates', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(form) });
                 }
-                await this.loadTemplates();
-                this.editingTemplate = null;
+                await this.loadTemplates(); this.editingTemplate = null;
                 this.templateForm = { name: '', body: '', category: 'Allgemein' };
-            } catch (error) {
-                showNotification(error.message || 'Vorlage konnte nicht gespeichert werden', 'error');
-            }
+            } catch (error) { showNotification(error.message || 'Vorlage konnte nicht gespeichert werden', 'error'); }
         },
 
         editTemplate(tmpl) {
@@ -1724,12 +1506,8 @@ function inboxApp() {
 
         async deleteTemplate(id) {
             if (!confirm('Vorlage wirklich löschen?')) return;
-            try {
-                await this.fetchJson(`/api/templates/${id}`, { method: 'DELETE' });
-                await this.loadTemplates();
-            } catch (error) {
-                showNotification(error.message || 'Löschen fehlgeschlagen', 'error');
-            }
+            try { await this.fetchJson(`/api/templates/${id}`, { method: 'DELETE' }); await this.loadTemplates(); }
+            catch (error) { showNotification(error.message || 'Löschen fehlgeschlagen', 'error'); }
         },
     };
 }
@@ -1737,6 +1515,16 @@ function inboxApp() {
 function extractEmail(value) {
     const match = (value || '').match(/<([^>]+)>/);
     return match ? match[1] : (value || '').trim();
+}
+
+function refreshInbox() {
+    const el = document.querySelector('[x-data*="inboxApp"]');
+    if (el && el.__x) { el.__x.$data.refreshFolders(); el.__x.$data.loadMails(); }
+}
+
+function openNewCompose() {
+    const el = document.querySelector('[x-data*="inboxApp"]');
+    if (el && el.__x) el.__x.$data.openNewCompose();
 }
 
 function prefixSubject(subject, prefix) {

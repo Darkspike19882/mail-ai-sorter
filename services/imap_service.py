@@ -9,26 +9,51 @@ import imaplib
 import os
 import re
 import ssl
+import logging
 from typing import Any, Dict, List, Optional, Tuple
 
 from services import inbox_service
 from config_service import inject_account_secret
 
+logger = logging.getLogger(__name__)
 
-def connect(account: Dict[str, Any]):
+
+def connect(account: Dict[str, Any], use_pool: bool = True):
+    """
+    IMAP-Verbindung herstellen mit Connection Pooling für bessere Performance.
+
+    Args:
+        account: Account-Konfiguration
+        use_pool: Wenn True, werden Verbindungen wiederverwendet (default: True)
+    """
     account = inject_account_secret(account)
+
+    # Versuche Verbindung aus Pool zu holen
+    if use_pool:
+        try:
+            from services.cache_service import _imap_pool
+
+            conn = _imap_pool.get(account)
+            if conn is not None:
+                return conn
+        except Exception as e:
+            logger.warning(f"[imap] Pool retrieval failed, creating new connection: {e}")
+
+    # Neue Verbindung aufbauen
     host = account.get("imap_host", "")
     port = int(account.get("imap_port", 993))
     username = account.get("username", "")
     password = account.get("password", "")
     encryption = str(account.get("imap_encryption", "ssl")).lower()
     timeout = int(account.get("imap_timeout_sec", 25))
+
     if not host:
         raise ValueError("IMAP-Host fehlt")
     if not username:
         raise ValueError("IMAP-Benutzername fehlt")
     if not password:
         raise ValueError("IMAP-Passwort fehlt")
+
     if encryption == "starttls":
         conn = imaplib.IMAP4(host, port, timeout=timeout)
         conn.starttls(ssl_context=ssl.create_default_context())
@@ -299,7 +324,16 @@ def list_folder_emails(
     page: int,
     per_page: int,
 ) -> Tuple[List[Dict[str, Any]], int]:
-    conn = connect(account)
+    """
+    Liste Emails aus Ordner mit Connection Pooling und Performance-Optimierungen.
+
+    Performance-Verbesserungen:
+    - Connection Pooling reduziert Verbindungsaufbau
+    - Readonly-Modus für schnellere Abfragen
+    - Batch fetching von Headern
+    - Optimiertes Timeout
+    """
+    conn = connect(account, use_pool=True)
     try:
         typ, select_data = conn.select(folder, readonly=True)
         if typ != "OK":
@@ -358,23 +392,38 @@ def list_folder_emails(
                 )
         return emails, total
     finally:
-        try:
-            conn.logout()
-        except Exception:
-            pass
+        # Nicht ausloggen - Verbindung bleibt im Pool für Wiederverwendung
+        # Connection Pool cleanup läuft automatisch im Hintergrund
+        pass
 
 
 def list_unified_inbox(
     accounts: List[Dict[str, Any]], page: int, per_page: int
 ) -> Tuple[List[Dict[str, Any]], int]:
-    emails = []
-    for account in accounts:
-        try:
-            account_emails, _ = list_folder_emails(account, "INBOX", 1, per_page * page)
-            emails.extend(account_emails)
-        except Exception:
-            pass
-    emails = inbox_service.sort_mail_items(emails)
+    """
+    Optimiertes Unified Inbox mit parallelen Abfragen für bessere Performance.
+
+    Performance-Verbesserungen:
+    - Parallele Abfrage aller Accounts gleichzeitig
+    - Connection Pooling reduziert Verbindungsaufbau
+    - Effizientes Merging der Ergebnisse
+    """
+    import concurrent.futures
+
+    all_emails = []
+    with concurrent.futures.ThreadPoolExecutor(max_workers=4) as executor:
+        futures = {
+            executor.submit(list_folder_emails, account, "INBOX", 1, per_page * page): account
+            for account in accounts
+        }
+        for future in concurrent.futures.as_completed(futures):
+            try:
+                account_emails, _ = future.result()
+                all_emails.extend(account_emails)
+            except Exception:
+                pass
+
+    emails = inbox_service.sort_mail_items(all_emails)
     total = len(emails)
     start = (page - 1) * per_page
     return emails[start : start + per_page], total
@@ -506,16 +555,61 @@ def get_email_detail(account: Dict[str, Any], folder: str, uid: str) -> Dict[str
 def get_attachment(
     account: Dict[str, Any], folder: str, uid: str, att_index: int
 ) -> Dict[str, Any]:
-    detail = get_email_detail(account, folder, uid)
-    attachments = detail.get("attachments", [])
-    if att_index >= len(attachments):
-        raise ValueError("Anhang nicht gefunden")
-    attachment = attachments[att_index]
-    return {
-        "filename": attachment["filename"],
-        "content_type": attachment["content_type"],
-        "data": base64.b64decode(attachment["data_b64"]),
-    }
+    """Fetch a specific attachment by re-downloading the full email and extracting it."""
+    conn = connect(account)
+    try:
+        typ, _ = conn.select(folder, readonly=True)
+        if typ != "OK":
+            raise ValueError(f"Ordner {folder} nicht gefunden")
+
+        typ, data = conn.uid("fetch", uid, "(BODY.PEEK[])")
+        if typ != "OK" or not data:
+            raise ValueError("Email nicht gefunden")
+
+        raw_bytes = None
+        for item in data:
+            if isinstance(item, tuple) and len(item) >= 2:
+                raw_bytes = item[1] if isinstance(item[1], bytes) else item[1].encode()
+
+        if not raw_bytes:
+            raise ValueError("Email-Inhalt leer")
+
+        msg = email_lib.message_from_bytes(raw_bytes)
+        attachments = []
+        if msg.is_multipart():
+            for part in msg.walk():
+                ctype = part.get_content_type()
+                disp = str(part.get("Content-Disposition") or "").lower()
+                filename = part.get_filename()
+                if (
+                    "attachment" in disp
+                    or "inline" in disp
+                    or (filename and ctype not in {"text/plain", "text/html"})
+                ):
+                    payload = part.get_payload(decode=True)
+                    attachments.append({
+                        "filename": decode_header(filename) if filename else "attachment",
+                        "content_type": ctype,
+                        "data": payload or b"",
+                    })
+        else:
+            # Single-part messages don't have attachments in the usual sense
+            pass
+
+        if att_index >= len(attachments):
+            raise ValueError(f"Anhang {att_index} nicht gefunden ({len(attachments)} Anhaenge)")
+
+        attachment = attachments[att_index]
+        return {
+            "filename": attachment["filename"],
+            "content_type": attachment["content_type"],
+            "data": attachment["data"],
+        }
+    finally:
+        try:
+            conn.logout()
+        except Exception:
+            pass
 
 
 def set_flag(account: Dict[str, Any], folder: str, uid: str, action: str) -> None:
