@@ -36,9 +36,9 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Local-First Operations
 
-- [ ] **LOCL-01**: User can use the app without any required cloud service for core mail, search, and AI workflows.
+- [x] **LOCL-01**: User can use the app without any required cloud service for core mail, search, and AI workflows.
 - [ ] **LOCL-02**: User can use AI-assisted features through local LLM execution.
-- [ ] **LOCL-03**: User can operate the app in a way that supports a local, DSGVO-conscious deployment model.
+- [x] **LOCL-03**: User can operate the app in a way that supports a local, DSGVO-conscious deployment model.
 
 ## v2 Requirements
 
@@ -90,9 +90,9 @@ Which phases cover which requirements. Updated during roadmap creation.
 | AUTO-02 | Phase 4 | Pending |
 | AUTO-03 | Phase 4 | Pending |
 | AUTO-04 | Phase 4 | Pending |
-| LOCL-01 | Phase 5 | Pending |
+| LOCL-01 | Phase 5 | Complete |
 | LOCL-02 | Phase 3 | Pending |
-| LOCL-03 | Phase 5 | Pending |
+| LOCL-03 | Phase 5 | Complete |
 
 **Coverage:**
 - v1 requirements: 18 total

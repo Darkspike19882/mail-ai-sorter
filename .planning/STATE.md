@@ -2,16 +2,16 @@
 gsd_state_version: 1.0
 milestone: v1.0
 milestone_name: milestone
-status: execution-complete
-stopped_at: Phase 4 implemented
-last_updated: "2026-04-17T16:00:00.000Z"
+status: completed
+stopped_at: Completed 05-02-PLAN.md
+last_updated: "2026-04-18T09:54:46.506Z"
 last_activity: 2026-04-17 — Phase 4 Delayed Sorting & Reviewability implemented
 progress:
-  total_phases: 5
-  completed_phases: 4
-  total_plans: 10
-  completed_plans: 10
-  percent: 80
+  total_phases: 9
+  completed_phases: 1
+  total_plans: 4
+  completed_plans: 2
+  percent: 50
 ---
 
 # Project State
@@ -51,6 +51,8 @@ Progress: [████████░░] 80%
 - Last 5 plans: Phase 2 Plans 1-3 completed on 2026-04-17
 - Trend: Positive
 
+| Phase 05 P02 | 10m | 2 tasks | 4 files |
+
 ## Accumulated Context
 
 ### Decisions
@@ -62,6 +64,9 @@ Recent decisions affecting current work:
 - [Phase 2]: Attachment text indexing (SRCH-03) deferred to Phase 3 — no extraction infrastructure exists.
 - [Phase 2]: AI Q&A panel as right-side drawer overlay, not a separate page.
 - [Phase 2]: RAG history endpoint added, Ollama health check added to status.
+- [Phase 05]: PRIVACY.md: Comprehensive DSGVO documentation with data inventory, network flows, user rights, in German
+- [Phase 05]: Data export/delete APIs: ZIP export with password stripping, full database + keyring deletion
+- [Phase 05]: sort_actions table is in llm_memory.db (not mail_index.db) — corrected in delete endpoint
 
 ### Pending Todos
 
@@ -83,6 +88,6 @@ Recent decisions affecting current work:
 
 ## Session Continuity
 
-Last session: 2026-04-17T12:00:00.000Z
-Stopped at: Phase 2 implemented
-Resume file: .planning/ROADMAP.md
+Last session: 2026-04-18T09:54:46.502Z
+Stopped at: Completed 05-02-PLAN.md
+Resume file: None

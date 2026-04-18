@@ -80,8 +80,8 @@ Superhero Mail ist der Umbau von Mail AI Sorter zu einem Superhuman-inspirierten
   2. User can run the product in a local deployment model that keeps mail data and intelligence under local control.
   3. User can evaluate the app as consistent with its local, open-source, DSGVO-conscious positioning.
 **Plans**: 2 plans
-- [ ] 05-01-PLAN — Credential security + network hardening + CSP (keyring migration, no-cloud test, CSP middleware)
-- [ ] 05-02-PLAN — Privacy documentation + data APIs (PRIVACY.md, export/delete endpoints)
+- [x] 05-01-PLAN — Credential security + network hardening + CSP (keyring migration, no-cloud test, CSP middleware)
+- [x] 05-02-PLAN — Privacy documentation + data APIs (PRIVACY.md, export/delete endpoints)
 
 ### Phase 5: Superhero Rebranding + FastAPI
 **Goal**: Rebrand zu Superhero Mail (Electric Blue, Blitz-Icon) und Migration von Flask zu FastAPI.
