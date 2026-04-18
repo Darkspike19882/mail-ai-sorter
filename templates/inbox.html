@@ -772,10 +772,9 @@ function inboxApp() {
             this.accounts = (cfg.accounts || []).map(acc => ({ name: acc.name, folders: [], expanded: true, unreadTotal: 0 }));
             this.compose.account = this.accounts[0]?.name || '';
             this.restoreState();
-            const [_, mailData] = await Promise.all([
-                this.refreshFolders(),
-                this.searchActive ? this.runSearch() : this.loadMails(),
-            ]);
+            if (this.searchActive) await this.runSearch();
+            else await this.loadMails();
+            this.refreshFolders();
             this.restoreSelectedMail().catch(() => {});
             this.$nextTick(() => lucide.createIcons());
             this.loadBatchSummaries();

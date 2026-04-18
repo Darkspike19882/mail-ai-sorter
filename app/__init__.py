@@ -19,7 +19,7 @@ class CSPMiddleware(BaseHTTPMiddleware):
             "connect-src 'self' http://localhost:* http://127.0.0.1:*; "
             "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://cdn.tailwindcss.com https://cdn.jsdelivr.net https://unpkg.com; "
             "style-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com https://cdn.jsdelivr.net; "
-            "img-src 'self' data: blob: https://cdn.jsdelivr.net; "
+            "img-src 'self' data: blob: cid: https://cdn.jsdelivr.net; "
             "font-src 'self' https://cdn.jsdelivr.net; "
             "frame-ancestors 'none'; "
             "form-action 'self'; "
